@@ -2,11 +2,39 @@
 <html lang="es">
 	<head>
 		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<title>{% if title %}{{ title }} — {% endif %}{{ site.title }}</title>
-		{% if description %}<meta name="description" content="{{ description }}">{% endif %}
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+		<title>{% if title and title != site.title %}{{ title }} — {% endif %}{{ site.title }}</title>
+		<meta name="description" content="{{ description or site.description }}">
+		<meta property="og:title" content="{% if title and title != site.title %}{{ title }} — {% endif %}{{ site.title }}">
+		<meta property="og:description" content="{{ description or site.description }}">
+		<meta property="og:type" content="website">
+		<meta name="twitter:card" content="summary_large_image">
+		<link rel="icon" href="{{ '/assets/favicon.ico' | url }}" sizes="any">
+		<link rel="stylesheet" href="{{ '/assets/css/main.css' | url }}">
 	</head>
 	<body>
-		<main class="page">{{ content | safe }}</main>
+		<header class="site-header">
+			<nav class="site-nav" aria-label="Principal">
+				<a class="site-nav__item" href="{{ site.nav.about.url | url }}">{{ site.nav.about.label }}</a>
+				<a class="site-nav__item" href="mailto:{{ site.contactEmail }}">{{ site.contactName }}</a>
+				<a class="site-nav__item" href="{{ site.nav.projects.url | url }}"><svg class="site-nav__icon" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="square"><path d="M2 4.5h12M2 8h12M2 11.5h12"/></svg>{{ site.nav.projects.label }}</a>
+				<div class="site-nav__item site-nav__email">{{ site.email }}</div>
+			</nav>
+			<div class="site-brand">
+				<a class="site-brand__link" href="{{ '/' | url }}" aria-label="{{ site.title }}">
+					<img src="{{ '/assets/images/lava-logo.png' | url }}" alt="{{ site.title }}" width="1400" height="551">
+				</a>
+			</div>
+		</header>
+		<main class="site-main">
+			<div class="page-content">{{ content | safe }}</div>
+		</main>
+		<footer class="site-footer">
+			<div class="site-footer__inner">
+				<span>{{ site.footer.copyright }}</span>
+				<span>{{ site.footer.city }}</span>
+				<span>{{ site.footer.instagram }}</span>
+			</div>
+		</footer>
 	</body>
 </html>

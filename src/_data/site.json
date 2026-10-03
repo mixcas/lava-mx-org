@@ -7,6 +7,14 @@
   "contactName": "info.lavamx",
   "instagram": "lava__mx",
   "city": "Ciudad de México",
+  "social": {
+    "instagram": "https://www.instagram.com/lava__mx/"
+  },
+  "footer": {
+    "copyright": "©LAVA",
+    "city": "Ciudad de México",
+    "instagram": "@lava__mx"
+  },
   "nav": {
     "about": {
       "label": "Lava es — Lava is",

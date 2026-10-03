@@ -23,7 +23,6 @@ media:
 ---
 
 Un diálogo visual entre Natalia Mejía y Lucía Hinojosa
-
 *Tiempos Pendulares* es una una propuesta expositiva entre dos artistas cuyo trabajo gira en torno a las variables categóricas del tiempo, las convenciones que se han usado histórica y culturalmente para definirlo y contenerlo. En una búsqueda por cuestionar la rigidez de la magnitud física del tiempo, se valen de la observación e interpretación del movimiento de los cuerpos celestes, para hacer una relectura —mediante el uso de la ficción y la poesía— de la construcción de mitologías astronómicas, según nuestro lugar en la Tierra y el universo.
 
 [Dossier](../../assets/files/Dossier_Tiempos-Pendulares-x-Lava.pdf)

@@ -38,11 +38,8 @@ Artistas / Artists:
 Sofía Acosta (ECU), Amauta García y David Camargo (MEX), André Magaña (EE.UU.), Lorena Mal (MEX), Carly Mandel (EE.UU.), Perla Mata Chairez (MEX), Theo Michael (GRC/UK), Mariana Ledesma (MEX), Rodrigo Red Sandoval (MEX).
 
 Curated by Lava:
-
 fernanda ramos mena
-
 adriana flores
-
 fatima payro
 
 guadalajara90210. Mar Báltico 24, Col. Nextitla, Miguel Hidalgo, 11420 Ciudad de México, CDMX.

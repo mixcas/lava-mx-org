@@ -29,7 +29,6 @@ La palabra penumbra se refiere a aquello que es casi una sombra, es decir, una o
 Esta muestra es una colaboración entre Lava y Proyecto Eme, plataformas curatoriales que trabajan con artistas contemporáneos desde la Ciudad de México.
 
 **Artistas:**
-
 Andrea Bores (MX) · Santiago Amaya (MX) · Paulina Silva Hauyon (CL) · Perla Mata (MX) · Christopher Steenson (CRI) · Valentina Guerrero (CL) · Rodrigo Suárez (MX) · Julia Carrillo (MX).
 
 Activación sonora por Layla Fassa y Guillermo Martínez de Velasco.

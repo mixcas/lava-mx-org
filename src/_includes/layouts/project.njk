@@ -1,32 +1,45 @@
 ---
 layout: base.njk
 ---
-{# Placeholder layout for Phase 2 validation; rebuilt with the faithful design in Phase 3. #}
-<article class="project">
-	<header class="project-header">
-		<h1 class="project-title">{{ title }}</h1>
-		{% if venue %}<p class="project-venue">{{ venue }}</p>{% endif %}
-		{% if dates %}<p class="project-dates">{{ dates }}</p>{% endif %}
-	</header>
-
-	{% if variant == "three-column" %}
-		<div class="project-gallery project-gallery--left">
-			{% for m in media_left %}{% picture m.src, title %}{% endfor %}
+{% if variant == "three-column" %}
+	<article class="project project--three-column">
+		<div class="project-three">
+			<div class="project-three__col">
+				<div class="project-header__title">{{ title }}</div>
+				<div class="project-gallery">
+					{% for m in media_left %}{% picture m.src %}{% endfor %}
+				</div>
+			</div>
+			<div class="project-three__col">
+				<div>{{ venue | mdInline | safe }}</div>
+				<div class="project-gallery">
+					{% for m in media_middle %}{% picture m.src %}{% endfor %}
+				</div>
+			</div>
+			<div class="project-three__col">
+				<div>{{ dates | mdInline | safe }}</div>
+				<div class="project-body">{{ content | safe }}</div>
+			</div>
 		</div>
-		<div class="project-gallery project-gallery--middle">
-			{% for m in media_middle %}{% picture m.src, title %}{% endfor %}
+	</article>
+{% else %}
+	<article class="project">
+		<header class="project-header">
+			<div class="project-header__title">{{ title }}</div>
+			<div>{{ venue | mdInline | safe }}</div>
+			<div>{{ dates | mdInline | safe }}</div>
+		</header>
+		<div class="project-main">
+			<div class="project-gallery" data-columns="{{ gallery_columns }}">
+				{% for m in media %}
+					{% if m.video %}
+						<video class="project-video" src="{{ ('/assets/videos/' + m.src) | url }}"{% if m.poster %} poster="{% imageUrl m.poster, 1200 %}"{% endif %}{% if m.autoplay %} autoplay{% endif %}{% if m.loop %} loop{% endif %}{% if m.muted %} muted{% endif %} playsinline preload="metadata"></video>
+					{% else %}
+						{% picture m.src %}
+					{% endif %}
+				{% endfor %}
+			</div>
+			<div class="project-body">{{ content | safe }}</div>
 		</div>
-	{% else %}
-		<div class="project-gallery" data-columns="{{ gallery_columns }}">
-			{% for m in media %}
-				{% if m.video %}
-					<video class="project-video" src="{{ ('/assets/videos/' + m.src) | url }}"{% if m.poster %} poster="{% imageUrl m.poster, 1200 %}"{% endif %}{% if m.autoplay %} autoplay{% endif %}{% if m.loop %} loop{% endif %}{% if m.muted %} muted{% endif %} playsinline preload="metadata"></video>
-				{% else %}
-					{% picture m.src, title %}
-				{% endif %}
-			{% endfor %}
-		</div>
-	{% endif %}
-
-	<div class="project-body">{{ content | safe }}</div>
-</article>
+	</article>
+{% endif %}

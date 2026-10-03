@@ -1,7 +1,7 @@
 ---
 title: "Vestigios Metabolicos"
 venue: "Más Arte Galería"
-dates: "26 Octubre - 10 Noviembre 2023. Quito, Ecuador."
+dates: "26 Octubre - 10 Noviembre 2023. Quito, Ecuador."
 current: false
 order: 5
 slug: "vestigios-metabolicos"
@@ -27,5 +27,4 @@ media:
 Co-curaduría: Lava, Tlaxcala3, Galería Más Arte.
 
 **Artistas:**
-
 Pamela Abad (ECU) · Sonia Bandura (ARG) · Raffaella Descalzi (ECU) · Ma. Fernanda García (ECU) · Aileen Gavonel (PER) · Gabriela Lobato (MX) · Liz Mevill (MX) · Fernanda Murray (ECU) · Mariana Paniagua (MX) · Daniel Robles Lizano (MX) · Lucía Taibo (MX) · Daniela Terroba (MX) · Sebastián Terrones (MX) · Brenda Vega (ECU).

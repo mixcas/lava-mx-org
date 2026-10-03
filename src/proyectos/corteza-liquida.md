@@ -1,5 +1,5 @@
 ---
-title: "Corteza  Líquida"
+title: "Corteza Líquida"
 venue: "laNao Galería"
 dates: "1 febrero - 1 abril, 2025. Ciudad de México."
 current: true

@@ -40,6 +40,21 @@ const PROJECTS = [
 
 const ABOUT = { page: "acerca-de-2", purl: "acerca-de-2" };
 
+// Cargo's About "team" column uses irregular nested <b>/<i> markup that does not
+// round-trip through Markdown cleanly; normalise it into clean Markdown here.
+const ABOUT_TEAM = [
+  "**Adriana Flores Suárez**",
+  "*Fundadora y Curadora / Founder and Curator*",
+  "",
+  "*Colaboradoras anteriores / Former collaborators:*",
+  "",
+  "**Fernanda Ramos Mena**",
+  "*Curadora Asociada / Associate Curator*",
+  "",
+  "**Fátima Payró Arandia**",
+  "*Asistencia Curatorial / Curatorial Assistant*",
+].join("\n");
+
 const SITE = {
   title: "Lava",
   description:
@@ -50,6 +65,8 @@ const SITE = {
   contactName: "info.lavamx",
   instagram: "lava__mx",
   city: "Ciudad de México",
+  social: { instagram: "https://www.instagram.com/lava__mx/" },
+  footer: { copyright: "©LAVA", city: "Ciudad de México", instagram: "@lava__mx" },
   nav: {
     about: { label: "Lava es — Lava is", url: "/acerca-de/" },
     projects: { label: "Proyectos anteriores — Previous projects", url: "/proyectos/" },
@@ -81,7 +98,6 @@ const turndown = new TurndownService({
   codeBlockStyle: "fenced",
   emDelimiter: "*",
   strongDelimiter: "**",
-  br: "\n", // Cargo uses <br> for line breaks; rendered with markdown-it breaks:true
 });
 turndown.remove(["text-icon"]);
 turndown.addRule("emptyPre", {
@@ -100,9 +116,21 @@ const tidy = (s) =>
     .replace(/[ \t]{2,}/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+
+// Use a sentinel for <br> so multiple/consecutive breaks survive turndown, then
+// map sentinels to newlines. Also collapses Cargo's source-formatting whitespace
+// so only intentional <br> tags produce breaks.
+const BREAK = "\uE000";
+const BREAK_RE = new RegExp(`\\s*${BREAK}\\s*`, "g");
+const cleanHtml = (html) =>
+  String(html || "")
+    .replace(/<br\s*\/?>/gi, BREAK)
+    .replace(/\s+/g, " ")
+    .replace(BREAK_RE, BREAK);
+const turndownHtml = (html) => turndown.turndown(cleanHtml(html)).replace(BREAK_RE, "\n");
 const md = (html) =>
   tidy(
-    decodeEntities(turndown.turndown(html || ""))
+    decodeEntities(turndownHtml(html))
       .replace(/\u00A0/g, " ")
       .replace(/(\*\*[^*\n]+)\n+\*\*/g, "$1** "), // re-join bold split across breaks
   );
@@ -255,14 +283,14 @@ function extractProject(project) {
   if (threeColumn) {
     const [u0, u1, u2] = unitsOf(sets[0]);
     result.layout = "three-column";
-    result.title = decodeEntities(u0.text).trim();
-    result.venue = plain(decodeEntities(turndown.turndown(u1.innerHTML))).replace(/\s+/g, " ").trim();
+    result.title = decodeEntities(u0.text).replace(/\s+/g, " ").trim();
+    result.venue = plain(decodeEntities(turndownHtml(u1.innerHTML))).replace(/\s+/g, " ").trim();
     result.mediaLeft = extractMedia(u0);
     result.mediaMiddle = extractMedia(u1);
 
     const u2html = u2.innerHTML;
     const brAt = u2html.search(/<br\s*\/?>/i);
-    result.dates = plain(decodeEntities(turndown.turndown(brAt === -1 ? "" : u2html.slice(0, brAt)))).trim();
+    result.dates = plain(decodeEntities(turndownHtml(brAt === -1 ? "" : u2html.slice(0, brAt)))).trim();
     result.body = tidy(md(brAt === -1 ? u2html : u2html.slice(brAt)));
     return result;
   }
@@ -275,9 +303,9 @@ function extractProject(project) {
   const textUnit = mainUnits.find((u) => u.getAttribute("span") === "4") || mainUnits[1];
 
   result.layout = "standard";
-  result.title = decodeEntities(headerUnits[0] ? headerUnits[0].text : "").trim();
-  result.venue = headerUnits[1] ? plain(decodeEntities(turndown.turndown(headerUnits[1].innerHTML))).trim() : "";
-  result.dates = headerUnits[2] ? plain(decodeEntities(turndown.turndown(headerUnits[2].innerHTML))).trim() : "";
+  result.title = decodeEntities(headerUnits[0] ? headerUnits[0].text : "").replace(/\s+/g, " ").trim();
+  result.venue = headerUnits[1] ? plain(decodeEntities(turndownHtml(headerUnits[1].innerHTML))).trim() : "";
+  result.dates = headerUnits[2] ? plain(decodeEntities(turndownHtml(headerUnits[2].innerHTML))).trim() : "";
   result.media = extractMedia(galleryUnit);
   result.galleryColumns = galleryColumns(galleryUnit);
   result.body = textUnit ? tidy(md(textUnit.innerHTML)) : "";
@@ -294,7 +322,7 @@ function extractAbout() {
   return {
     title: "Acerca de",
     bio: tidy(md(units[0] ? units[0].innerHTML : "")),
-    team: tidy(md(units[1] ? units[1].innerHTML : "")),
+    team: ABOUT_TEAM,
   };
 }
 

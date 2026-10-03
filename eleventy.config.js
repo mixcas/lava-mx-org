@@ -4,6 +4,7 @@
  */
 import path from "node:path";
 import Image from "@11ty/eleventy-img";
+import MarkdownIt from "markdown-it";
 
 // `/` for a custom domain; `/<repo>/` when served from a GitHub Pages subpath.
 const PATH_PREFIX = (process.env.PATH_PREFIX || "/").replace(/\/+$/, ""); // "" | "/repo"
@@ -44,6 +45,11 @@ export default function (eleventyConfig) {
 
   // Cargo content used <br> for line breaks; render single newlines as breaks.
   eleventyConfig.amendLibrary("md", (md) => md.set({ breaks: true, html: true }));
+
+  // Render Markdown stored in front matter (bilingual body, venue/dates, about).
+  const mdLib = new MarkdownIt({ html: true, breaks: true });
+  eleventyConfig.addFilter("md", (value) => mdLib.render(String(value ?? "")));
+  eleventyConfig.addFilter("mdInline", (value) => mdLib.renderInline(String(value ?? "")));
 
   // Responsive <picture> for a master filename in src/assets/images.
   eleventyConfig.addShortcode(

@@ -1,9 +1,9 @@
 ---
 layout: base.njk
 ---
-{# Placeholder layout for Phase 1 validation; rebuilt with the faithful design in Phase 3. #}
 <article class="about">
-	<h1>{{ title }}</h1>
-	<div class="about-bio">{{ bio | safe }}</div>
-	<div class="about-team">{{ team | safe }}</div>
+	<div class="about-main">
+		<div class="about-bio">{{ bio | md | safe }}</div>
+		<div class="about-team">{{ team | md | safe }}</div>
+	</div>
 </article>
