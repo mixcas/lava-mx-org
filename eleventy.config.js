@@ -27,7 +27,7 @@ async function processImage(src, widths) {
     outputDir: "./_site/img/",
     urlPath: IMAGE_URL_PATH,
     sharpWebpOptions: { quality: 88, effort: 4 },
-    sharpAvifOptions: { quality: 65, effort: 4 },
+    sharpAvifOptions: { quality: 80, effort: 4 },
   });
 }
 
