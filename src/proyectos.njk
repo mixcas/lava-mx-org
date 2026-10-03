@@ -1,14 +1,15 @@
 ---
 layout: base.njk
-title: Lava
+title: Proyectos
+permalink: /proyectos/
 ---
-{% for item in collections.currentProjects %}
+{% for item in collections.pastProjects %}
 {% set d = item.data %}
 {% if d.variant == "three-column" %}
 	<article class="project project--three-column">
 		<div class="project-three">
 			<div class="project-three__col">
-				<div class="project-header__title">{{ d.title }}</div>
+				<div class="project-header__title"><a href="{{ item.url | url }}">{{ d.title }}</a></div>
 				<div class="project-gallery">
 					{% for m in d.media_left %}{% picture m.src %}{% endfor %}
 				</div>
@@ -28,7 +29,7 @@ title: Lava
 {% else %}
 	<article class="project">
 		<header class="project-header">
-			<div class="project-header__title">{{ d.title }}</div>
+			<div class="project-header__title"><a href="{{ item.url | url }}">{{ d.title }}</a></div>
 			<div>{{ d.venue | mdInline | safe }}</div>
 			<div>{{ d.dates | mdInline | safe }}</div>
 		</header>

@@ -135,6 +135,10 @@ a {
 }
 
 /* --- Project ------------------------------------------------------------ */
+.project + .project {
+	margin-top: 5rem;
+}
+
 .project-header {
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);

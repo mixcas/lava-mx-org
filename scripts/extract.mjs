@@ -397,8 +397,8 @@ function main() {
       fm.push(...mediaYaml(project.mediaLeft).map((l) => l.replace(/^media:/, "media_left:")));
       fm.push(...mediaYaml(project.mediaMiddle).map((l) => l.replace(/^media:/, "media_middle:")));
     }
-    const body = project.body.trim();
-    const doc = `---\n${fm.join("\n")}\n---\n\n${body}\n`;
+    fm.push(keyValue("text", project.body));
+    const doc = `---\n${fm.join("\n")}\n---\n`;
     writeFileSync(path.join(OUT_PROJECTS, `${project.slug}.md`), doc);
   }
 

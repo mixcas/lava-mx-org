@@ -18,7 +18,7 @@ layout: base.njk
 			</div>
 			<div class="project-three__col">
 				<div>{{ dates | mdInline | safe }}</div>
-				<div class="project-body">{{ content | safe }}</div>
+				<div class="project-body">{{ text | md | safe }}</div>
 			</div>
 		</div>
 	</article>
@@ -39,7 +39,7 @@ layout: base.njk
 					{% endif %}
 				{% endfor %}
 			</div>
-			<div class="project-body">{{ content | safe }}</div>
+			<div class="project-body">{{ text | md | safe }}</div>
 		</div>
 	</article>
 {% endif %}

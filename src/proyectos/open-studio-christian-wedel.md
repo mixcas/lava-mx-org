@@ -22,8 +22,8 @@ media:
   - src: "Copia-de-IMG_7164.webp"
   - src: "Copia-de-IMG_7172.webp"
   - src: "Copia-de-IMG_7135.webp"
+text: |-
+  **Christian Wedel** es un artista que trabaja desde la inmensidad y densidad de los ecosistemas tropicales. Su práctica se nutre de la ciencia ficción y la mitología, planteando posibilidades de relaciones interespecie por medio de la pintura, cerámica y la escultura con objetos encontrados. Observando las relaciones de compenetración y enmarañamiento entre plantas, humanos y materias, Christian ensaya mundos de intimidad y hospitalidad alternativos al paradigma antropocentrista
+  
+  Para este estudio abierto, el artista estará desplegando parte de sus procesos de producción de su más reciente proyecto **“Vampirismo Tropical”,** desarrollado en su tránsito por Ciudad de México y Costa Rica, desde dónde vive y trabaja.
 ---
-
-**Christian Wedel** es un artista que trabaja desde la inmensidad y densidad de los ecosistemas tropicales. Su práctica se nutre de la ciencia ficción y la mitología, planteando posibilidades de relaciones interespecie por medio de la pintura, cerámica y la escultura con objetos encontrados. Observando las relaciones de compenetración y enmarañamiento entre plantas, humanos y materias, Christian ensaya mundos de intimidad y hospitalidad alternativos al paradigma antropocentrista
-
-Para este estudio abierto, el artista estará desplegando parte de sus procesos de producción de su más reciente proyecto **“Vampirismo Tropical”,** desarrollado en su tránsito por Ciudad de México y Costa Rica, desde dónde vive y trabaja.

@@ -15,8 +15,8 @@ media:
   - src: "_MG_1171-copy.webp"
   - src: "_MG_1174-copy.webp"
   - src: "_MG_1180-copy.webp"
+text: |-
+  ***Lianas Neotropicales*** es un despliegue de la investigación de la artista **Fabiana Mapel,** en torno a su inherente relación con la naturaleza y situaciones cotidianas que le resultan esculturas performáticas. ¿Cómo se desborda la escultura?
+  
+  Fabiana explora posibles respuestas proponiendo un ejercicio performático que involucra el fluir de los cuerpos en toda su extensión. Encontramos aquí una invitación a abandonar el estado contemplativo de la densidad selvática, disponer el cuerpo y emular a cuerpo entero, el desplazamiento de las lianas.
 ---
-
-***Lianas Neotropicales*** es un despliegue de la investigación de la artista **Fabiana Mapel,** en torno a su inherente relación con la naturaleza y situaciones cotidianas que le resultan esculturas performáticas. ¿Cómo se desborda la escultura?
-
-Fabiana explora posibles respuestas proponiendo un ejercicio performático que involucra el fluir de los cuerpos en toda su extensión. Encontramos aquí una invitación a abandonar el estado contemplativo de la densidad selvática, disponer el cuerpo y emular a cuerpo entero, el desplazamiento de las lianas.

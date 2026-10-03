@@ -72,6 +72,21 @@ export default function (eleventyConfig) {
     return metadata[format][metadata[format].length - 1].url;
   });
 
+  // Collections driving the home page (current) and the projects index (past).
+  const byOrder = (a, b) => (a.data.order ?? 0) - (b.data.order ?? 0);
+  eleventyConfig.addCollection("currentProjects", (api) =>
+    api
+      .getFilteredByGlob("src/proyectos/*.md")
+      .filter((item) => item.data.current === true)
+      .sort(byOrder),
+  );
+  eleventyConfig.addCollection("pastProjects", (api) =>
+    api
+      .getFilteredByGlob("src/proyectos/*.md")
+      .filter((item) => item.data.current !== true)
+      .sort(byOrder),
+  );
+
   return {
     dir: {
       input: "src",
