@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Build output
+_site/
+
+# Raw Cargo backup (HTML + __PRELOADED_STATE__ + originals) — kept local only
+_cargo-export/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.*

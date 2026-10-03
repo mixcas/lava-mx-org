@@ -1,0 +1,17 @@
+{
+  "name": "lava-mx-org",
+  "version": "1.0.0",
+  "private": true,
+  "description": "lava-mx.org — Eleventy static site migrated from Cargo",
+  "type": "module",
+  "scripts": {
+    "build": "eleventy",
+    "serve": "eleventy --serve",
+    "clean": "rm -rf _site",
+    "backup": "node scripts/backup.mjs"
+  },
+  "devDependencies": {
+    "@11ty/eleventy": "^3.1.6",
+    "@11ty/eleventy-img": "^7.0.0"
+  }
+}
