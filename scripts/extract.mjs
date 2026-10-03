@@ -132,7 +132,8 @@ const md = (html) =>
   tidy(
     decodeEntities(turndownHtml(html))
       .replace(/\u00A0/g, " ")
-      .replace(/(\*\*[^*\n]+)\n+\*\*/g, "$1** "), // re-join bold split across breaks
+      .replace(/(\*\*[^*\n]+)\n+\*\*/g, "$1** ") // re-join bold split across breaks
+      .replace(/\[\s*\]\([^)]*\)/g, ""), // drop empty links
   );
 // Short front-matter fields (venue/dates) keep line breaks (rendered by the template).
 const plain = (s) => tidy(s);

@@ -82,6 +82,37 @@ a {
 	text-decoration: none;
 }
 
+/* Headings are used for semantics; the design sizes them like body copy. */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	margin: 0;
+	font-size: inherit;
+	font-weight: inherit;
+	line-height: inherit;
+	letter-spacing: inherit;
+}
+
+:focus-visible {
+	outline: 2px solid var(--swatch-1);
+	outline-offset: 3px;
+}
+
+.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+	border: 0;
+}
+
 /* --- Header: nav + brand ------------------------------------------------ */
 .site-header {
 	background: var(--bg);
@@ -137,6 +168,8 @@ a {
 /* --- Project ------------------------------------------------------------ */
 .project + .project {
 	margin-top: 5rem;
+	content-visibility: auto;
+	contain-intrinsic-size: auto 1200px;
 }
 
 .project-header {
@@ -233,7 +266,7 @@ a {
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
 	gap: var(--gutter);
-	color: var(--swatch-4);
+	color: var(--swatch-3);
 }
 
 /* --- Mobile ------------------------------------------------------------- */
@@ -245,6 +278,10 @@ a {
 	.site-nav {
 		grid-template-columns: 1fr;
 		gap: 0.4rem;
+	}
+
+	.site-nav__item {
+		padding-block: 0.5rem;
 	}
 
 	.site-nav__email {

@@ -1,19 +1,20 @@
 ---
 layout: base.njk
 ---
+{% set titleTag = "h1" %}
 {% if variant == "three-column" %}
 	<article class="project project--three-column">
 		<div class="project-three">
 			<div class="project-three__col">
-				<div class="project-header__title">{{ title }}</div>
+				<{{ titleTag }} class="project-header__title">{{ title }}</{{ titleTag }}>
 				<div class="project-gallery">
-					{% for m in media_left %}{% picture m.src %}{% endfor %}
+					{% for m in media_left %}{% picture m.src, title %}{% endfor %}
 				</div>
 			</div>
 			<div class="project-three__col">
 				<div>{{ venue | mdInline | safe }}</div>
 				<div class="project-gallery">
-					{% for m in media_middle %}{% picture m.src %}{% endfor %}
+					{% for m in media_middle %}{% picture m.src, title %}{% endfor %}
 				</div>
 			</div>
 			<div class="project-three__col">
@@ -25,7 +26,7 @@ layout: base.njk
 {% else %}
 	<article class="project">
 		<header class="project-header">
-			<div class="project-header__title">{{ title }}</div>
+			<{{ titleTag }} class="project-header__title">{{ title }}</{{ titleTag }}>
 			<div>{{ venue | mdInline | safe }}</div>
 			<div>{{ dates | mdInline | safe }}</div>
 		</header>
@@ -35,7 +36,7 @@ layout: base.njk
 					{% if m.video %}
 						<video class="project-video" src="{{ ('/assets/videos/' + m.src) | url }}"{% if m.poster %} poster="{% imageUrl m.poster, 1200 %}"{% endif %}{% if m.autoplay %} autoplay{% endif %}{% if m.loop %} loop{% endif %}{% if m.muted %} muted{% endif %} playsinline preload="metadata"></video>
 					{% else %}
-						{% picture m.src %}
+						{% picture m.src, title, loop.first %}
 					{% endif %}
 				{% endfor %}
 			</div>

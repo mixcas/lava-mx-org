@@ -1,22 +1,26 @@
 ---
 layout: base.njk
 title: Lava
+hero: current
 ---
+{% set titleTag = "h2" %}
+<h1 class="visually-hidden">Lava — proyectos actuales</h1>
 {% for item in collections.currentProjects %}
 {% set d = item.data %}
+{% set isFirstSection = loop.first %}
 {% if d.variant == "three-column" %}
 	<article class="project project--three-column">
 		<div class="project-three">
 			<div class="project-three__col">
-				<div class="project-header__title">{{ d.title }}</div>
+				<{{ titleTag }} class="project-header__title">{{ d.title }}</{{ titleTag }}>
 				<div class="project-gallery">
-					{% for m in d.media_left %}{% picture m.src %}{% endfor %}
+					{% for m in d.media_left %}{% picture m.src, d.title %}{% endfor %}
 				</div>
 			</div>
 			<div class="project-three__col">
 				<div>{{ d.venue | mdInline | safe }}</div>
 				<div class="project-gallery">
-					{% for m in d.media_middle %}{% picture m.src %}{% endfor %}
+					{% for m in d.media_middle %}{% picture m.src, d.title %}{% endfor %}
 				</div>
 			</div>
 			<div class="project-three__col">
@@ -28,7 +32,7 @@ title: Lava
 {% else %}
 	<article class="project">
 		<header class="project-header">
-			<div class="project-header__title">{{ d.title }}</div>
+			<{{ titleTag }} class="project-header__title">{{ d.title }}</{{ titleTag }}>
 			<div>{{ d.venue | mdInline | safe }}</div>
 			<div>{{ d.dates | mdInline | safe }}</div>
 		</header>
@@ -38,7 +42,7 @@ title: Lava
 					{% if m.video %}
 						<video class="project-video" src="{{ ('/assets/videos/' + m.src) | url }}"{% if m.poster %} poster="{% imageUrl m.poster, 1200 %}"{% endif %}{% if m.autoplay %} autoplay{% endif %}{% if m.loop %} loop{% endif %}{% if m.muted %} muted{% endif %} playsinline preload="metadata"></video>
 					{% else %}
-						{% picture m.src %}
+						{% picture m.src, d.title, (isFirstSection and loop.first) %}
 					{% endif %}
 				{% endfor %}
 			</div>

@@ -8,6 +8,7 @@ import MarkdownIt from "markdown-it";
 
 // `/` for a custom domain; `/<repo>/` when served from a GitHub Pages subpath.
 const PATH_PREFIX = (process.env.PATH_PREFIX || "/").replace(/\/+$/, ""); // "" | "/repo"
+const SITE_URL = (process.env.SITE_URL || "https://lava-mx.org").replace(/\/$/, "");
 const IMAGE_URL_PATH = `${PATH_PREFIX}/img/`; // "/img/" | "/repo/img/"
 const IMAGES_DIR = path.join("src", "assets", "images");
 const RESPONSIVE_WIDTHS = [480, 960, 1440, 2000];
@@ -46,31 +47,72 @@ export default function (eleventyConfig) {
   // Cargo content used <br> for line breaks; render single newlines as breaks.
   eleventyConfig.amendLibrary("md", (md) => md.set({ breaks: true, html: true }));
 
+  // Absolute site origin (for canonical/OG/sitemap URLs).
+  eleventyConfig.addGlobalData("siteUrl", SITE_URL);
+
+  // Hero image (LCP) per page: first image of the page/project, else first item
+  // of the current/past project collections (per the `hero` front-matter flag).
+  eleventyConfig.addGlobalData("eleventyComputed", {
+    heroImage: (data) => {
+      const pick = (m) => (!m ? null : m.video ? m.poster || null : m.src);
+      if (data.media?.length) return pick(data.media[0]);
+      if (data.media_middle?.length) return pick(data.media_middle[0]);
+      if (data.media_left?.length) return pick(data.media_left[0]);
+      const list =
+        data.hero === "past"
+          ? data.collections?.pastProjects
+          : data.hero === "current"
+            ? data.collections?.currentProjects
+            : null;
+      if (list?.length) {
+        const d = list[0].data;
+        return pick(d.media?.[0] || d.media_left?.[0] || d.media_middle?.[0]);
+      }
+      return null;
+    },
+  });
+
   // Render Markdown stored in front matter (bilingual body, venue/dates, about).
   const mdLib = new MarkdownIt({ html: true, breaks: true });
   eleventyConfig.addFilter("md", (value) => mdLib.render(String(value ?? "")));
   eleventyConfig.addFilter("mdInline", (value) => mdLib.renderInline(String(value ?? "")));
 
   // Responsive <picture> for a master filename in src/assets/images.
+  // `priority` marks the LCP image (eager + high fetch priority).
   eleventyConfig.addShortcode(
     "picture",
-    async (src, alt = "", sizes = "(min-width: 900px) 66vw, 100vw") => {
+    async (src, alt = "", priority = false, sizes = "(min-width: 900px) 66vw, 100vw") => {
       const metadata = await processImage(src, RESPONSIVE_WIDTHS);
       return Image.generateHTML(metadata, {
         alt,
         sizes,
-        loading: "lazy",
-        decoding: "async",
+        loading: priority ? "eager" : "lazy",
+        decoding: priority ? "sync" : "async",
+        fetchpriority: priority ? "high" : "low",
       });
     },
   );
 
-  // Single URL (e.g. for a video poster).
+  // Single URL (e.g. for a video poster or OG image). WebP is widely supported.
   eleventyConfig.addShortcode("imageUrl", async (src, width = 1200) => {
     const metadata = await processImage(src, [Number(width)]);
-    const format = metadata.avif ? "avif" : "webp";
+    const format = metadata.webp ? "webp" : "avif";
     return metadata[format][metadata[format].length - 1].url;
   });
+
+  // Preload the LCP image early (uses the same responsive srcset as <picture>).
+  eleventyConfig.addShortcode(
+    "imagePreload",
+    async (src, sizes = "(min-width: 900px) 66vw, 100vw") => {
+      if (!src) return "";
+      const metadata = await processImage(src, RESPONSIVE_WIDTHS);
+      const list = metadata.avif || metadata.webp || [];
+      if (!list.length) return "";
+      const type = metadata.avif ? "image/avif" : "image/webp";
+      const srcset = list.map((img) => `${img.url} ${img.width}w`).join(", ");
+      return `<link rel="preload" as="image" type="${type}" imagesrcset="${srcset}" imagesizes="${sizes}">`;
+    },
+  );
 
   // Collections driving the home page (current) and the projects index (past).
   const byOrder = (a, b) => (a.data.order ?? 0) - (b.data.order ?? 0);

@@ -1,14 +1,33 @@
+{% if description %}{% set metaDescription = description %}{% elif text %}{% set metaDescription = text | md | striptags | replace('\n', ' ') | truncate(160) %}{% else %}{% set metaDescription = site.description %}{% endif %}
+{% if title and title != site.title %}{% set metaTitle = title + ' — ' + site.title %}{% else %}{% set metaTitle = site.title %}{% endif %}
 <!doctype html>
 <html lang="es">
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-		<title>{% if title and title != site.title %}{{ title }} — {% endif %}{{ site.title }}</title>
-		<meta name="description" content="{{ description or site.description }}">
-		<meta property="og:title" content="{% if title and title != site.title %}{{ title }} — {% endif %}{{ site.title }}">
-		<meta property="og:description" content="{{ description or site.description }}">
+		<title>{{ metaTitle }}</title>
+		<meta name="description" content="{{ metaDescription }}">
+		<link rel="canonical" href="{{ siteUrl }}{{ page.url | url }}">
+		<meta property="og:site_name" content="{{ site.title }}">
 		<meta property="og:type" content="website">
+		<meta property="og:title" content="{{ metaTitle }}">
+		<meta property="og:description" content="{{ metaDescription }}">
+		<meta property="og:url" content="{{ siteUrl }}{{ page.url | url }}">
+		{% if heroImage %}
+			<meta property="og:image" content="{{ siteUrl }}{% imageUrl heroImage, 1200 %}">
+		{% else %}
+			<meta property="og:image" content="{{ siteUrl }}{{ '/assets/images/lava-logo.png' | url }}">
+		{% endif %}
 		<meta name="twitter:card" content="summary_large_image">
+		<meta name="twitter:title" content="{{ metaTitle }}">
+		<meta name="twitter:description" content="{{ metaDescription }}">
+		{% if heroImage %}
+			<meta name="twitter:image" content="{{ siteUrl }}{% imageUrl heroImage, 1200 %}">
+		{% else %}
+			<meta name="twitter:image" content="{{ siteUrl }}{{ '/assets/images/lava-logo.png' | url }}">
+		{% endif %}
+		<link rel="preload" as="font" type="font/woff2" href="{{ '/assets/fonts/instrument-sans-latin-wght-normal.woff2' | url }}" crossorigin>
+		{% if heroImage %}{% imagePreload heroImage %}{% endif %}
 		<link rel="icon" href="{{ '/assets/favicon.ico' | url }}" sizes="any">
 		<link rel="stylesheet" href="{{ '/assets/css/main.css' | url }}">
 	</head>

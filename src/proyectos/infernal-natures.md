@@ -34,7 +34,4 @@ text: |-
   Cheyann Washington, Gary Brewer, John Greer, Liz Miller.
   
   Fotografías por Andreas Baudisch
-  
-  [
-  ](https://www.instagram.com/cosarapozo/)
 ---

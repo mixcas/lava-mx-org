@@ -2,22 +2,26 @@
 layout: base.njk
 title: Proyectos
 permalink: /proyectos/
+hero: past
 ---
+{% set titleTag = "h2" %}
+<h1 class="visually-hidden">Proyectos anteriores</h1>
 {% for item in collections.pastProjects %}
 {% set d = item.data %}
+{% set isFirstSection = loop.first %}
 {% if d.variant == "three-column" %}
 	<article class="project project--three-column">
 		<div class="project-three">
 			<div class="project-three__col">
-				<div class="project-header__title"><a href="{{ item.url | url }}">{{ d.title }}</a></div>
+				<{{ titleTag }} class="project-header__title"><a href="{{ item.url | url }}">{{ d.title }}</a></{{ titleTag }}>
 				<div class="project-gallery">
-					{% for m in d.media_left %}{% picture m.src %}{% endfor %}
+					{% for m in d.media_left %}{% picture m.src, d.title %}{% endfor %}
 				</div>
 			</div>
 			<div class="project-three__col">
 				<div>{{ d.venue | mdInline | safe }}</div>
 				<div class="project-gallery">
-					{% for m in d.media_middle %}{% picture m.src %}{% endfor %}
+					{% for m in d.media_middle %}{% picture m.src, d.title %}{% endfor %}
 				</div>
 			</div>
 			<div class="project-three__col">
@@ -29,7 +33,7 @@ permalink: /proyectos/
 {% else %}
 	<article class="project">
 		<header class="project-header">
-			<div class="project-header__title"><a href="{{ item.url | url }}">{{ d.title }}</a></div>
+			<{{ titleTag }} class="project-header__title"><a href="{{ item.url | url }}">{{ d.title }}</a></{{ titleTag }}>
 			<div>{{ d.venue | mdInline | safe }}</div>
 			<div>{{ d.dates | mdInline | safe }}</div>
 		</header>
@@ -39,7 +43,7 @@ permalink: /proyectos/
 					{% if m.video %}
 						<video class="project-video" src="{{ ('/assets/videos/' + m.src) | url }}"{% if m.poster %} poster="{% imageUrl m.poster, 1200 %}"{% endif %}{% if m.autoplay %} autoplay{% endif %}{% if m.loop %} loop{% endif %}{% if m.muted %} muted{% endif %} playsinline preload="metadata"></video>
 					{% else %}
-						{% picture m.src %}
+						{% picture m.src, d.title, (isFirstSection and loop.first) %}
 					{% endif %}
 				{% endfor %}
 			</div>
