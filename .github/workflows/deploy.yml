@@ -31,6 +31,18 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Cache generated image variants
+        uses: actions/cache@v6
+        with:
+          # @11ty/eleventy-img skips encoding when the output file already exists,
+          # so restoring _site/img lets content-only builds skip all image work.
+          # A changed master/config invalidates the exact key; restore-keys reuses
+          # the previous set so only changed images are re-encoded.
+          path: _site/img
+          key: images-${{ hashFiles('src/assets/images/**', 'eleventy.config.js', 'package-lock.json') }}
+          restore-keys: |
+            images-
+
       - name: Build site
         # Defaults target a project subpath: https://<owner>.github.io/<repo>/
         # Override with repository variables PATH_PREFIX / SITE_URL for a custom
