@@ -5,7 +5,7 @@
   "description": "lava-mx.org — Eleventy static site migrated from Cargo",
   "type": "module",
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "scripts": {
     "build": "eleventy",
