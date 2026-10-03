@@ -9,15 +9,15 @@ layout: project
 variant: standard
 gallery_columns: 1
 media:
-  - src: "xLAVA_guadalajara90210.20.jpg"
-  - src: "xLAVA_guadalajara90210.22.jpg"
-  - src: "xLAVA_guadalajara90210.21.jpg"
-  - src: "xLAVA_guadalajara90210.19.jpg"
-  - src: "xLAVA_guadalajara90210.01.jpg"
-  - src: "xLAVA_guadalajara90210.08.jpg"
-  - src: "xLAVA_guadalajara90210.02.jpg"
-  - src: "xLAVA_guadalajara90210.06.jpg"
-  - src: "xLAVA_guadalajara90210.09.jpg"
+  - src: "xLAVA_guadalajara90210.20.webp"
+  - src: "xLAVA_guadalajara90210.22.webp"
+  - src: "xLAVA_guadalajara90210.21.webp"
+  - src: "xLAVA_guadalajara90210.19.webp"
+  - src: "xLAVA_guadalajara90210.01.webp"
+  - src: "xLAVA_guadalajara90210.08.webp"
+  - src: "xLAVA_guadalajara90210.02.webp"
+  - src: "xLAVA_guadalajara90210.06.webp"
+  - src: "xLAVA_guadalajara90210.09.webp"
   - src: "LAVA-FLYER-MOTION.mp4"
     video: true
     autoplay: true

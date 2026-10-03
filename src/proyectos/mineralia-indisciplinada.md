@@ -12,20 +12,20 @@ layout: project
 variant: standard
 gallery_columns: 1
 media:
-  - src: "587715752_1242916567868994_3097586358400451986_n.jpg"
-  - src: "Reel_chopo_audio.mov"
+  - src: "587715752_1242916567868994_3097586358400451986_n.webp"
+  - src: "Reel_chopo_audio.mp4"
     video: true
-    poster: "Mineraliaindisciplinada-0143-B2766344.jpg"
-  - src: "587712401_1242916671202317_2545464800785283322_n.jpg"
-  - src: "Mineraliaindisciplinada-0143-G2766345.jpg"
-  - src: "587700345_1242916747868976_3744605753807776042_n.jpg"
-  - src: "DSC01924.jpg"
-  - src: "DSC01858.jpg"
-  - src: "DSC01929.jpg"
-  - src: "Mineraliaindisciplinada-0052.jpg"
-  - src: "Mineraliaindisciplinada-8.jpg"
-  - src: "Mineraliaindisciplinada-7.jpeg"
-  - src: "Mineraliaindisciplinada-4.jpeg"
+    poster: "Mineraliaindisciplinada-0143-B2766344.webp"
+  - src: "587712401_1242916671202317_2545464800785283322_n.webp"
+  - src: "Mineraliaindisciplinada-0143-G2766345.webp"
+  - src: "587700345_1242916747868976_3744605753807776042_n.webp"
+  - src: "DSC01924.webp"
+  - src: "DSC01858.webp"
+  - src: "DSC01929.webp"
+  - src: "Mineraliaindisciplinada-0052.webp"
+  - src: "Mineraliaindisciplinada-8.webp"
+  - src: "Mineraliaindisciplinada-7.webp"
+  - src: "Mineraliaindisciplinada-4.webp"
 ---
 
 ***Mineralia indisciplinada*** es un proyecto curatorial realizado en conjunto con lxs artistas Mariana Dussel (CDMX,1998) y Daniel Robles Lizano (CDMX,1994), quienes transforman El gabinete del Museo Universitario del Chopo en un organismo rocoso que da lugar a la emergencia de nuevos cuerpos minerales.

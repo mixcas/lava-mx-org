@@ -9,7 +9,8 @@
     "serve": "eleventy --serve",
     "clean": "rm -rf _site",
     "backup": "node scripts/backup.mjs",
-    "extract": "node scripts/extract.mjs"
+    "extract": "node scripts/extract.mjs",
+    "fetch-assets": "node scripts/fetch-assets.mjs"
   },
   "devDependencies": {
     "@11ty/eleventy": "^3.1.6",

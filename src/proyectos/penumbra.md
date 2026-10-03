@@ -8,18 +8,18 @@ layout: project
 variant: standard
 gallery_columns: 1
 media:
-  - src: "ALEX0006.jpg"
-  - src: "ALEX0007.jpg"
-  - src: "ALEX0058.jpg"
-  - src: "ALEX9992.jpeg"
-  - src: "ALEX9985.jpg"
-  - src: "ALEX9976.jpg"
-  - src: "ALEX9979.jpg"
-  - src: "ALEX0003.jpg"
-  - src: "ALEX0002.jpg"
-  - src: "laylaevento24-1-29.jpg"
-  - src: "laylaevento24-1-30.jpg"
-  - src: "laylaevento24-1-19.jpg"
+  - src: "ALEX0006.webp"
+  - src: "ALEX0007.webp"
+  - src: "ALEX0058.webp"
+  - src: "ALEX9992.webp"
+  - src: "ALEX9985.webp"
+  - src: "ALEX9976.webp"
+  - src: "ALEX9979.webp"
+  - src: "ALEX0003.webp"
+  - src: "ALEX0002.webp"
+  - src: "laylaevento24-1-29.webp"
+  - src: "laylaevento24-1-30.webp"
+  - src: "laylaevento24-1-19.webp"
 ---
 
 *Penumbra* es una exposición colectiva en la que se reúne la obra de siete artistas locales e internacionales, cuya práctica nos permite sumergirnos en paisajes que transcurren en el intervalo entre la luz y la sombra.

@@ -9,15 +9,15 @@ layout: project
 variant: standard
 gallery_columns: 1
 media:
-  - src: "T007_458.jpeg"
-  - src: "T007_461.jpeg"
-  - src: "T007_465.jpeg"
-  - src: "T007_471.jpeg"
-  - src: "T007_472.jpeg"
-  - src: "T007_476.jpeg"
-  - src: "T007_484.jpeg"
-  - src: "T007_723.jpeg"
-  - src: "T007_724.jpeg"
+  - src: "T007_458.webp"
+  - src: "T007_461.webp"
+  - src: "T007_465.webp"
+  - src: "T007_471.webp"
+  - src: "T007_472.webp"
+  - src: "T007_476.webp"
+  - src: "T007_484.webp"
+  - src: "T007_723.webp"
+  - src: "T007_724.webp"
 ---
 
 ***Piel de proxy*** es el acontecer de un mundo pospretérito, si acaso futuro, en el que conviven piezas que fragmentan la realidad física y refieren a sucesos de un otro tiempo.

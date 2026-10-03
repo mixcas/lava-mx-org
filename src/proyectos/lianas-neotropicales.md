@@ -9,12 +9,12 @@ layout: project
 variant: standard
 gallery_columns: 2
 media:
-  - src: "_MG_1152-color-copy.jpeg"
-  - src: "_MG_1154-color-copy.jpeg"
-  - src: "_MG_1168-copy.jpeg"
-  - src: "_MG_1171-copy.jpeg"
-  - src: "_MG_1174-copy.jpeg"
-  - src: "_MG_1180-copy.jpeg"
+  - src: "_MG_1152-color-copy.webp"
+  - src: "_MG_1154-color-copy.webp"
+  - src: "_MG_1168-copy.webp"
+  - src: "_MG_1171-copy.webp"
+  - src: "_MG_1174-copy.webp"
+  - src: "_MG_1180-copy.webp"
 ---
 
 ***Lianas Neotropicales*** es un despliegue de la investigación de la artista **Fabiana Mapel,** en torno a su inherente relación con la naturaleza y situaciones cotidianas que le resultan esculturas performáticas. ¿Cómo se desborda la escultura?

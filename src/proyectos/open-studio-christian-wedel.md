@@ -9,19 +9,19 @@ layout: project
 variant: standard
 gallery_columns: 1
 media:
-  - src: "Copia-de-IMG_7163.jpg"
-  - src: "Copia-de-IMG_7140.jpg"
-  - src: "Copia-de-IMG_7104.jpg"
-  - src: "Copia-de-IMG_7098.jpg"
-  - src: "Copia-de-IMG_7156.jpg"
-  - src: "Copia-de-IMG_7111.jpg"
-  - src: "Copia-de-IMG_7169.jpg"
-  - src: "Copia-de-IMG_7143.jpg"
-  - src: "Copia-de-IMG_7105.jpg"
-  - src: "Copia-de-IMG_7170.jpg"
-  - src: "Copia-de-IMG_7164.jpg"
-  - src: "Copia-de-IMG_7172.jpg"
-  - src: "Copia-de-IMG_7135.jpg"
+  - src: "Copia-de-IMG_7163.webp"
+  - src: "Copia-de-IMG_7140.webp"
+  - src: "Copia-de-IMG_7104.webp"
+  - src: "Copia-de-IMG_7098.webp"
+  - src: "Copia-de-IMG_7156.webp"
+  - src: "Copia-de-IMG_7111.webp"
+  - src: "Copia-de-IMG_7169.webp"
+  - src: "Copia-de-IMG_7143.webp"
+  - src: "Copia-de-IMG_7105.webp"
+  - src: "Copia-de-IMG_7170.webp"
+  - src: "Copia-de-IMG_7164.webp"
+  - src: "Copia-de-IMG_7172.webp"
+  - src: "Copia-de-IMG_7135.webp"
 ---
 
 **Christian Wedel** es un artista que trabaja desde la inmensidad y densidad de los ecosistemas tropicales. Su práctica se nutre de la ciencia ficción y la mitología, planteando posibilidades de relaciones interespecie por medio de la pintura, cerámica y la escultura con objetos encontrados. Observando las relaciones de compenetración y enmarañamiento entre plantas, humanos y materias, Christian ensaya mundos de intimidad y hospitalidad alternativos al paradigma antropocentrista

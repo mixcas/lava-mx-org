@@ -9,16 +9,16 @@ layout: project
 variant: standard
 gallery_columns: 1
 media:
-  - src: "La-Nao-febrero-2025_019.jpg"
-  - src: "La-Nao-febrero-2025_030.jpg"
-  - src: "La-Nao-febrero-2025_022.jpg"
-  - src: "La-Nao-febrero-2025_048.jpg"
-  - src: "La-Nao-febrero-2025_043.jpg"
-  - src: "La-Nao-febrero-2025_041.jpg"
-  - src: "La-Nao-febrero-2025_045.jpg"
-  - src: "La-Nao-febrero-2025_023.jpg"
-  - src: "La-Nao-febrero-2025_027.jpg"
-  - src: "Corteza-Liquida-x-Lava.-jpg.jpg"
+  - src: "La-Nao-febrero-2025_019.webp"
+  - src: "La-Nao-febrero-2025_030.webp"
+  - src: "La-Nao-febrero-2025_022.webp"
+  - src: "La-Nao-febrero-2025_048.webp"
+  - src: "La-Nao-febrero-2025_043.webp"
+  - src: "La-Nao-febrero-2025_041.webp"
+  - src: "La-Nao-febrero-2025_045.webp"
+  - src: "La-Nao-febrero-2025_023.webp"
+  - src: "La-Nao-febrero-2025_027.webp"
+  - src: "Corteza-Liquida-x-Lava.-jpg.webp"
 ---
 
 Fruto de una investigación artística de largo aliento *Corteza líquida* es una exposición individual de la artista Sonia Bandura que explora las relaciones simbióticas entre microorganismos bacterianos y su influencia en los procesos geológicos. Desde las profundidades inhóspitas y húmedas de la Tierra, estos minúsculos y silenciosos organismos emergen como imponentes artífices de la vida.
@@ -39,4 +39,4 @@ Sonia Bandura (Buenos Aires, 1992) is a visual artist whose practice encompasses
 
 [Dossier
 
-](https://freight.cargo.site/m/M2199276210961373889464138728670/Dossier_Corteza-Liquida--xLava.pdf.pdf)
+](../../assets/files/Dossier_Corteza-Liquida--xLava.pdf.pdf)

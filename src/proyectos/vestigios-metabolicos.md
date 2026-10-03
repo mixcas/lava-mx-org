@@ -9,15 +9,15 @@ layout: project
 variant: standard
 gallery_columns: 1
 media:
-  - src: "_DSC9798.jpeg"
-  - src: "_DSC9800.jpeg"
-  - src: "_DSC9802.jpeg"
-  - src: "_DSC9824.jpeg"
-  - src: "_DSC9846.jpeg"
-  - src: "_DSC9852.jpeg"
-  - src: "_DSC9860.jpeg"
-  - src: "_DSC9861.jpeg"
-  - src: "_DSC9933.jpeg"
+  - src: "_DSC9798.webp"
+  - src: "_DSC9800.webp"
+  - src: "_DSC9802.webp"
+  - src: "_DSC9824.webp"
+  - src: "_DSC9846.webp"
+  - src: "_DSC9852.webp"
+  - src: "_DSC9860.webp"
+  - src: "_DSC9861.webp"
+  - src: "_DSC9933.webp"
 ---
 
 ***Vestigios Metabólicos*** es el espacio donde se muestran piezas o vestigios de corporalidades indistintas, develando el momento transitorio de un tiempo incierto a otro, de un estado de la materia hasta el momento final donde se convierten seres fantásticos, paisajes místicos y composiciones simbólicas de una mitología desconocida.

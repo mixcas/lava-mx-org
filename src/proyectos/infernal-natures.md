@@ -8,15 +8,15 @@ slug: "infernal-natures"
 layout: project
 variant: three-column
 media_left:
-  - src: "20240629-03-roam-BLAM-opening.jpg"
-  - src: "20240629-15-roam-BLAM-doku.jpg"
-  - src: "20240629-14-roam-BLAM-doku.jpg"
-  - src: "20240629-03-roam-BLAM-doku.jpg"
+  - src: "20240629-03-roam-BLAM-opening.webp"
+  - src: "20240629-15-roam-BLAM-doku.webp"
+  - src: "20240629-14-roam-BLAM-doku.webp"
+  - src: "20240629-03-roam-BLAM-doku.webp"
 media_middle:
-  - src: "20240629-16-roam-BLAM-doku.jpg"
-  - src: "20240629-17-roam-BLAM-opening.jpg"
-  - src: "20240629-13-roam-BLAM-doku.jpg"
-  - src: "20240629-06-roam-BLAM-doku.jpg"
+  - src: "20240629-16-roam-BLAM-doku.webp"
+  - src: "20240629-17-roam-BLAM-opening.webp"
+  - src: "20240629-13-roam-BLAM-doku.webp"
+  - src: "20240629-06-roam-BLAM-doku.webp"
 ---
 
 B-L-A-M es un intercambio de tres años que busca fortalecer las relaciones entre la escena artística independiente de Berlín, Los Ángeles y Ciudad de México.

@@ -142,6 +142,12 @@ const sanitize = (name) => {
   return `${clean || "asset"}${ext.toLowerCase()}`;
 };
 
+// Masters are stored as WebP (images) / MP4 (video); keys use those extensions.
+const outputName = (name, isVideo) =>
+  isVideo
+    ? name.replace(/\.(mov|webm|m4v|mp4)$/i, ".mp4")
+    : name.replace(/\.(jpe?g|png|gif|tiff?|avif|webp)$/i, ".webp");
+
 const withHash = (base, hash) => {
   const dot = base.lastIndexOf(".");
   const ext = dot > 0 ? base.slice(dot) : "";
@@ -336,7 +342,7 @@ function main() {
 
   const byName = new Map();
   for (const asset of allAssets) {
-    const base = sanitize(asset.name);
+    const base = sanitize(outputName(asset.name, asset.isVideo));
     if (!byName.has(base)) byName.set(base, []);
     byName.get(base).push(asset);
   }
