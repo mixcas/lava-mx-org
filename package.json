@@ -8,10 +8,13 @@
     "build": "eleventy",
     "serve": "eleventy --serve",
     "clean": "rm -rf _site",
-    "backup": "node scripts/backup.mjs"
+    "backup": "node scripts/backup.mjs",
+    "extract": "node scripts/extract.mjs"
   },
   "devDependencies": {
     "@11ty/eleventy": "^3.1.6",
-    "@11ty/eleventy-img": "^7.0.0"
+    "@11ty/eleventy-img": "^7.0.0",
+    "node-html-parser": "^9.0.4",
+    "turndown": "^7.2.4"
   }
 }

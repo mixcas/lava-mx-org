@@ -7,11 +7,15 @@ export default function (eleventyConfig) {
   // @11ty/eleventy-img shortcodes (Phase 2).
   eleventyConfig.addPassthroughCopy({ "src/assets": "assets" });
 
+  // Cargo content used <br> for line breaks; render single newlines as breaks.
+  eleventyConfig.amendLibrary("md", (md) => md.set({ breaks: true, html: true }));
+
   return {
     dir: {
       input: "src",
       output: "_site",
       includes: "_includes",
+      layouts: "_includes/layouts",
       data: "_data",
     },
     // `/` for a custom domain; `/<repo-name>/` when served from a GitHub Pages

@@ -1,0 +1,32 @@
+---
+layout: base.njk
+---
+{# Placeholder layout for Phase 1 validation; rebuilt with the faithful design in Phase 3. #}
+<article class="project">
+	<header class="project-header">
+		<h1 class="project-title">{{ title }}</h1>
+		{% if venue %}<p class="project-venue">{{ venue }}</p>{% endif %}
+		{% if dates %}<p class="project-dates">{{ dates }}</p>{% endif %}
+	</header>
+
+	{% if variant == "three-column" %}
+		<div class="project-gallery project-gallery--left">
+			{% for m in media_left %}{{ m.src }}<br>{% endfor %}
+		</div>
+		<div class="project-gallery project-gallery--middle">
+			{% for m in media_middle %}{{ m.src }}<br>{% endfor %}
+		</div>
+	{% else %}
+		<div class="project-gallery" data-columns="{{ gallery_columns }}">
+			{% for m in media %}
+				{% if m.video %}
+					<video src="{{ ('/assets/videos/' + m.src) | url }}"{% if m.poster %} poster="{{ ('/assets/images/' + m.poster) | url }}"{% endif %}{% if m.autoplay %} autoplay{% endif %}{% if m.loop %} loop{% endif %}{% if m.muted %} muted{% endif %} playsinline></video>
+				{% else %}
+					<img src="{{ ('/assets/images/' + m.src) | url }}" alt="" loading="lazy">
+				{% endif %}
+			{% endfor %}
+		</div>
+	{% endif %}
+
+	<div class="project-body">{{ content | safe }}</div>
+</article>

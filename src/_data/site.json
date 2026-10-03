@@ -1,0 +1,20 @@
+{
+  "title": "Lava",
+  "description": "Lava es una plataforma de encuentros transversales entre investigación, gestión y curaduría de prácticas artísticas ubicada en la Ciudad de México.",
+  "url": "https://lava-mx.org",
+  "email": "hola@lava-mx.org",
+  "contactEmail": "info.lavamx@gmail.com",
+  "contactName": "info.lavamx",
+  "instagram": "lava__mx",
+  "city": "Ciudad de México",
+  "nav": {
+    "about": {
+      "label": "Lava es — Lava is",
+      "url": "/acerca-de/"
+    },
+    "projects": {
+      "label": "Proyectos anteriores — Previous projects",
+      "url": "/proyectos/"
+    }
+  }
+}
