@@ -4,6 +4,9 @@
   "private": true,
   "description": "lava-mx.org — Eleventy static site migrated from Cargo",
   "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "build": "eleventy",
     "serve": "eleventy --serve",
