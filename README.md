@@ -130,4 +130,6 @@ The site is designed to go live on a project subpath first, then switch to
   Cargo's licensed Diatype.
 - **Old URLs:** the rebuild uses clean slugs and does not preserve the original
   Cargo URLs (see `MIGRATION-PLAN.md`).
-- **Large assets:** the dossier PDFs are committed as-is (~70 MB total).
+- **Large assets:** image masters (~82 MB, up to 3200 px), videos (~18 MB) and
+  dossier PDFs (~71 MB) are committed as-is; the responsive AVIF/WebP variants
+  are generated at build time, so the build is image-heavy (~4 min locally).

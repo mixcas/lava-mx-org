@@ -11,7 +11,7 @@ const PATH_PREFIX = (process.env.PATH_PREFIX || "/").replace(/\/+$/, ""); // "" 
 const SITE_URL = (process.env.SITE_URL || "https://lava-mx.org").replace(/\/$/, "");
 const IMAGE_URL_PATH = `${PATH_PREFIX}/img/`; // "/img/" | "/repo/img/"
 const IMAGES_DIR = path.join("src", "assets", "images");
-const RESPONSIVE_WIDTHS = [480, 960, 1440, 2000];
+const RESPONSIVE_WIDTHS = [640, 1024, 1440, 1920, 2560, 3200];
 
 /** Process an image master into responsive WebP + AVIF variants. */
 async function processImage(src, widths) {
@@ -26,8 +26,8 @@ async function processImage(src, widths) {
     formats: ["avif", "webp"],
     outputDir: "./_site/img/",
     urlPath: IMAGE_URL_PATH,
-    sharpWebpOptions: { quality: 78 },
-    sharpAvifOptions: { quality: 58 },
+    sharpWebpOptions: { quality: 88, effort: 4 },
+    sharpAvifOptions: { quality: 65, effort: 4 },
   });
 }
 

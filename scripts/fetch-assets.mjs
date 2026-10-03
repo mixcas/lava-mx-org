@@ -35,8 +35,8 @@ const FILE_OUT = path.join("src", "assets", "files");
 const CONTENT_DIRS = [path.join("src", "proyectos"), "src"];
 
 const CONCURRENCY = 4;
-const IMG_MAX = 2000;
-const IMG_QUALITY = 80;
+const IMG_MAX = 3200;
+const IMG_QUALITY = 92;
 
 // Site chrome (not part of the project media manifest).
 const SITE_ASSETS = [
