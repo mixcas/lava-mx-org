@@ -10,6 +10,8 @@
   "scripts": {
     "build": "eleventy",
     "serve": "eleventy --serve",
+    "preview": "node scripts/dev-server.mjs",
+    "images:rebuild": "rm -rf _site/img && eleventy",
     "clean": "rm -rf _site",
     "backup": "node scripts/backup.mjs",
     "extract": "node scripts/extract.mjs",
