@@ -18,8 +18,11 @@ async function processImage(src, widths) {
   const input = path.join(IMAGES_DIR, src);
   const stats = await Image(input, { statsOnly: true, formats: ["webp"] });
   const sourceWidth = Math.max(...Object.values(stats).flat().map((format) => format.width));
-  let chosen = widths.filter((width) => width <= sourceWidth);
-  if (!chosen.length) chosen = [sourceWidth];
+  let chosen = widths.filter((width) => width < sourceWidth);
+  // Always include the native width so full source detail is reachable
+  // (never upscale). Without this, a source between two steps (e.g. 1365px)
+  // would be stuck at the smaller step (1024) and look softer than the original.
+  chosen.push(sourceWidth);
 
   return Image(input, {
     widths: chosen,
