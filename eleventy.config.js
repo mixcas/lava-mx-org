@@ -8,6 +8,9 @@ import MarkdownIt from "markdown-it";
 
 import { buildProjectView } from "./lib/project-view.js";
 import { applyPathPrefix } from "./lib/path-prefix.js";
+import { assertProjectsValid } from "./lib/project-contract.js";
+
+const ROOT = import.meta.dirname;
 
 // `/` for a custom domain; `/<repo>/` when served from a GitHub Pages subpath.
 const PATH_PREFIX = (process.env.PATH_PREFIX || "/").replace(/\/+$/, ""); // "" | "/repo"
@@ -38,6 +41,13 @@ async function processImage(src, widths) {
 }
 
 export default function (eleventyConfig) {
+  // Project content contract (lib/project-contract.js): reject invalid project
+  // front matter before any page renders, with a message naming the project file
+  // and field — a broken project must never reach the output.
+  eleventyConfig.on("eleventy.before", ({ inputDir, dir }) => {
+    assertProjectsValid({ inputDir: path.resolve(ROOT, inputDir ?? dir.input) });
+  });
+
   // Static assets copied verbatim. Image masters are NOT copied — they are
   // processed by @11ty/eleventy-img into responsive variants under /img/.
   eleventyConfig.addPassthroughCopy({ "src/assets/css": "assets/css" });
