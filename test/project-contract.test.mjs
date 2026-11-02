@@ -5,7 +5,7 @@ import { after, describe, it } from "node:test";
 
 import yaml from "js-yaml";
 
-import { checkProjects } from "../lib/project-contract.js";
+import { checkProjects, LEGACY_KEYS } from "../lib/project-contract.js";
 import { buildContentDir, projectFile, removeContentDirs, REPO_INPUT, writeContentDir } from "./support/contract.mjs";
 
 after(removeContentDirs);
@@ -82,18 +82,8 @@ const INVALID = [
   },
 ];
 
-/** Legacy front-matter keys, and what replaced each one. */
-const LEGACY = {
-  current: 'use "featured"',
-  slug: "the URL comes from the file name",
-  layout: "the layout comes from proyectos.11tydata.json",
-  text: 'use "text_es" (and optionally "text_en")',
-  bio: 'use "text_es" (and optionally "text_en")',
-  media_left: 'use one ordered "media" list',
-  media_middle: 'use one ordered "media" list',
-};
-
-for (const [key, hint] of Object.entries(LEGACY)) {
+/** Legacy front-matter keys, and what replaced each one (the build's own list). */
+for (const [key, hint] of Object.entries(LEGACY_KEYS)) {
   INVALID.push({
     name: `the legacy "${key}" key`,
     content: project({ [key]: key === "text" || key === "bio" ? "Texto legado." : "legado" }),
@@ -157,6 +147,11 @@ INVALID.push(
     name: "a video whose master does not exist",
     content: media({ type: "video", src: "/assets/videos/no-existe.mp4" }),
     message: 'media[1] ("/assets/videos/no-existe.mp4"): the master src/assets/videos/no-existe.mp4 does not exist',
+  },
+  {
+    name: "alt text that is not text",
+    content: media({ type: "image", src: IMAGE, alt: 42 }),
+    message: `media[1] ("${IMAGE}"): "alt" must be a string (found: 42)`,
   },
   {
     name: "a video poster outside the image folder",

@@ -12,8 +12,9 @@
 	view model (`splitAt`): the first column takes the first half rounded up,
 	the second column takes the rest.
 
-	The divider between the Spanish and the optional English text comes from the
-	shared `divider` macro, so the `//` literal lives in one place.
+	The title and the bilingual text come from the `projectTitle` and
+	`projectBody` macros (`partials/project-content.njk`), so both variants
+	share one copy of that markup.
 
 	Context:
 		projects — project view models, in display order
@@ -21,14 +22,14 @@
 		linked   — link the title to its project page (listing pages)
 		priority — load the first gallery image of the first project eagerly (LCP)
 #}
-{% from "partials/divider.njk" import divider -%}
+{% from "partials/project-content.njk" import projectTitle, projectBody -%}
 {% set projectHeading = heading or "h2" %}
 {% for project in projects %}
 {% if project.variant == "three-column" %}
 	<article class="project project--three-column">
 		<div class="project-three">
 			<div class="project-three__col">
-				<{{ projectHeading }} class="project-header__title">{% if linked %}<a href="{{ project.url | url }}">{{ project.title }}</a>{% else %}{{ project.title }}{% endif %}</{{ projectHeading }}>
+				{{ projectTitle(project, projectHeading, linked) }}
 				{% gallery project.gallery.slice(0, project.splitAt) %}
 			</div>
 			<div class="project-three__col">
@@ -37,22 +38,20 @@
 			</div>
 			<div class="project-three__col">
 				<div>{{ project.dates | mdInline | safe }}</div>
-				<div class="project-body">{{ project.text.spanish | md | safe }}{% if project.text.english %}{{ divider() }}
-				{{ project.text.english | md | safe }}{% endif %}</div>
+				{{ projectBody(project.text) }}
 			</div>
 		</div>
 	</article>
 {% else %}
 	<article class="project">
 		<header class="project-header">
-			<{{ projectHeading }} class="project-header__title">{% if linked %}<a href="{{ project.url | url }}">{{ project.title }}</a>{% else %}{{ project.title }}{% endif %}</{{ projectHeading }}>
+			{{ projectTitle(project, projectHeading, linked) }}
 			<div>{{ project.venue | mdInline | safe }}</div>
 			<div>{{ project.dates | mdInline | safe }}</div>
 		</header>
 		<div class="project-main">
 			{% gallery project.gallery, project.columns, (priority and loop.first) %}
-			<div class="project-body">{{ project.text.spanish | md | safe }}{% if project.text.english %}{{ divider() }}
-			{{ project.text.english | md | safe }}{% endif %}</div>
+			{{ projectBody(project.text) }}
 		</div>
 	</article>
 {% endif %}

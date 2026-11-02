@@ -45,10 +45,11 @@ Notes:
 - Collaborators can open the repository and edit content and media. They cannot
   change `.pages.yml` or manage other collaborators — those stay with GitHub
   users who have repository access.
-- Collaborator writes use the GitHub App installation token, and this repository
-  does not set `settings.commit.identity: user`, so commits are attributed to the
-  app rather than to the editor's name. The commit message and the file path
-  identify the change; `git log` is the audit trail.
+- Collaborator writes push with the GitHub App installation token, and
+  `settings.commit.identity: user` makes each commit authored by the editor who
+  saved it, with the name and email from their Pages CMS account — the push still
+  uses the installation token, so the deploy is unaffected. The commit message
+  and the file path identify the change; `git log` is the audit trail.
 
 ## 3. Verify the CMS on a non-production branch **(manual)**
 
@@ -89,7 +90,9 @@ from the repository.
 6. **Bilingual text and About** — edit `text_es` and `text_en`, save, and confirm
    both live in front matter (not in the Markdown body). Do the same for
    `bio_es`, `bio_en` and `team`; confirm `title` and `layout` are not editable
-   and survive the save.
+   and survive the save. Upload a PDF from the insert button in `text_es` and
+   confirm the link points at `/assets/files/…` and the file lands in
+   `src/assets/files/`.
 7. **Site settings** — change one value that reaches the site (for example the
    footer city) and one that does not (for example *Dirección del sitio*), save,
    and confirm both survive and the description says which one has no effect.
@@ -99,7 +102,8 @@ from the repository.
    and confirm the file still carries `variant: three-column` and no unmanaged
    key was dropped.
 10. **Commits land on the branch** — confirm every save above produced a commit
-    on `cms-verification` and that `main` is untouched.
+    on `cms-verification`, that `main` is untouched, and that the commit author
+    is the editor who saved it (their name and email, not the Pages CMS app).
 11. Run the suite on the branch before merging:
 
     ```bash
