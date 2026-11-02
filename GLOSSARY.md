@@ -12,6 +12,7 @@ _Avoid_: Show, event, entry
 A project selected by an editor to appear on the homepage, independent of its exhibition dates.
 _Avoid_: Current project, active project, featured project, ongoing project
 _Front matter_: `featured: true`; the `featuredProjects` collection.
+_Public label_: the homepage heading reads «proyectos actuales» (the site copy for this group, not a second term).
 
 **Archive project**:
 A project that is not selected for the homepage; it appears on the project archive page.

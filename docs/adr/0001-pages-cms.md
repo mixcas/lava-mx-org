@@ -30,9 +30,13 @@ The shipped configuration:
 - labels and helper text in Spanish (the app chrome stays English);
 - `settings.content.merge: true`, so keys outside the schema (`variant`) survive
   a save;
+- `settings.commit.identity: user`, so each save is committed as the editor who
+  made it (the push still uses the GitHub App installation token);
 - three media sources — images, videos and documents — that keep original
   filenames and reject formats the build cannot publish (WebP, JPG, JPEG, PNG,
   AVIF, GIF; MP4, WebM; PDF);
+- rich-text fields that insert from the documents library, so an editor can
+  upload a PDF while writing and link to it;
 - a gallery modelled as a block list keyed by `type` (`image` / `video`), with
   alt text, an optional video poster and autoplay / loop / mute flags;
 - create, rename and delete enabled for projects, with the filename visible on
@@ -52,9 +56,9 @@ The shipped configuration:
 - A save is a commit on the branch selected in the app. Only `main` deploys
   (the deploy workflow runs on pushes to `main` and on manual dispatch), so a
   branch can be verified before it is merged.
-- Collaborator writes use the GitHub App installation token; without
-  `settings.commit.identity: user`, commits carry the app identity rather than
-  the editor's.
+- Collaborator writes push with the GitHub App installation token; commits are
+  authored by the editor who saved (`settings.commit.identity: user`), not by
+  the app.
 - There is no rendered page preview inside the CMS. Editors check the live site
   after the deploy, currently about four minutes.
 - There is no URL-change warning in the app and no redirects. The warning lives

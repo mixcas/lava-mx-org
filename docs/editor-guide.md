@@ -108,9 +108,10 @@ editor visual se atora y necesitas corregir el formato a mano.
 - **Enlaces y descargas van al final del texto en español**, porque el texto en
   inglés es opcional y no queremos que los enlaces desaparezcan cuando no hay
   traducción.
-- **Enlazar un PDF:** el archivo vive en la biblioteca de **Documentos** y su
-  dirección en el sitio es `/assets/files/nombre-del-archivo.pdf`. En el texto,
-  escribe un enlace con esa dirección (por ejemplo
+- **Subir y enlazar un PDF:** usa el botón de insertar del editor y elige la
+  biblioteca de **Documentos**: puedes subir el PDF ahí mismo y enlazarlo en el
+  texto. Si lo prefieres, escribe el enlace a mano: la dirección del archivo es
+  `/assets/files/nombre-del-archivo.pdf` (por ejemplo
   `[Dossier](/assets/files/Dossier.pdf)`). El sitio añade solo el prefijo
   necesario cuando se publica en una subcarpeta, así que la dirección siempre
   funciona igual.
@@ -168,7 +169,9 @@ mantenedor.
 ## Publicar y revisar
 
 1. Guarda el formulario. Pages CMS guarda el cambio como un commit en la rama
-   en la que estás trabajando. Puede tardar unos segundos.
+   en la que estás trabajando. Puede tardar unos segundos. El commit queda
+   registrado a tu nombre y con tu correo, así que el historial muestra quién
+   hizo cada cambio.
 2. En la rama de producción (`main`), ese commit inicia la publicación
    automática (**GitHub Actions**). Tarda **aproximadamente 4 minutos**.
 3. Cuando termine, abre el sitio publicado en la dirección de producción (por

@@ -87,12 +87,18 @@ live site, not as a copy of the templates. Failures name the page and the
 assertion, for example
 `page /proyectos/penumbra/: gallery images rendered`.
 
-The build honours the same variables as `npm run build`, so the suite can be
-run for a subpath deployment or any origin:
+The suite builds twice: the primary build under `PATH_PREFIX` (the root when it
+is unset) and a second build under `/lava-mx-org/` in a child process, so every
+run also checks the subpath deployment. Both reuse the `_site/img` cache. The
+primary build honours the same variables as `npm run build`, so the suite can be
+run for another subpath or origin:
 
 ```bash
 PATH_PREFIX=/lava-mx-org/ SITE_URL=https://example.github.io npm test
 ```
+
+When `PATH_PREFIX` is already `/lava-mx-org/`, both builds are the same and the
+suite builds once.
 
 In CI, run it after `npm ci` with the same `PATH_PREFIX` / `SITE_URL` values
 used for the deploy build (see `.github/workflows/deploy.yml`), and cache
@@ -117,7 +123,10 @@ scripts/
   fetch-assets.mjs             Phase 2 — download + optimize assets
 test/
   site.test.mjs                Generated-site assertions (`npm test`)
-  support/                     Build-once harness + baseline expectations
+  project-contract.test.mjs    Build-time validation rules
+  project-view.test.mjs        View model's reading of media items
+  docs.test.mjs                Handoff documents exist, are linked, are committed
+  support/                     Build-once harness + editorial fixture facts
 .github/workflows/deploy.yml   Build + deploy to GitHub Pages
 _cargo-export/                 Raw Cargo backup (git-ignored)
 ```
@@ -152,7 +161,7 @@ media:                  # ordered media items; the list order is the display ord
     # alt: optional; omitted means the project title is used
   - type: video
     src: "/assets/videos/Reel_chopo_audio.mp4"
-    poster: "/assets/images/Mineralia-0143-B2766344.webp"   # optional
+    poster: "/assets/images/Mineraliaindisciplinada-0143-B2766344.webp"   # optional
     # autoplay / loop / mute: only written when enabled
 text_es: |-             # Spanish text, required; rendered first, with Markdown
   ...
@@ -163,6 +172,12 @@ text_en: |-             # English text, optional; rendered after the divider
 Only non-default values appear: `variant: three-column` (Infernal Natures) and
 `gallery_columns: 2` (Lianas Neotropicales). The file name is the public URL:
 `src/proyectos/penumbra.md` → `/proyectos/penumbra/`. There is no `slug` key.
+
+The listing pages set a page-level `hero` flag in their own front matter —
+`hero: featured` on the homepage (`index.njk`), `hero: archive` on
+`/proyectos/` (`proyectos.njk`). It names the collection whose first image
+becomes the page's preloaded LCP image and social image; a project page uses its
+own first gallery image instead.
 
 A project's text is two explicit fields: `text_es` (Spanish, required) and
 `text_en` (English, optional). The template renders the Spanish text, then a
@@ -266,6 +281,9 @@ branch (all manual steps).
 
 - `settings.content.merge: true` — keys outside the schema (`variant`) are
   preserved when an editor saves a project.
+- `settings.commit.identity: user` — every save is committed under the editor's
+  own name and email. The push still uses the GitHub App installation token, so
+  the deploy is unaffected.
 - The `proyectos` collection edits `src/proyectos` and excludes
   `proyectos.11tydata.json`, so the directory defaults never appear as a project.
 - The filename field is visible on create and on edit and is seeded from the
@@ -281,12 +299,15 @@ branch (all manual steps).
   text, choose a video poster, and toggle autoplay / loop / mute.
   `gallery_columns` stores the number of gallery columns (1 or 2).
 - The text is two rich-text fields, `text_es` (Spanish, required) and `text_en`
-  (English, optional), both Markdown with the editor/source switch and no media
-  (the text lives in front matter, not in the Markdown body).
+  (English, optional), both Markdown with the editor/source switch (the text
+  lives in front matter, not in the Markdown body). Their insert button reads
+  the documents library, so an editor can upload a PDF while writing and link to
+  it; no other media is inserted.
 - The `about` entry edits `src/acerca-de.md`: `bio_es` (Spanish, required),
   `bio_en` (English, optional) and `team`, all Markdown rich text with the
-  source switch and no media. `title` and `layout` stay out of the editor, so
-  merge mode preserves them and the page keeps its layout on save.
+  source switch and the same documents library. `title` and `layout` stay out of
+  the editor, so merge mode preserves them and the page keeps its layout on
+  save.
 - The schema covers the `proyectos` collection (title, venue, dates, both texts,
   homepage status, order, gallery columns and the gallery), the About file
   (`bio_es`, `bio_en`, `team`) and the site settings file (every key in
