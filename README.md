@@ -21,7 +21,7 @@ deployed to GitHub Pages.
 |---|---|
 | `npm run serve` | Build and serve locally with live reload |
 | `npm run build` | Build the site into `_site/` |
-| `npm test` | Build once and assert the generated site (`test/site.test.mjs`) |
+| `npm test` | Build once and assert the generated site plus the content contract (`test/*.test.mjs`) |
 | `npm run clean` | Remove the build output |
 | `npm run backup` | Mirror the live Cargo site into `_cargo-export/` |
 | `npm run extract` | Parse the backup into `src/proyectos/*.md`, `src/acerca-de.md`, site data |
@@ -54,6 +54,12 @@ the generated HTML with `node-html-parser` and asserts the public behaviour —
 - the content contract: the project directory defaults, that no project file
   carries a legacy `current` / `slug` / `layout` key, and that `.pages.yml`
   still declares the project collection the editors depend on.
+
+`test/project-contract.test.mjs` covers build-time validation: the migrated
+content passes, and each broken rule (a missing title, a non-numeric `order`, a
+legacy key, a bad media item, a missing master…) fails a real build with a
+message naming the file and the field. `test/project-view.test.mjs` pins the
+view model's canonical reading of media items.
 
 Expectations live in `test/support/projects.mjs` as editorial facts about the
 live site, not as a copy of the templates. Failures name the page and the
@@ -157,13 +163,47 @@ Each media item is typed: an image has a `src` and optional `alt`, a video has a
 `src`, optional `poster`, and `autoplay` / `loop` / `mute` flags. Sources are
 canonical asset paths — `/assets/images/…` for images (masters in
 `src/assets/images/`), `/assets/videos/…` for videos, `/assets/files/…` for
-documents. `lib/project-view.js` normalizes both canonical paths and legacy bare
-filenames to the master basename, and also still reads the legacy
-`{ src, video: true, poster, autoplay, loop, muted }` shape until ticket #11
-removes it. Images are processed by `@11ty/eleventy-img` into the responsive
-variants at build time. Dossier PDFs live in `src/assets/files/` and are linked
-with page-relative paths (`../../assets/files/...`) so they work under any base
-path.
+documents. `lib/project-view.js` normalizes those paths to the master basename
+the image pipeline reads. Images are processed by `@11ty/eleventy-img` into the
+responsive variants at build time. Dossier PDFs live in `src/assets/files/` and
+are linked root-relative (`/assets/files/...`); the build applies the deployment
+path prefix (`lib/path-prefix.js`), so they work under any base path.
+
+Content is edited by hand or through Pages CMS, and always in this one canonical
+shape: the build no longer interprets pre-CMS leftovers (`media_left` /
+`media_middle`, `{ video: true }`, `muted`, bare filenames).
+
+### Content contract (build validation)
+
+Before rendering anything, the build checks every file in `src/proyectos/`
+(`lib/project-contract.js`) and refuses to publish content an editor could not
+have saved:
+
+- `title` and `text_es` are non-empty, `order` is a number, `featured` is a
+  boolean, `gallery_columns` is 1 or 2 (the three-column variant included), and
+  `variant` is `standard` or `three-column`;
+- every media item has a `type` (`image` / `video`) and a `src` under the right
+  assets folder; image sources (and video posters) use webp, jpg, jpeg, png,
+  avif or gif, video sources use mp4 or webm;
+- the master file each source names exists in `src/assets/images/` or
+  `src/assets/videos/`;
+- no project file still carries a legacy key (`current`, `slug`, `layout`,
+  `text`, `bio`, `media_left`, `media_middle`) or a legacy per-item `video` /
+  `muted` flag.
+
+Every problem is reported in one build failure, naming the project file and the
+field (gallery items are numbered from 1):
+
+```text
+Invalid project content (2 problems):
+  - src/proyectos/penumbra.md: "order" must be a number (found: "primero")
+  - src/proyectos/penumbra.md: media[2] ("/assets/images/foto.tiff"): "src" has an unsupported image format ".tiff"; use webp, jpg, jpeg, png, avif or gif
+Fix the front matter under src/proyectos/ (.pages.yml describes each field).
+```
+
+`npm test` runs the same checks against throwaway content directories and
+through a real Eleventy build, so each rule is proven to stop the build.
+
 
 ### About page
 

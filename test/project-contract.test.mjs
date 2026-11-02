@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import { after, describe, it } from "node:test";
 
 import yaml from "js-yaml";
@@ -260,6 +262,15 @@ describe("project content contract", () => {
 
     assert.deepEqual(checkProjects({ inputDir }), [
       "src/proyectos/sin-front-matter.md: the file has no YAML front matter",
+    ]);
+  });
+
+  it("fails the build when the directory defaults are missing", () => {
+    const inputDir = writeContentDir({ "penumbra.md": project() });
+    fs.rmSync(path.join(inputDir, "proyectos/proyectos.11tydata.json"));
+
+    assert.deepEqual(checkProjects({ inputDir }), [
+      "src/proyectos/proyectos.11tydata.json: the project directory defaults file is missing",
     ]);
   });
 });
