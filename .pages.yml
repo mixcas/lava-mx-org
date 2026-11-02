@@ -92,6 +92,33 @@ content:
         description: >-
           Fechas de exhibición tal como se muestran en la página del proyecto;
           admite Markdown.
+      # The project text is two fields, one per language: the template renders
+      # the Spanish text first, then a divider, then the English text when it
+      # exists. Both live in front matter (the Markdown body is empty), so their
+      # rich-text fields take no media source.
+      - name: text_es
+        label: Texto en español
+        type: rich-text
+        required: true
+        options:
+          format: markdown
+          switcher: true
+          media: false
+        description: >-
+          Texto del proyecto en español; admite Markdown. Se muestra primero.
+          Los enlaces y descargas del proyecto van aquí, al final de este
+          texto, porque el texto en inglés es opcional.
+      - name: text_en
+        label: Texto en inglés
+        type: rich-text
+        options:
+          format: markdown
+          switcher: true
+          media: false
+        description: >-
+          Texto del proyecto en inglés; admite Markdown. Aparece después del
+          texto en español, separado por «//». Si lo dejas vacío, el proyecto
+          se muestra solo en español.
       - name: featured
         label: Proyecto en portada
         type: boolean

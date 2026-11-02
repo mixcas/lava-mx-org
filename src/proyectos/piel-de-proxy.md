@@ -22,7 +22,7 @@ media:
     src: "/assets/images/T007_723.webp"
   - type: image
     src: "/assets/images/T007_724.webp"
-text: |-
+text_es: |-
   ***Piel de proxy*** es el acontecer de un mundo pospretérito, si acaso futuro, en el que conviven piezas que fragmentan la realidad física y refieren a sucesos de un otro tiempo.
   
   ¿Cuál es el primer indicio de la virtualidad en los cuerpos?
