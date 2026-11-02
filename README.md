@@ -165,12 +165,36 @@ variants at build time. Dossier PDFs live in `src/assets/files/` and are linked
 with page-relative paths (`../../assets/files/...`) so they work under any base
 path.
 
+### About page
+
+`src/acerca-de.md` is the About page. Its front matter keeps the biography in
+two language fields plus the team:
+
+```yaml
+title: "Acerca de"
+layout: about
+bio_es: |-              # Spanish biography, required; rendered first
+  ...
+bio_en: |-              # English biography, optional; rendered after the divider
+  ...
+team: |-                # names, roles and the former-collaborators heading
+  ...
+```
+
+The layout renders `bio_es`, then the `//` divider when `bio_en` has text, then
+`bio_en`, with the team beside the biography. The divider comes from the shared
+`divider` macro (`_includes/partials/divider.njk`) — the same markup the project
+renderer uses — so no content file stores `//`. `team` stays one rich-text field
+because the editors keep free-form control of names, roles and the
+former-collaborators heading. The page keeps the site description as its
+`<meta name="description">`.
+
 ## Pages CMS
 
 `.pages.yml` (repository root) configures [Pages CMS](https://pagescms.org) 2.x.
 Editors sign in at <https://app.pagescms.org>, pick a branch, and edit the
-`proyectos` collection; every save is a commit on that branch, which triggers the
-deploy workflow. Labels and helper text are Spanish.
+`proyectos` collection or the About page; every save is a commit on that branch,
+which triggers the deploy workflow. Labels and helper text are Spanish.
 
 - `settings.content.merge: true` — keys outside the schema (`variant`) are
   preserved when an editor saves a project.
@@ -191,6 +215,10 @@ deploy workflow. Labels and helper text are Spanish.
 - The text is two rich-text fields, `text_es` (Spanish, required) and `text_en`
   (English, optional), both Markdown with the editor/source switch and no media
   (the text lives in front matter, not in the Markdown body).
+- The `about` entry edits `src/acerca-de.md`: `bio_es` (Spanish, required),
+  `bio_en` (English, optional) and `team`, all Markdown rich text with the
+  source switch and no media. `title` and `layout` stay out of the editor, so
+  merge mode preserves them and the page keeps its layout on save.
 - The schema currently covers title, venue, dates, both texts, homepage status,
   order, gallery columns and the gallery. The remaining media sources are
   handled by later work.

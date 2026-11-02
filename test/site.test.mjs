@@ -346,6 +346,56 @@ describe("Pages CMS project collection (.pages.yml)", () => {
   });
 });
 
+describe("Pages CMS about page (.pages.yml)", () => {
+  const config = yaml.load(readRepoFile(".pages.yml"));
+  const entry = config.content?.find((item) => item.name === "about");
+
+  it("edits the About page as a single file entry", () => {
+    assert.ok(entry, ".pages.yml: no `about` entry");
+    assert.equal(entry.type, "file", ".pages.yml: the About page is a single-file entry");
+    assert.equal(entry.path, "src/acerca-de.md", ".pages.yml: About entry path");
+    assert.ok(entry.label, ".pages.yml: the About entry has a label");
+    assert.doesNotThrow(() => readRepoFile(entry.path), ".pages.yml: the About entry path is the About page file");
+  });
+
+  it("exposes both biographies and the team as Markdown rich text with Spanish labels", () => {
+    const fields = entry?.fields ?? [];
+    assert.deepEqual(fields.map((field) => field.name), ["bio_es", "bio_en", "team"], ".pages.yml: About fields");
+
+    for (const field of fields) {
+      assert.ok(field.label, `.pages.yml: About field "${field.name}" has no label`);
+      assert.ok(field.description, `.pages.yml: About field "${field.name}" has no description`);
+      assert.equal(field.type, "rich-text", `.pages.yml: About field "${field.name}" is rich text`);
+      assert.deepEqual(
+        field.options,
+        { format: "markdown", switcher: true, media: false },
+        `.pages.yml: About field "${field.name}" is Markdown with a source switch and no body media (the text lives in front matter)`,
+      );
+    }
+
+    const byName = (name) => fields.find((field) => field.name === name);
+    assert.equal(byName("bio_es").required, true, ".pages.yml: the About page always has a Spanish biography");
+    assert.notEqual(byName("bio_en").required, true, ".pages.yml: the English biography is optional");
+    assert.match(byName("bio_es").label, /español/i, ".pages.yml: the Spanish biography field is labelled in Spanish");
+    assert.match(byName("bio_en").label, /inglés/i, ".pages.yml: the English biography field is labelled in Spanish");
+    assert.match(byName("team").label, /equipo/i, ".pages.yml: the team field is labelled in Spanish");
+  });
+
+  it("keeps the page layout out of the editor so a save preserves it", () => {
+    assert.ok(entry, ".pages.yml: no `about` entry");
+    // `title` and `layout` are developer-only keys: no field may write them, so
+    // merge mode carries the page file's own values through every save.
+    const exposed = [...(entry?.fields ?? []), ...(entry?.view?.fields ?? [])].map((field) =>
+      typeof field === "string" ? field : field.name,
+    );
+
+    for (const name of ["title", "layout", "bio"]) {
+      assert.ok(!exposed.includes(name), `.pages.yml: the About "${name}" key is not editable in the CMS`);
+    }
+    assert.equal(config.settings?.content?.merge, true, ".pages.yml: merge mode keeps the page layout on save");
+  });
+});
+
 describe("Pages CMS media sources (.pages.yml)", () => {
   const config = yaml.load(readRepoFile(".pages.yml"));
   const sources = Object.fromEntries((config.media ?? []).map((source) => [source.name, source]));
@@ -686,6 +736,15 @@ describe("about page (/acerca-de/)", () => {
   const route = ABOUT_ROUTE;
   const text = () => normalize(readPage(route).querySelector("main")?.textContent);
 
+  /** The text blocks of the biography column, in document order. */
+  const bioBlocks = () => {
+    const bio = readPage(route).querySelector("main .about-bio");
+    assert.ok(bio, `page ${route}: no biography rendered`);
+    return bio.childNodes
+      .filter((node) => node.nodeType === NodeType.ELEMENT_NODE)
+      .map((node) => normalize(node.textContent));
+  };
+
   it("renders the Spanish biography", () => {
     assert.ok(text().includes(ABOUT.spanish), `page ${route}: Spanish bio "${ABOUT.spanish}"`);
   });
@@ -694,10 +753,56 @@ describe("about page (/acerca-de/)", () => {
     assert.ok(text().includes(ABOUT.english), `page ${route}: English bio "${ABOUT.english}"`);
   });
 
+  it("renders the Spanish bio first, one divider, then the English bio", () => {
+    const blocks = bioBlocks();
+    const spanish = blocks.findIndex((block) => block.startsWith(ABOUT.spanish));
+    const english = blocks.findIndex((block) => block.startsWith(ABOUT.english));
+    const dividers = blocks.flatMap((block, index) => (block === "//" ? [index] : []));
+
+    assert.notEqual(spanish, -1, `page ${route}: the Spanish biography is its own text block`);
+    assert.notEqual(english, -1, `page ${route}: the English biography is its own text block`);
+    assert.equal(dividers.length, 1, `page ${route}: the template draws one divider between the biographies`);
+    assert.ok(spanish < dividers[0], `page ${route}: the Spanish biography comes before the divider`);
+    assert.ok(dividers[0] < english, `page ${route}: the English biography comes after the divider`);
+  });
+
   it("renders the team", () => {
     for (const member of ABOUT.team) {
       assert.ok(text().includes(member), `page ${route}: team copy "${member}"`);
     }
+  });
+
+  it("stores each biography language in its own field, without the separator", () => {
+    const data = projectData("src/acerca-de.md");
+    const spanish = String(data.bio_es ?? "").trim();
+    const english = String(data.bio_en ?? "").trim();
+
+    assert.ok(spanish.startsWith(ABOUT.spanish), `page ${route}: "bio_es" starts the Spanish biography`);
+    assert.ok(english.startsWith(ABOUT.english), `page ${route}: "bio_en" starts the English biography`);
+    assert.ok(!Object.hasOwn(data, "bio"), `page ${route}: the legacy "bio" field is gone`);
+    assert.equal(typeof data.team, "string", `page ${route}: the team is one rich-text field`);
+
+    for (const key of ["bio_es", "bio_en", "team"]) {
+      assert.ok(
+        !/^[ \t]*\/\/[ \t]*$/m.test(String(data[key] ?? "")),
+        `page ${route}: "${key}" contains a literal // separator line (the template draws the divider)`,
+      );
+    }
+  });
+
+  it("renders the team after both biographies, from the one team field", () => {
+    const blocks = bioBlocks();
+    const body = text();
+    const english = blocks.findIndex((block) => block.startsWith(ABOUT.english));
+    const team = readPage(route).querySelector("main .about-team");
+    assert.ok(team, `page ${route}: no team section rendered`);
+
+    assert.notEqual(english, -1, `page ${route}: the English biography is its own text block`);
+    assert.ok(body.indexOf(ABOUT.team[0]) > body.indexOf(ABOUT.english), `page ${route}: the team comes after the biographies`);
+    assert.ok(
+      normalize(team.textContent).includes(ABOUT.team.at(-1)),
+      `page ${route}: the team section carries the whole team copy`,
+    );
   });
 });
 
