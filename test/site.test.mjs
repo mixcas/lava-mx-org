@@ -346,6 +346,56 @@ describe("Pages CMS project collection (.pages.yml)", () => {
   });
 });
 
+describe("Pages CMS about page (.pages.yml)", () => {
+  const config = yaml.load(readRepoFile(".pages.yml"));
+  const entry = config.content?.find((item) => item.name === "about");
+
+  it("edits the About page as a single file entry", () => {
+    assert.ok(entry, ".pages.yml: no `about` entry");
+    assert.equal(entry.type, "file", ".pages.yml: the About page is a single-file entry");
+    assert.equal(entry.path, "src/acerca-de.md", ".pages.yml: About entry path");
+    assert.ok(entry.label, ".pages.yml: the About entry has a label");
+    assert.doesNotThrow(() => readRepoFile(entry.path), ".pages.yml: the About entry path is the About page file");
+  });
+
+  it("exposes both biographies and the team as Markdown rich text with Spanish labels", () => {
+    const fields = entry?.fields ?? [];
+    assert.deepEqual(fields.map((field) => field.name), ["bio_es", "bio_en", "team"], ".pages.yml: About fields");
+
+    for (const field of fields) {
+      assert.ok(field.label, `.pages.yml: About field "${field.name}" has no label`);
+      assert.ok(field.description, `.pages.yml: About field "${field.name}" has no description`);
+      assert.equal(field.type, "rich-text", `.pages.yml: About field "${field.name}" is rich text`);
+      assert.deepEqual(
+        field.options,
+        { format: "markdown", switcher: true, media: false },
+        `.pages.yml: About field "${field.name}" is Markdown with a source switch and no body media (the text lives in front matter)`,
+      );
+    }
+
+    const byName = (name) => fields.find((field) => field.name === name);
+    assert.equal(byName("bio_es").required, true, ".pages.yml: the About page always has a Spanish biography");
+    assert.notEqual(byName("bio_en").required, true, ".pages.yml: the English biography is optional");
+    assert.match(byName("bio_es").label, /español/i, ".pages.yml: the Spanish biography field is labelled in Spanish");
+    assert.match(byName("bio_en").label, /inglés/i, ".pages.yml: the English biography field is labelled in Spanish");
+    assert.match(byName("team").label, /equipo/i, ".pages.yml: the team field is labelled in Spanish");
+  });
+
+  it("keeps the page layout out of the editor so a save preserves it", () => {
+    assert.ok(entry, ".pages.yml: no `about` entry");
+    // `title` and `layout` are developer-only keys: no field may write them, so
+    // merge mode carries the page file's own values through every save.
+    const exposed = [...(entry?.fields ?? []), ...(entry?.view?.fields ?? [])].map((field) =>
+      typeof field === "string" ? field : field.name,
+    );
+
+    for (const name of ["title", "layout", "bio"]) {
+      assert.ok(!exposed.includes(name), `.pages.yml: the About "${name}" key is not editable in the CMS`);
+    }
+    assert.equal(config.settings?.content?.merge, true, ".pages.yml: merge mode keeps the page layout on save");
+  });
+});
+
 describe("Pages CMS media sources (.pages.yml)", () => {
   const config = yaml.load(readRepoFile(".pages.yml"));
   const sources = Object.fromEntries((config.media ?? []).map((source) => [source.name, source]));

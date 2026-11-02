@@ -216,3 +216,49 @@ content:
                 type: boolean
                 default: false
                 description: Reproduce el video sin sonido.
+
+  # Single-file entry: the About page lives in one Markdown file. `title` and
+  # `layout` stay out of the editor so merge mode preserves them on save; the
+  # template draws the divider between the two biographies (never store `//`).
+  - name: about
+    label: Acerca de
+    type: file
+    path: src/acerca-de.md
+    description: >-
+      Biografía y equipo de la página «Acerca de». El título y el diseño de la
+      página no se editan aquí: se conservan tal como están en el archivo.
+    fields:
+      - name: bio_es
+        label: Biografía en español
+        type: rich-text
+        required: true
+        options:
+          format: markdown
+          switcher: true
+          media: false
+        description: >-
+          Biografía del colectivo en español; admite Markdown. Se muestra
+          primero, seguida de la biografía en inglés cuando existe.
+      - name: bio_en
+        label: Biografía en inglés
+        type: rich-text
+        options:
+          format: markdown
+          switcher: true
+          media: false
+        description: >-
+          Biografía del colectivo en inglés; admite Markdown. Aparece después
+          de la biografía en español, separada por «//». No escribas «//»: si
+          dejas este campo vacío, la página se muestra solo en español.
+      - name: team
+        label: Equipo
+        type: rich-text
+        required: true
+        options:
+          format: markdown
+          switcher: true
+          media: false
+        description: >-
+          Nombres, cargos y el encabezado de colaboradoras anteriores en un solo
+          texto; admite Markdown (negritas y cursivas). Se muestra junto a la
+          biografía.
