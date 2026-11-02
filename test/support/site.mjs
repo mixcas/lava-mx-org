@@ -1,6 +1,12 @@
+import { execFile } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
+
 import { parse } from "node-html-parser";
+
+const execFileAsync = promisify(execFile);
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
 
@@ -25,6 +31,9 @@ export const OUTPUT_DIR = path.join(ROOT, "_site");
 /** Same defaults as `eleventy.config.js`, so tests follow the deployed layout. */
 export const PATH_PREFIX = (process.env.PATH_PREFIX || "/").replace(/\/+$/, "");
 export const SITE_URL = (process.env.SITE_URL || "https://lava-mx.org").replace(/\/$/, "");
+
+/** The subpath the default suite also builds, to prove the prefix logic. */
+export const SUBPATH_PREFIX = "/lava-mx-org/";
 
 /** Route as the browser sees it, including the deployment path prefix. */
 export const localUrl = (route) => `${PATH_PREFIX}${route}`;
@@ -63,33 +72,74 @@ export function buildSite() {
   return build;
 }
 
+let prefixedBuild;
+
+/**
+ * Build the site a second time under `SUBPATH_PREFIX` (ticket #10) and return
+ * its output directory. The build runs in a child process (see
+ * `support/prefixed-build.mjs`) because the configuration reads the prefix once
+ * at import time, and it reuses the responsive-image cache in `_site/img`, so
+ * it costs about a second. A run that already builds under the probe prefix
+ * (`PATH_PREFIX=/lava-mx-org/`) reuses its own output.
+ */
+export function buildPrefixedSite() {
+  if (PATH_PREFIX === SUBPATH_PREFIX.replace(/\/$/, "")) return OUTPUT_DIR;
+
+  prefixedBuild ??= (async () => {
+    const started = Date.now();
+    const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "lava-prefix-"));
+    await execFileAsync(process.execPath, [path.join(import.meta.dirname, "prefixed-build.mjs"), fixtureRoot], {
+      cwd: ROOT,
+      env: { ...process.env, PATH_PREFIX: SUBPATH_PREFIX, SITE_URL },
+    });
+    const seconds = ((Date.now() - started) / 1000).toFixed(2);
+    console.log(`Built the ${SUBPATH_PREFIX} variant in ${seconds}s`);
+    return path.join(fixtureRoot, "_site");
+  })();
+  return prefixedBuild;
+}
+
 const pages = new Map();
 
-/** Generated file for a route, failing with a message that names the route. */
-function outputFile(route) {
+/** Generated file for a route in an output directory, failing with the route. */
+function outputFileIn(outputDir, route) {
   const relative = path.extname(route) ? route : path.join(route, "index.html");
-  const file = path.join(OUTPUT_DIR, relative);
+  const file = path.join(outputDir, relative);
   if (!fs.existsSync(file)) {
     throw new Error(`page ${route}: expected generated file ${path.relative(ROOT, file)} (build did not produce this URL)`);
   }
   return file;
 }
 
+/** Generated file for a route of the default build. */
+const outputFile = (route) => outputFileIn(OUTPUT_DIR, route);
+
 /**
  * Read a generated page as a DOM. Throws a message naming the missing route so
  * a removed or renamed URL fails with a readable error.
  */
 export function readPage(route) {
-  if (pages.has(route)) return pages.get(route);
+  return readOutputPage(OUTPUT_DIR, route);
+}
 
-  const doc = parse(fs.readFileSync(outputFile(route), "utf8"), { comment: false });
-  pages.set(route, doc);
+/** Read a page from another build's output directory (e.g. the prefixed build). */
+export function readOutputPage(outputDir, route) {
+  const key = `${outputDir}\n${route}`;
+  if (pages.has(key)) return pages.get(key);
+
+  const doc = parse(fs.readFileSync(outputFileIn(outputDir, route), "utf8"), { comment: false });
+  pages.set(key, doc);
   return doc;
 }
 
 /** Read a generated non-HTML file (sitemap, robots) as text. */
 export function readText(route) {
-  return fs.readFileSync(outputFile(route), "utf8");
+  return readOutputText(OUTPUT_DIR, route);
+}
+
+/** Read a non-HTML file from another build's output directory. */
+export function readOutputText(outputDir, route) {
+  return fs.readFileSync(outputFileIn(outputDir, route), "utf8");
 }
 
 /** Entries generated directly under a route's directory, sorted. */

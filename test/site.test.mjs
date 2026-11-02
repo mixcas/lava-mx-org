@@ -6,9 +6,23 @@ import { before, describe, it } from "node:test";
 import yaml from "js-yaml";
 import { NodeType } from "node-html-parser";
 
-import { frontMatter, projectData, projectFiles, projectRoute } from "./support/content.mjs";
-import { ABOUT, ARCHIVE_PROJECTS, HOMEPAGE_PROJECTS, PROJECTS, SITE } from "./support/projects.mjs";
+import { LEGACY_KEYS } from "../lib/project-contract.js";
+import { ASSET_FOLDER, ASSET_URL, FORMATS, GALLERY_TYPES } from "../lib/media-assets.js";
+import { projectData, projectFiles, projectRoute } from "./support/content.mjs";
 import {
+  ABOUT,
+  ARCHIVE_PROJECTS,
+  BILINGUAL_PROJECT_COUNT,
+  HOMEPAGE_PROJECTS,
+  LOCAL_DOCUMENTS,
+  PROJECTS,
+  PROJECT_COUNT,
+  SITE,
+  THREE_COLUMN_PROJECT,
+  TWO_COLUMN_PROJECTS,
+} from "./support/projects.mjs";
+import {
+  buildPrefixedSite,
   buildSite,
   listOutput,
   listRepoFiles,
@@ -16,17 +30,27 @@ import {
   normalize,
   OUTPUT_DIR,
   PATH_PREFIX,
+  readOutputPage,
+  readOutputText,
   readPage,
   readRepoFile,
   readText,
   SITE_URL,
+  SUBPATH_PREFIX,
 } from "./support/site.mjs";
 
 /** About page route (see GLOSSARY: the collective's identity page). */
 const ABOUT_ROUTE = "/acerca-de/";
 
+/**
+ * Options every rich-text field declares: Markdown, the Editor/Source switch,
+ * and the documents library, so an editor can upload a PDF there and link it
+ * (US 30). The text lives in front matter either way.
+ */
+const RICH_TEXT_OPTIONS = { format: "markdown", switcher: true, media: "documents", categories: ["document"] };
+
 /** The one project that keeps the three-column layout. */
-const THREE_COLUMN_ROUTE = "/proyectos/infernal-natures/";
+const THREE_COLUMN_ROUTE = THREE_COLUMN_PROJECT.route;
 
 before(async () => {
   await buildSite();
@@ -60,9 +84,20 @@ function projectBodyBlocks(route) {
     .map((node) => ({ element: node, text: normalize(node.textContent) }));
 }
 
+/**
+ * The alt text each gallery image must render, read from the content: the
+ * item's own alt text when it has one, otherwise the project title.
+ */
+function expectedImageAlt(route) {
+  const data = projectData(sourceOf(route));
+  return (Array.isArray(data.media) ? data.media : [])
+    .filter((item) => item.type !== "video")
+    .map((item) => (typeof item.alt === "string" ? item.alt.trim() : "") || data.title);
+}
+
 describe("project URLs", () => {
   it("keeps all twelve project URLs", () => {
-    assert.equal(PROJECTS.length, 12, "fixture: expected twelve baseline projects");
+    assert.equal(PROJECTS.length, PROJECT_COUNT, "fixture: expected twelve baseline projects");
     for (const { route } of PROJECTS) {
       assert.doesNotThrow(() => readPage(route), `page ${route}: project URL no longer exists`);
     }
@@ -99,8 +134,8 @@ describe("project content model", () => {
     assert.equal(files.length, PROJECTS.length, "fixture: expected one content file per project");
 
     for (const file of files) {
-      const keys = Object.keys(frontMatter(file));
-      for (const legacy of ["current", "slug", "layout", "media_left", "media_middle"]) {
+      const keys = Object.keys(projectData(file));
+      for (const legacy of Object.keys(LEGACY_KEYS)) {
         assert.ok(!keys.includes(legacy), `${file}: front matter still carries the legacy "${legacy}" key`);
       }
     }
@@ -108,16 +143,16 @@ describe("project content model", () => {
 
   it("keeps only non-default values in project front matter", () => {
     for (const file of projectFiles()) {
-      const keys = frontMatter(file);
+      const keys = projectData(file);
 
       if ("variant" in keys) {
         assert.equal(keys.variant, "three-column", `${file}: "variant" only appears when it is not the standard variant`);
       }
       if ("gallery_columns" in keys) {
-        assert.notEqual(keys.gallery_columns, "1", `${file}: "gallery_columns" only appears when it is not one column`);
+        assert.notEqual(keys.gallery_columns, 1, `${file}: "gallery_columns" only appears when it is not one column`);
       }
       if ("featured" in keys) {
-        assert.equal(keys.featured, "true", `${file}: "featured" only appears for homepage projects`);
+        assert.equal(keys.featured, true, `${file}: "featured" only appears for homepage projects`);
       }
     }
   });
@@ -125,8 +160,12 @@ describe("project content model", () => {
   /** The keys a typed gallery item may carry (see GLOSSARY: Media item). */
   const ITEM_KEYS = { image: ["type", "src", "alt"], video: ["type", "src", "poster", "autoplay", "loop", "mute"] };
   /** Media sources are canonical asset paths; the basename names the master. */
-  const CANONICAL = { image: /^\/assets\/images\/[^/]+$/, video: /^\/assets\/videos\/[^/]+$/ };
-  const MASTER_DIR = { image: "src/assets/images", video: "src/assets/videos" };
+  const CANONICAL = Object.fromEntries(
+    Object.entries(GALLERY_TYPES).map(([type, { path: prefix }]) => [type, new RegExp(`^${prefix}/[^/]+$`)]),
+  );
+  const MASTER_DIR = Object.fromEntries(
+    Object.entries(GALLERY_TYPES).map(([type, { folder }]) => [type, `src/assets/${folder}`]),
+  );
 
   it("models every project gallery as ordered typed media items", () => {
     const files = projectFiles();
@@ -158,7 +197,7 @@ describe("project content model", () => {
 
         const masters = [item.src, item.type === "video" ? item.poster : null].filter(Boolean);
         for (const master of masters) {
-          const masterDir = master.startsWith("/assets/images/") ? MASTER_DIR.image : MASTER_DIR.video;
+          const masterDir = master.startsWith(`${GALLERY_TYPES.image.path}/`) ? MASTER_DIR.image : MASTER_DIR.video;
           assert.doesNotThrow(
             () => readRepoFile(`${masterDir}/${path.posix.basename(master)}`),
             `${label}: master for "${master}" exists`,
@@ -313,8 +352,8 @@ describe("Pages CMS project collection (.pages.yml)", () => {
     assert.equal(spanish?.required, true, ".pages.yml: every project has Spanish text");
     assert.deepEqual(
       spanish?.options,
-      { format: "markdown", switcher: true, media: false },
-      ".pages.yml: text_es is Markdown with a source switch and no body media (the text lives in front matter)",
+      RICH_TEXT_OPTIONS,
+      ".pages.yml: text_es is Markdown with a source switch and the documents library (an editor uploads a PDF here and links it)",
     );
 
     const english = byName("text_en");
@@ -322,8 +361,8 @@ describe("Pages CMS project collection (.pages.yml)", () => {
     assert.notEqual(english?.required, true, ".pages.yml: English text is optional");
     assert.deepEqual(
       english?.options,
-      { format: "markdown", switcher: true, media: false },
-      ".pages.yml: text_en is Markdown with a source switch and no body media",
+      RICH_TEXT_OPTIONS,
+      ".pages.yml: text_en is Markdown with a source switch and the documents library",
     );
 
     assert.match(spanish.label, /español/i, ".pages.yml: the Spanish text field is labelled in Spanish");
@@ -345,6 +384,18 @@ describe("Pages CMS project collection (.pages.yml)", () => {
       exposed.filter((entry) => (typeof entry === "string" ? entry : entry.name) === "variant"),
       [],
       ".pages.yml: the variant is not editable in the CMS",
+    );
+  });
+});
+
+describe("Pages CMS commits (.pages.yml)", () => {
+  const config = yaml.load(readRepoFile(".pages.yml"));
+
+  it("attributes each save to the editor who made it", () => {
+    assert.equal(
+      config.settings?.commit?.identity,
+      "user",
+      ".pages.yml: settings.commit.identity: user attributes the commit to the editor",
     );
   });
 });
@@ -371,8 +422,8 @@ describe("Pages CMS about page (.pages.yml)", () => {
       assert.equal(field.type, "rich-text", `.pages.yml: About field "${field.name}" is rich text`);
       assert.deepEqual(
         field.options,
-        { format: "markdown", switcher: true, media: false },
-        `.pages.yml: About field "${field.name}" is Markdown with a source switch and no body media (the text lives in front matter)`,
+        RICH_TEXT_OPTIONS,
+        `.pages.yml: About field "${field.name}" is Markdown with a source switch and the documents library`,
       );
     }
 
@@ -403,31 +454,40 @@ describe("Pages CMS media sources (.pages.yml)", () => {
   const config = yaml.load(readRepoFile(".pages.yml"));
   const sources = Object.fromEntries((config.media ?? []).map((source) => [source.name, source]));
 
-  /** Images the image pipeline handles; anything else would break the build. */
-  const IMAGE_EXTENSIONS = ["avif", "gif", "jpeg", "jpg", "png", "webp"];
-
   it("defines image, video and document sources under the folders the site serves", () => {
-    assert.deepEqual(Object.keys(sources), ["images", "videos", "documents"], ".pages.yml: media sources");
+    assert.deepEqual(Object.keys(sources), Object.keys(ASSET_URL), ".pages.yml: media sources");
+
+    // The same canonical paths and master folders the build reads from
+    // `lib/media-assets.js`: the CMS writes what the templates expect.
+    const expected = Object.fromEntries(
+      Object.keys(ASSET_URL).map((name) => [name, [`src/assets/${ASSET_FOLDER[name]}`, ASSET_URL[name]]]),
+    );
     assert.deepEqual(
       Object.fromEntries(Object.entries(sources).map(([name, source]) => [name, [source.input, source.output]])),
-      {
-        images: ["src/assets/images", "/assets/images"],
-        videos: ["src/assets/videos", "/assets/videos"],
-        documents: ["src/assets/files", "/assets/files"],
-      },
+      expected,
       ".pages.yml: media source folders and the canonical paths written into content",
     );
   });
 
   it("accepts only the formats the site can publish", () => {
-    assert.deepEqual([...sources.images.extensions].sort(), IMAGE_EXTENSIONS, ".pages.yml: image upload formats");
-    assert.deepEqual([...sources.videos.extensions].sort(), ["mp4", "webm"], ".pages.yml: video upload formats");
-    assert.deepEqual(sources.documents.extensions, ["pdf"], ".pages.yml: document upload formats");
+    assert.deepEqual([...sources.images.extensions].sort(), [...FORMATS.image].sort(), ".pages.yml: image upload formats");
+    assert.deepEqual([...sources.videos.extensions].sort(), [...FORMATS.video].sort(), ".pages.yml: video upload formats");
+    assert.deepEqual([...sources.documents.extensions].sort(), [...FORMATS.document].sort(), ".pages.yml: document upload formats");
   });
 
   it("preserves original upload filenames", () => {
     for (const [name, source] of Object.entries(sources)) {
       assert.equal(source.rename, false, `.pages.yml: the "${name}" source keeps original filenames`);
+    }
+  });
+
+  it("is reachable from every rich-text field, so an editor can upload a document there", () => {
+    const richText = (config.content ?? []).flatMap((entry) => (entry.fields ?? []).filter(({ type }) => type === "rich-text"));
+    assert.ok(richText.length > 0, ".pages.yml: expected the rich-text fields of the editor");
+
+    for (const field of richText) {
+      const media = field.options?.media;
+      assert.ok(media !== false && sources[media], `.pages.yml: the "${field.name}" field inserts from the "${media}" media source`);
     }
   });
 });
@@ -713,6 +773,7 @@ describe("project pages", () => {
 
     it(`${route} renders its gallery`, () => {
       const article = projectArticle(route);
+      const alts = expectedImageAlt(route);
 
       const pictures = article.querySelectorAll("picture");
       assert.equal(pictures.length, project.images, `${label}: gallery images rendered`);
@@ -720,7 +781,7 @@ describe("project pages", () => {
         const position = `gallery image ${index + 1}`;
         const img = picture.querySelector("img");
         assert.ok(img, `${label}: ${position} has no <img>`);
-        assert.equal(img.getAttribute("alt"), title, `${label}: ${position} alt text`);
+        assert.equal(img.getAttribute("alt"), alts[index], `${label}: ${position} alt text`);
         assert.ok(
           (img.getAttribute("src") ?? "").startsWith(`${PATH_PREFIX}/img/`),
           `${label}: ${position} src "${img.getAttribute("src")}" uses the responsive image pipeline`,
@@ -770,7 +831,7 @@ describe("bilingual project text", () => {
   }
 
   it("renders the Spanish text first and the English text after the divider", () => {
-    assert.equal(BILINGUAL.length, 3, "fixture: expected three bilingual projects");
+    assert.equal(BILINGUAL.length, BILINGUAL_PROJECT_COUNT, "fixture: expected three bilingual projects");
 
     for (const { route, spanish, english } of BILINGUAL) {
       const label = `page ${route}`;
@@ -810,18 +871,20 @@ describe("bilingual project text", () => {
   });
 
   it("keeps Corteza Líquida's Spanish artist biography on the Spanish side", () => {
-    const route = "/proyectos/corteza-liquida/";
+    const project = PROJECTS.find(({ biography }) => biography);
+    assert.ok(project, "fixture: expected a project whose biography exists in both languages");
+    const { route, biography } = project;
     const { spanish, english } = sides(route);
     const spanishText = spanish.map((block) => block.text).join(" ");
     const englishText = english.map((block) => block.text).join(" ");
 
     // The biography exists in both languages; each one stays with its language.
     assert.ok(
-      spanishText.includes("es una artista visual cuya práctica abarca el dibujo, la escultura"),
+      spanishText.includes(biography.spanish),
       `page ${route}: the Spanish biography comes before the divider`,
     );
     assert.ok(
-      englishText.includes("is a visual artist whose practice encompasses drawing, sculpture"),
+      englishText.includes(biography.english),
       `page ${route}: the English biography comes after the divider`,
     );
 
@@ -1044,8 +1107,6 @@ describe("page metadata", () => {
  * heading level, linked titles, gallery columns, and first-image priority.
  */
 describe("project rendering contract", () => {
-  /** Projects whose gallery is laid out in two columns (see GLOSSARY: Gallery). */
-  const TWO_COLUMN_PROJECTS = new Set(["/proyectos/lianas-neotropicales/"]);
   const LISTING_ROUTES = ["/", "/proyectos/"];
 
   it("gives project pages an h1 title and listing pages an h2 title", () => {
@@ -1095,7 +1156,7 @@ describe("project rendering contract", () => {
       assert.equal(galleries.length, 1, `page ${route}: standard projects have one gallery`);
       assert.equal(
         galleries[0].getAttribute("data-columns"),
-        TWO_COLUMN_PROJECTS.has(route) ? "2" : "1",
+        TWO_COLUMN_PROJECTS.some((project) => project.route === route) ? "2" : "1",
         `page ${route}: gallery column count`,
       );
     }
@@ -1111,8 +1172,7 @@ describe("project rendering contract", () => {
 
     // One ordered gallery, split for the layout: the first column takes the
     // first half of the media items rounded up, the second column the rest.
-    const baseline = PROJECTS.find((project) => project.route === THREE_COLUMN_ROUTE);
-    const total = baseline.gallery.length;
+    const total = THREE_COLUMN_PROJECT.gallery.length;
     const columns = galleries.map((gallery) => gallery.querySelectorAll("picture").length);
     assert.deepEqual(columns, [Math.ceil(total / 2), Math.floor(total / 2)], `page ${THREE_COLUMN_ROUTE}: media items per column`);
 
@@ -1147,7 +1207,8 @@ describe("project rendering contract", () => {
     const eager = (route) => projectArticle(route).querySelectorAll('img[loading="eager"]');
 
     // A project page prioritizes its own first gallery image.
-    assert.equal(eager("/proyectos/mineralia-indisciplinada/").length, 1, "page /proyectos/mineralia-indisciplinada/: one eager image");
+    const projectPage = PROJECTS[0].route;
+    assert.equal(eager(projectPage).length, 1, `page ${projectPage}: one eager image`);
 
     // A listing page prioritizes the first gallery image of its first project only.
     for (const route of LISTING_ROUTES) {
@@ -1164,19 +1225,6 @@ describe("project rendering contract", () => {
     assert.equal(eager(THREE_COLUMN_ROUTE).length, 0, `page ${THREE_COLUMN_ROUTE}: no eager image`);
   });
 });
-
-/**
- * Local dossier/poster PDFs linked from project text. They live in
- * `src/assets/files/` and are served at `/assets/files/<file>`; `label` is the
- * editorial link text. `route` is the project page that offers the document
- * (homepage projects also offer it on `/`).
- */
-const LOCAL_DOCUMENTS = [
-  { route: "/proyectos/corteza-liquida/", label: "Dossier", file: "Dossier_Corteza-Liquida--xLava.pdf.pdf" },
-  { route: "/proyectos/tiempos-pendulares/", label: "Dossier", file: "Dossier_Tiempos-Pendulares-x-Lava.pdf" },
-  { route: "/proyectos/tiempos-pendulares/", label: "Poster", file: "PPD_LAVA_posterzine.pdf" },
-  { route: "/proyectos/tramas-de-lo-indomito/", label: "Dossier", file: "Lava_Tramas-de-lo-indomito_GaleriaMunicipal.pdf" },
-];
 
 /** Every page that renders project text, and so can carry its links. */
 const PAGES_WITH_PROJECT_TEXT = ["/", "/proyectos/", ...PROJECTS.map((project) => project.route)];
@@ -1256,5 +1304,84 @@ describe("local document links", () => {
         assert.ok(!href.startsWith(doubled), `page ${pageRoute}: ${href} is not double-prefixed`);
       }
     }
+  });
+});
+
+/**
+ * Ticket #10: the same site built for a GitHub Pages subpath. The default run
+ * builds it too, so a URL that skips the prefix fails the suite on every run;
+ * `PATH_PREFIX=/.../ npm test` covers a custom prefix instead.
+ */
+describe(`subpath deployment (${SUBPATH_PREFIX})`, () => {
+  const PREFIX = SUBPATH_PREFIX.replace(/\/$/, "");
+  let output;
+
+  before(async () => {
+    output = await buildPrefixedSite();
+  });
+
+  const page = (route) => readOutputPage(output, route);
+
+  /** Every URL the page owns: its root-relative `href` / `src` values. */
+  const localUrls = (doc) =>
+    doc
+      .querySelectorAll("[href], [src]")
+      .flatMap((node) => ["href", "src"].map((name) => node.getAttribute(name)))
+      .filter((url) => url?.startsWith("/") && !url.startsWith("//"));
+
+  it("prefixes every URL the site owns, exactly once", () => {
+    for (const route of ["/", "/proyectos/", PROJECTS[0].route, THREE_COLUMN_ROUTE, ABOUT_ROUTE]) {
+      const urls = localUrls(page(route));
+      assert.ok(urls.length > 0, `page ${route}: no local URLs rendered`);
+      for (const url of urls) {
+        assert.ok(url.startsWith(`${PREFIX}/`), `page ${route}: ${url} carries the path prefix`);
+        assert.ok(!url.startsWith(`${PREFIX}${PREFIX}/`), `page ${route}: ${url} is prefixed exactly once`);
+      }
+    }
+  });
+
+  it("keeps canonical URLs and the sitemap on the prefixed routes", () => {
+    const route = PROJECTS[0].route;
+    assert.equal(
+      page(route).querySelector('link[rel="canonical"]')?.getAttribute("href"),
+      `${SITE_URL}${PREFIX}${route}`,
+      `page ${route}: canonical URL under the subpath`,
+    );
+
+    const listed = [...readOutputText(output, "/sitemap.xml").matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
+    assert.ok(listed.length > 0, "page /sitemap.xml: no URLs listed");
+    for (const loc of listed) {
+      assert.ok(loc.startsWith(`${SITE_URL}${PREFIX}/`), `page /sitemap.xml: ${loc} carries the path prefix`);
+    }
+  });
+
+  it("serves the gallery video and the dossier links under the prefix", () => {
+    const project = PROJECTS.find(({ videos }) => videos.length);
+    assert.ok(project, "fixture: expected a project with a video");
+    assert.equal(
+      page(project.route).querySelector("video")?.getAttribute("src"),
+      `${PREFIX}/assets/videos/${project.videos[0].source}`,
+      `page ${project.route}: video source under the subpath`,
+    );
+
+    const { route, file } = LOCAL_DOCUMENTS[0];
+    const hrefs = page(route)
+      .querySelectorAll("main .project-body a")
+      .map((link) => link.getAttribute("href"));
+    assert.ok(hrefs.includes(`${PREFIX}/assets/files/${file}`), `page ${route}: dossier link ${file} under the subpath`);
+  });
+
+  it("serves the responsive images and social metadata under the prefix", () => {
+    const route = PROJECTS[0].route;
+    const doc = page(route);
+
+    assert.ok(
+      doc.querySelector("main .project-gallery img")?.getAttribute("src")?.startsWith(`${PREFIX}/img/`),
+      `page ${route}: gallery images come from the prefixed image pipeline`,
+    );
+    assert.ok(
+      doc.querySelector('meta[property="og:image"]')?.getAttribute("content")?.startsWith(`${SITE_URL}${PREFIX}/img/`),
+      `page ${route}: og:image is an absolute prefixed URL`,
+    );
   });
 });

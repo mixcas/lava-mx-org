@@ -9,7 +9,16 @@
  *
  * `featured: true` marks a homepage project; the rest are archive projects.
  * Array order is the order each group must appear in on its page.
+ * `columns` and `variant` are written only when they differ from the project
+ * directory defaults (one column, standard layout).
  */
+
+/** The number of projects the site publishes. */
+export const PROJECT_COUNT = 12;
+
+/** The number of projects that show Spanish and English text. */
+export const BILINGUAL_PROJECT_COUNT = 3;
+
 export const PROJECTS = [
   {
     route: "/proyectos/mineralia-indisciplinada/",
@@ -43,6 +52,12 @@ export const PROJECTS = [
     dates: "1 febrero - 1 abril, 2025. Ciudad de México.",
     spanish: "es una exposición individual de la artista Sonia Bandura",
     english: "is a solo exhibition by artist Sonia Bandura",
+    // The artist biography exists in both languages; each one stays with its
+    // own language, while the language-neutral dossier stays with the Spanish.
+    biography: {
+      spanish: "es una artista visual cuya práctica abarca el dibujo, la escultura",
+      english: "is a visual artist whose practice encompasses drawing, sculpture",
+    },
     images: 10,
     videos: [],
   },
@@ -73,6 +88,7 @@ export const PROJECTS = [
     venue: "B-LA-M > Roam Space + Wonzimer + Lava",
     dates: "29 Jun - 7 Jul 2024. Berlín.",
     spanish: "es un intercambio de tres años que busca fortalecer las relaciones",
+    variant: "three-column",
     images: 8,
     // The deployed page shows two galleries side by side: this list is the
     // editor's order after the migration merged them, former left column first.
@@ -148,6 +164,7 @@ export const PROJECTS = [
     venue: "Compás 88",
     dates: "13 - 20 de Mayo 2023. Ciudad de México.",
     spanish: "es un despliegue de la investigación de la artista",
+    columns: 2,
     images: 6,
     videos: [],
   },
@@ -155,6 +172,25 @@ export const PROJECTS = [
 
 export const HOMEPAGE_PROJECTS = PROJECTS.filter((project) => project.featured);
 export const ARCHIVE_PROJECTS = PROJECTS.filter((project) => !project.featured);
+
+/** The project that keeps the three-column layout. */
+export const THREE_COLUMN_PROJECT = PROJECTS.find((project) => project.variant === "three-column");
+
+/** Projects whose gallery is laid out in two columns (see GLOSSARY: Gallery). */
+export const TWO_COLUMN_PROJECTS = PROJECTS.filter((project) => project.columns === 2);
+
+/**
+ * Local dossier/poster PDFs linked from project text. They live in
+ * `src/assets/files/` and are served at `/assets/files/<file>`; `label` is the
+ * editorial link text. `route` is the project page that offers the document
+ * (homepage projects also offer it on `/`).
+ */
+export const LOCAL_DOCUMENTS = [
+  { route: "/proyectos/corteza-liquida/", label: "Dossier", file: "Dossier_Corteza-Liquida--xLava.pdf.pdf" },
+  { route: "/proyectos/tiempos-pendulares/", label: "Dossier", file: "Dossier_Tiempos-Pendulares-x-Lava.pdf" },
+  { route: "/proyectos/tiempos-pendulares/", label: "Poster", file: "PPD_LAVA_posterzine.pdf" },
+  { route: "/proyectos/tramas-de-lo-indomito/", label: "Dossier", file: "Lava_Tramas-de-lo-indomito_GaleriaMunicipal.pdf" },
+];
 
 /** Site-wide copy the migration must keep using. */
 export const SITE = {
