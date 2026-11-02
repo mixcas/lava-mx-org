@@ -21,7 +21,7 @@ media:
     src: "/assets/images/20240629-13-roam-BLAM-doku.webp"
   - type: image
     src: "/assets/images/20240629-06-roam-BLAM-doku.webp"
-text: |-
+text_es: |-
   B-L-A-M es un intercambio de tres años que busca fortalecer las relaciones entre la escena artística independiente de Berlín, Los Ángeles y Ciudad de México.
   
   *Love, Heat, Sweat, Tears* es la exposición organizada por roam projects en Berlín, donde además de mostrar una selección de artistas locales, se presentarán obras de artista propuestos por Wonzimer Gallery (LA) y Lava (CDMX).
