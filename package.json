@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "eleventy",
-    "test": "node --test test/site.test.mjs",
+    "test": "node --test test/*.test.mjs",
     "serve": "eleventy --serve",
     "preview": "node scripts/dev-server.mjs",
     "images:rebuild": "rm -rf _site/img && eleventy",
