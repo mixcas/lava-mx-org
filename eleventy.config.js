@@ -7,8 +7,9 @@ import Image from "@11ty/eleventy-img";
 import MarkdownIt from "markdown-it";
 
 import { buildProjectView } from "./lib/project-view.js";
-import { applyPathPrefix } from "./lib/path-prefix.js";
+import { applyPathPrefix, withPathPrefix } from "./lib/path-prefix.js";
 import { assertProjectsValid } from "./lib/project-contract.js";
+import { ASSET_URL } from "./lib/media-assets.js";
 
 const ROOT = import.meta.dirname;
 
@@ -132,8 +133,9 @@ export default function (eleventyConfig) {
           const autoplay = item.autoplay ? " autoplay" : "";
           const loop = item.loop ? " loop" : "";
           const mute = item.mute ? " muted" : "";
-          // Same result as the `url` filter for a root-relative asset path.
-          const src = `${PATH_PREFIX}/assets/videos/${item.src}`;
+          // Videos are copied verbatim, so the same path-prefix rule applies
+          // as for every other URL the site owns (lib/path-prefix.js).
+          const src = withPathPrefix(`${ASSET_URL.videos}/${item.src}`, PATH_PREFIX);
           return `<video class="project-video" src="${src}"${poster}${autoplay}${loop}${mute} playsinline preload="metadata"></video>`;
         }
         return picture(item.src, item.alt, priority && index === 0);

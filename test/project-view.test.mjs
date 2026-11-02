@@ -34,6 +34,21 @@ describe("project view model", () => {
     assert.equal(view.gallery[0].alt, "Sala principal");
   });
 
+  it("falls back to the project title when the alt text is only whitespace", () => {
+    const view = buildProjectView({
+      title: "Proyecto",
+      media: [
+        { type: "image", src: "/assets/images/uno.webp", alt: "   " },
+        { type: "image", src: "/assets/images/dos.webp", alt: "" },
+      ],
+    });
+
+    assert.deepEqual(
+      view.gallery.map((item) => item.alt),
+      ["Proyecto", "Proyecto"],
+    );
+  });
+
   it("no longer merges the separate media_left and media_middle galleries", () => {
     const view = buildProjectView({
       title: "Proyecto",

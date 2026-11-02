@@ -1,28 +1,17 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import yaml from "js-yaml";
-
+import { parseFrontMatter } from "../../lib/front-matter.js";
 import { readRepoFile, REPO_ROOT } from "./site.mjs";
 
 /**
- * The top-level keys of a Markdown file's YAML front matter, as raw scalar text.
- *
- * Content-contract assertions only need to know which keys a project file
- * carries (so a removed legacy key cannot creep back) and a few scalar values,
- * so this reads the key/value lines at column zero instead of parsing YAML.
+ * The front matter of a committed Markdown file, parsed by the same helper the
+ * build uses, so a content-contract assertion and the build read a file alike.
  */
-export function frontMatter(relativePath) {
-  const source = readRepoFile(relativePath).replace(/^---\r?\n/, "");
-  const end = source.search(/^---\r?$/m);
-  if (end === -1) throw new Error(`${relativePath}: no closing front matter delimiter`);
-
-  const keys = {};
-  for (const line of source.slice(0, end).split(/\r?\n/)) {
-    const match = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
-    if (match) keys[match[1]] = match[2].trim();
-  }
-  return keys;
+export function projectData(relativePath) {
+  const parsed = parseFrontMatter(readRepoFile(relativePath));
+  if (parsed.error) throw new Error(`${relativePath}: ${parsed.error}`);
+  return parsed.data;
 }
 
 /** Project content files under `src/proyectos/`, relative to the repo root. */
@@ -32,18 +21,6 @@ export function projectFiles() {
     .filter((entry) => entry.endsWith(".md"))
     .sort()
     .map((entry) => `src/proyectos/${entry}`);
-}
-
-/**
- * A Markdown file's front matter, parsed, so content-contract assertions can
- * read structured values (the gallery list, its media items).
- */
-export function projectData(relativePath) {
-  const source = readRepoFile(relativePath).replace(/^---\r?\n/, "");
-  const end = source.search(/^---\r?$/m);
-  if (end === -1) throw new Error(`${relativePath}: no closing front matter delimiter`);
-
-  return yaml.load(source.slice(0, end)) ?? {};
 }
 
 /** Project route for a project content file (the filename is the URL). */
