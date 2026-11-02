@@ -32,9 +32,7 @@ text_es: |-
   
   Sonia Bandura (Buenos Aires, 1992) es una artista visual cuya práctica abarca el dibujo, la escultura y exploraciones con materiales biológicos como raíces y celulosa bacteriana.
   
-  [Dossier
-  
-  ](../../assets/files/Dossier_Corteza-Liquida--xLava.pdf.pdf)
+  [Dossier](/assets/files/Dossier_Corteza-Liquida--xLava.pdf.pdf)
 text_en: |-
   Born from a long-term artistic research, *Corteza Líquida* is a solo exhibition by artist Sonia Bandura that explores the symbiotic relationships between bacterial microorganisms and their influence on geological processes. From the inhospitable and damp depths of the Earth, these tiny and silent organisms emerge as imposing architects of life.
   
