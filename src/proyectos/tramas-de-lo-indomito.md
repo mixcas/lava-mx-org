@@ -29,7 +29,7 @@ text_es: |-
   
   Cosa Rapozo, Daniel Godínez Nivón, Lucrezia de Fazio, Christian Wedel, Marian Roma, Dulce Chacón, Adolfo Riestra, Daniela Terroba, Fernando Zarur, Adela Casacuberta, Fernanda Almanza, Roger Muñoz, Valeria Michelle.
   
-  [Dossier](../../assets/files/Lava_Tramas-de-lo-indomito_GaleriaMunicipal.pdf)
+  [Dossier](/assets/files/Lava_Tramas-de-lo-indomito_GaleriaMunicipal.pdf)
   
   Crédito fotográfico: Monica Garrido
 ---

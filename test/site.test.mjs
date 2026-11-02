@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import path from "node:path";
 import { before, describe, it } from "node:test";
 
@@ -13,6 +14,7 @@ import {
   listRepoFiles,
   localUrl,
   normalize,
+  OUTPUT_DIR,
   PATH_PREFIX,
   readPage,
   readRepoFile,
@@ -1160,5 +1162,99 @@ describe("project rendering contract", () => {
 
     // The legacy three-column layout never prioritizes an image.
     assert.equal(eager(THREE_COLUMN_ROUTE).length, 0, `page ${THREE_COLUMN_ROUTE}: no eager image`);
+  });
+});
+
+/**
+ * Local dossier/poster PDFs linked from project text. They live in
+ * `src/assets/files/` and are served at `/assets/files/<file>`; `label` is the
+ * editorial link text. `route` is the project page that offers the document
+ * (homepage projects also offer it on `/`).
+ */
+const LOCAL_DOCUMENTS = [
+  { route: "/proyectos/corteza-liquida/", label: "Dossier", file: "Dossier_Corteza-Liquida--xLava.pdf.pdf" },
+  { route: "/proyectos/tiempos-pendulares/", label: "Dossier", file: "Dossier_Tiempos-Pendulares-x-Lava.pdf" },
+  { route: "/proyectos/tiempos-pendulares/", label: "Poster", file: "PPD_LAVA_posterzine.pdf" },
+  { route: "/proyectos/tramas-de-lo-indomito/", label: "Dossier", file: "Lava_Tramas-de-lo-indomito_GaleriaMunicipal.pdf" },
+];
+
+/** Every page that renders project text, and so can carry its links. */
+const PAGES_WITH_PROJECT_TEXT = ["/", "/proyectos/", ...PROJECTS.map((project) => project.route)];
+
+/** The project content file behind a project route. */
+const sourceOf = (route) => projectFiles().find((file) => projectRoute(file) === route);
+
+/** Links rendered inside the project text of a page, in document order. */
+function bodyLinks(pageRoute) {
+  return readPage(pageRoute)
+    .querySelectorAll("main .project-body")
+    .flatMap((body) => body.querySelectorAll("a"));
+}
+
+/** A URL the site itself owns: root-relative, no scheme, no host. */
+const isLocalRootRelative = (href) => href.startsWith("/") && !href.startsWith("//");
+
+describe("local document links", () => {
+  it("links each local document from its project page, under the deployment path prefix", () => {
+    for (const { route, label, file } of LOCAL_DOCUMENTS) {
+      const links = bodyLinks(route).filter((link) => normalize(link.textContent) === label);
+      assert.equal(links.length, 1, `page ${route}: exactly one “${label}” link`);
+      assert.equal(
+        links[0].getAttribute("href"),
+        localUrl(`/assets/files/${file}`),
+        `page ${route}: the “${label}” link points at the document under the path prefix`,
+      );
+    }
+  });
+
+  it("points every local link in project text at a file in the generated site", () => {
+    for (const pageRoute of PAGES_WITH_PROJECT_TEXT) {
+      for (const link of bodyLinks(pageRoute)) {
+        const href = link.getAttribute("href");
+        if (!isLocalRootRelative(href)) continue; // external or scheme link: checked below
+        assert.ok(href.startsWith(`${PATH_PREFIX}/`), `page ${pageRoute}: local link ${href} carries the path prefix`);
+        const file = path.join(OUTPUT_DIR, href.slice(PATH_PREFIX.length));
+        assert.ok(
+          fs.existsSync(file),
+          `page ${pageRoute}: local link ${href} resolves to generated file ${path.relative(OUTPUT_DIR, file)}`,
+        );
+      }
+    }
+  });
+
+  it("leaves external links exactly as the content wrote them", () => {
+    for (const project of PROJECTS) {
+      const source = String(projectData(sourceOf(project.route)).text_es ?? "");
+      const external = [...source.matchAll(/\]\((https?:\/\/[^)\s]+)\)/g)].map((match) => match[1]);
+      if (!external.length) continue;
+
+      const rendered = bodyLinks(project.route)
+        .map((link) => link.getAttribute("href"))
+        .filter((href) => /^https?:\/\//.test(href));
+      assert.deepEqual(rendered, external, `page ${project.route}: external links are untouched`);
+    }
+  });
+
+  it("repairs the malformed link wrappers into single links", () => {
+    for (const { route, label } of LOCAL_DOCUMENTS) {
+      const blocks = projectBodyBlocks(route).filter((block) => block.text.includes(label));
+      assert.equal(blocks.length, 1, `page ${route}: “${label}” renders as one block`);
+
+      const { element, text } = blocks[0];
+      const anchors = element.querySelectorAll("a");
+      assert.equal(anchors.length, 1, `page ${route}: “${label}” is a single link, not split text`);
+      assert.equal(text, label, `page ${route}: the “${label}” block carries only the link text`);
+      assert.ok(!/\]\(/.test(text), `page ${route}: no raw Markdown link residue around “${label}”`);
+    }
+  });
+
+  it("never applies the path prefix twice", () => {
+    if (!PATH_PREFIX) return; // a root build has no prefix to duplicate
+    const doubled = `${PATH_PREFIX}${PATH_PREFIX}/`;
+    for (const pageRoute of PAGES_WITH_PROJECT_TEXT) {
+      for (const href of bodyLinks(pageRoute).map((link) => link.getAttribute("href"))) {
+        assert.ok(!href.startsWith(doubled), `page ${pageRoute}: ${href} is not double-prefixed`);
+      }
+    }
   });
 });
