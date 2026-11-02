@@ -1,5 +1,16 @@
 # Lava-mx.org — Cargo → 11ty Migration Plan
 
+> **Historical document.** This is the plan written before the Cargo → Eleventy
+> rebuild, kept for reference. The content model it describes — a `current`
+> flag, a per-project `slug`, a per-file `layout`, split galleries and a literal
+> `//` separator stored in content — is **not** the current schema. See the
+> current model in [`README.md` → Content model](README.md#content-model), the
+> curator workflow in [`docs/editor-guide.md`](docs/editor-guide.md) and the
+> maintainer setup in [`docs/maintainer-checklist.md`](docs/maintainer-checklist.md).
+> The migration scripts (`scripts/backup.mjs`, `scripts/extract.mjs`,
+> `scripts/fetch-assets.mjs`) and `_cargo-export/` are one-time tools, not part
+> of the current editing or deploy workflow.
+
 ## Locked decisions
 
 | Decision | Choice |

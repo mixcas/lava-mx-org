@@ -4,6 +4,25 @@ Static site for [Lava](https://lava-mx.org), a curatorial collective in Mexico
 City. Migrated from Cargo to an [Eleventy](https://www.11ty.dev/) site and
 deployed to GitHub Pages.
 
+## Documentation
+
+- [`docs/editor-guide.md`](docs/editor-guide.md) — curator guide (Spanish):
+  signing in with the invitation, finding and editing a project, the gallery,
+  the bilingual text, the About page and the site settings, publishing, waiting
+  for the deploy, and the filename/URL warning.
+- [`docs/maintainer-checklist.md`](docs/maintainer-checklist.md) — installing
+  the Pages CMS GitHub App, inviting editors by email, verifying the CMS on a
+  non-production branch, and merging to production. App installation and
+  invitations are **manual maintainer actions**.
+- [`GLOSSARY.md`](GLOSSARY.md) — the domain vocabulary: project, homepage
+  project, archive project, gallery, media item, media source, and the editor and
+  maintainer roles.
+- [`docs/adr/0001-pages-cms.md`](docs/adr/0001-pages-cms.md) — the Pages CMS
+  decision and its trade-offs.
+- [`MIGRATION-PLAN.md`](MIGRATION-PLAN.md) — historical: the original Cargo →
+  Eleventy plan, kept for reference (its content model predates the current
+  schema; see the note at its top).
+
 ## Stack
 
 - **Eleventy v3** (Nunjucks templates, Markdown content)
@@ -170,8 +189,9 @@ are linked root-relative (`/assets/files/...`); the build applies the deployment
 path prefix (`lib/path-prefix.js`), so they work under any base path.
 
 Content is edited by hand or through Pages CMS, and always in this one canonical
-shape: the build no longer interprets pre-CMS leftovers (`media_left` /
-`media_middle`, `{ video: true }`, `muted`, bare filenames).
+shape: one typed gallery, `text_es` / `text_en`, `bio_es` / `bio_en` / `team` on
+the About page, and canonical asset paths. The build rejects any other shape
+(see the content contract below) instead of guessing what it meant.
 
 ### Content contract (build validation)
 
@@ -187,9 +207,9 @@ have saved:
   avif or gif, video sources use mp4 or webm;
 - the master file each source names exists in `src/assets/images/` or
   `src/assets/videos/`;
-- no project file still carries a legacy key (`current`, `slug`, `layout`,
-  `text`, `bio`, `media_left`, `media_middle`) or a legacy per-item `video` /
-  `muted` flag.
+- no project file still carries a key or per-item flag from the pre-CMS content
+  that the schema replaced — the build names every one of them in the error
+  message.
 
 Every problem is reported in one build failure, naming the project file and the
 field (gallery items are numbered from 1):
@@ -203,7 +223,6 @@ Fix the front matter under src/proyectos/ (.pages.yml describes each field).
 
 `npm test` runs the same checks against throwaway content directories and
 through a real Eleventy build, so each rule is proven to stop the build.
-
 
 ### About page
 
@@ -233,8 +252,15 @@ former-collaborators heading. The page keeps the site description as its
 
 `.pages.yml` (repository root) configures [Pages CMS](https://pagescms.org) 2.x.
 Editors sign in at <https://app.pagescms.org>, pick a branch, and edit the
-`proyectos` collection or the About page; every save is a commit on that branch,
-which triggers the deploy workflow. Labels and helper text are Spanish.
+`proyectos` collection, the About page and the site settings; every save is a
+commit on that branch. A commit on `main` triggers the deploy workflow and the
+site is live about four minutes later. Labels and helper text are Spanish.
+
+**There is no rendered page preview inside the CMS.** Editors review the live
+site after the deploy. [`docs/editor-guide.md`](docs/editor-guide.md) is the
+curator-facing workflow; [`docs/maintainer-checklist.md`](docs/maintainer-checklist.md)
+covers installing the GitHub App, inviting editors and verifying the app on a
+branch (all manual steps).
 
 - `settings.content.merge: true` — keys outside the schema (`variant`) are
   preserved when an editor saves a project.
@@ -259,9 +285,10 @@ which triggers the deploy workflow. Labels and helper text are Spanish.
   `bio_en` (English, optional) and `team`, all Markdown rich text with the
   source switch and no media. `title` and `layout` stay out of the editor, so
   merge mode preserves them and the page keeps its layout on save.
-- The schema currently covers title, venue, dates, both texts, homepage status,
-  order, gallery columns and the gallery. The remaining media sources are
-  handled by later work.
+- The schema covers the `proyectos` collection (title, venue, dates, both texts,
+  homepage status, order, gallery columns and the gallery), the About file
+  (`bio_es`, `bio_en`, `team`) and the site settings file (every key in
+  `src/_data/site.json`, including the ones no template reads).
 
 ### Filename / URL change warning (limitation)
 
@@ -269,38 +296,16 @@ Pages CMS has no built-in warning when a filename change alters a public URL, an
 no way to warn *at* the filename input. The configuration does the most the format
 allows: the collection `description` and the `title` field `description` both state
 that the filename is the public URL and that changing it breaks existing links.
+The editor guide repeats the warning for the editors.
 
-**A maintainer must verify this in the hosted app** (it cannot be checked from the
-repository, because it needs a signed-in session):
-
-1. Open the repository on a non-production branch.
-2. Confirm the collection description is visible on the project list and/or entry.
-3. Confirm the `title` field's helper text appears when creating and when editing.
-4. Confirm the filename input shows on create (pre-filled from the title) and on
-   edit (locked until unlocked).
-5. If the collection description is *not* rendered by the app, move the warning
-   into the field descriptions only, and record the finding in the editor handoff.
+Because the app renders this copy, a maintainer confirms it in the hosted app on
+a non-production branch — step 3 of
+[`docs/maintainer-checklist.md`](docs/maintainer-checklist.md) — together with the
+gallery editor, the upload restrictions, the About and settings saves, and
+create/rename/delete.
 
 Config changes are reviewable in Git and are read per branch, so a branch can be
 tested before merging.
-
-### Gallery and media (manual check)
-
-The gallery editor, the media browser and the upload restrictions live in the
-hosted app and cannot be exercised from the repository. **A maintainer must
-verify this on a non-production branch**, then discard the test commits:
-
-1. Open a project and confirm the gallery list renders as typed items (an
-   image item shows its image, a video item its video, poster and flags).
-2. Add an existing image from the library, upload a new image, add a video,
-   drag items to reorder, and remove one item.
-3. Save and confirm the committed front matter keeps the canonical paths
-   (`/assets/images/…`, `/assets/videos/…`), the original filename and the
-   item order.
-4. Try uploading an unsupported format (e.g. SVG, TIFF, MOV) and confirm the
-   media source rejects it.
-5. Set `gallery_columns` to 1 and 2 and confirm the saved value is a number and
-   the deployed page changes layout accordingly.
 
 ## CI/CD
 
