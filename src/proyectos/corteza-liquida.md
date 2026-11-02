@@ -2,12 +2,8 @@
 title: "Corteza Líquida"
 venue: "laNao Galería"
 dates: "1 febrero - 1 abril, 2025. Ciudad de México."
-current: true
+featured: true
 order: 3
-slug: "corteza-liquida"
-layout: project
-variant: standard
-gallery_columns: 1
 media:
   - src: "La-Nao-febrero-2025_019.webp"
   - src: "La-Nao-febrero-2025_030.webp"

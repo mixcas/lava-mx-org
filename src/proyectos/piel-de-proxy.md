@@ -2,12 +2,7 @@
 title: "Piel de Proxy"
 venue: "Trámite Buró de Coleccionistas"
 dates: "5 - 8 Octubre 2023. Quéretaro."
-current: false
 order: 6
-slug: "piel-de-proxy"
-layout: project
-variant: standard
-gallery_columns: 1
 media:
   - src: "T007_458.webp"
   - src: "T007_461.webp"

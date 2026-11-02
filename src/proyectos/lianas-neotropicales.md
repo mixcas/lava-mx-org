@@ -2,11 +2,7 @@
 title: "Lianas Neotropicales"
 venue: "Compás 88"
 dates: "13 - 20 de Mayo 2023. Ciudad de México."
-current: false
 order: 9
-slug: "lianas-neotropicales"
-layout: project
-variant: standard
 gallery_columns: 2
 media:
   - src: "_MG_1152-color-copy.webp"

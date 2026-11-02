@@ -2,12 +2,7 @@
 title: "Open Studio: Christian Wedel"
 venue: "Porvenir Residencias"
 dates: "12 de Agosto 2023. Ciudad de México."
-current: false
 order: 7
-slug: "open-studio-christian-wedel"
-layout: project
-variant: standard
-gallery_columns: 1
 media:
   - src: "Copia-de-IMG_7163.webp"
   - src: "Copia-de-IMG_7140.webp"

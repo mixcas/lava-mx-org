@@ -2,10 +2,7 @@
 title: "Infernal Natures"
 venue: "B-LA-M > Roam Space + Wonzimer + Lava"
 dates: "29 Jun - 7 Jul 2024. Berlín."
-current: false
 order: 3
-slug: "infernal-natures"
-layout: project
 variant: three-column
 media_left:
   - src: "20240629-03-roam-BLAM-opening.webp"

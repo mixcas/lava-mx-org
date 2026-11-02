@@ -1,8 +1,19 @@
 import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
 
+import { frontMatter, projectFiles } from "./support/content.mjs";
 import { ABOUT, ARCHIVE_PROJECTS, HOMEPAGE_PROJECTS, PROJECTS, SITE } from "./support/projects.mjs";
-import { buildSite, listOutput, localUrl, normalize, PATH_PREFIX, readPage, readText, SITE_URL } from "./support/site.mjs";
+import {
+  buildSite,
+  listOutput,
+  localUrl,
+  normalize,
+  PATH_PREFIX,
+  readPage,
+  readRepoFile,
+  readText,
+  SITE_URL,
+} from "./support/site.mjs";
 
 /** About page route (see GLOSSARY: the collective's identity page). */
 const ABOUT_ROUTE = "/acerca-de/";
@@ -47,6 +58,49 @@ describe("project URLs", () => {
       PROJECTS.map(({ route }) => route.split("/")[2]).sort(),
       "page /proyectos/: generated project directories (a stray page or content file such as the directory defaults file would show up here)",
     );
+  });
+});
+
+describe("project content model", () => {
+  /** Directory-level defaults shared by every project entry (Eleventy directory data file). */
+  const DEFAULTS_FILE = "src/proyectos/proyectos.11tydata.json";
+
+  it("supplies layout, variant, homepage status, order and columns from directory defaults", () => {
+    const defaults = JSON.parse(readRepoFile(DEFAULTS_FILE));
+
+    assert.deepEqual(
+      defaults,
+      { layout: "project", variant: "standard", featured: false, order: 0, gallery_columns: 1 },
+      `${DEFAULTS_FILE}: project defaults`,
+    );
+  });
+
+  it("keeps legacy identity keys out of every project file", () => {
+    const files = projectFiles();
+    assert.equal(files.length, PROJECTS.length, "fixture: expected one content file per project");
+
+    for (const file of files) {
+      const keys = Object.keys(frontMatter(file));
+      for (const legacy of ["current", "slug", "layout"]) {
+        assert.ok(!keys.includes(legacy), `${file}: front matter still carries the legacy "${legacy}" key`);
+      }
+    }
+  });
+
+  it("keeps only non-default values in project front matter", () => {
+    for (const file of projectFiles()) {
+      const keys = frontMatter(file);
+
+      if ("variant" in keys) {
+        assert.equal(keys.variant, "three-column", `${file}: "variant" only appears when it is not the standard variant`);
+      }
+      if ("gallery_columns" in keys) {
+        assert.notEqual(keys.gallery_columns, "1", `${file}: "gallery_columns" only appears when it is not one column`);
+      }
+      if ("featured" in keys) {
+        assert.equal(keys.featured, "true", `${file}: "featured" only appears for homepage projects`);
+      }
+    }
   });
 });
 

@@ -7,14 +7,14 @@
  * front matter, layouts, or the image pipeline that alters one of them must
  * fail the suite.
  *
- * `homepage: true` marks a homepage project; the rest are archive projects.
+ * `featured: true` marks a homepage project; the rest are archive projects.
  * Array order is the order each group must appear in on its page.
  */
 export const PROJECTS = [
   {
     route: "/proyectos/mineralia-indisciplinada/",
     title: "Mineralia indisciplinada",
-    homepage: true,
+    featured: true,
     venue: "Museo Universitario del Chopo. Ciudad de México.",
     dates: "Inauguración: Octubre 23, 2025 — Marzo 2026",
     spanish: "es un proyecto curatorial realizado en conjunto con lxs artistas Mariana Dussel",
@@ -25,7 +25,7 @@ export const PROJECTS = [
   {
     route: "/proyectos/y-las-entranas-gritaron/",
     title: "Y las entrañas gritaron...",
-    homepage: true,
+    featured: true,
     venue: "guadalajara90210",
     dates: "29 marzo - 26 abril, 2025. Ciudad de México.",
     spanish: "es una exposición colectiva que se adentra en la alteración de los compuestos naturales y minerales de la Tierra",
@@ -36,7 +36,7 @@ export const PROJECTS = [
   {
     route: "/proyectos/corteza-liquida/",
     title: "Corteza Líquida",
-    homepage: true,
+    featured: true,
     venue: "laNao Galería",
     dates: "1 febrero - 1 abril, 2025. Ciudad de México.",
     spanish: "es una exposición individual de la artista Sonia Bandura",
@@ -47,7 +47,7 @@ export const PROJECTS = [
   {
     route: "/proyectos/tramas-de-lo-indomito/",
     title: "Tramas de lo indómito",
-    homepage: false,
+    featured: false,
     venue: "Galería Municipal",
     dates: "16 octubre - 20 noviembre, 2024. Querétaro.",
     spanish: "ahonda en las nociones de ecologías y poéticas queer",
@@ -57,7 +57,7 @@ export const PROJECTS = [
   {
     route: "/proyectos/tiempos-pendulares/",
     title: "Tiempos Pendulares",
-    homepage: false,
+    featured: false,
     venue: "Islera",
     dates: "20 Julio - 17 Agosto, 2024. CDMX.",
     spanish: "es una una propuesta expositiva entre dos artistas",
@@ -67,7 +67,7 @@ export const PROJECTS = [
   {
     route: "/proyectos/infernal-natures/",
     title: "Infernal Natures",
-    homepage: false,
+    featured: false,
     venue: "B-LA-M > Roam Space + Wonzimer + Lava",
     dates: "29 Jun - 7 Jul 2024. Berlín.",
     spanish: "es un intercambio de tres años que busca fortalecer las relaciones",
@@ -77,7 +77,7 @@ export const PROJECTS = [
   {
     route: "/proyectos/penumbra/",
     title: "Penumbra",
-    homepage: false,
+    featured: false,
     // The source content has no venue; the page must not invent one.
     venue: null,
     dates: "1 - 18 Febrero 2024. Ciudad de México.",
@@ -88,7 +88,7 @@ export const PROJECTS = [
   {
     route: "/proyectos/vestigios-metabolicos/",
     title: "Vestigios Metabolicos",
-    homepage: false,
+    featured: false,
     venue: "Más Arte Galería",
     dates: "26 Octubre - 10 Noviembre 2023. Quito, Ecuador.",
     spanish: "es el espacio donde se muestran piezas o vestigios de corporalidades indistintas",
@@ -98,7 +98,7 @@ export const PROJECTS = [
   {
     route: "/proyectos/piel-de-proxy/",
     title: "Piel de Proxy",
-    homepage: false,
+    featured: false,
     venue: "Trámite Buró de Coleccionistas",
     dates: "5 - 8 Octubre 2023. Quéretaro.",
     spanish: "es el acontecer de un mundo pospretérito",
@@ -108,7 +108,7 @@ export const PROJECTS = [
   {
     route: "/proyectos/open-studio-christian-wedel/",
     title: "Open Studio: Christian Wedel",
-    homepage: false,
+    featured: false,
     venue: "Porvenir Residencias",
     dates: "12 de Agosto 2023. Ciudad de México.",
     spanish: "es un artista que trabaja desde la inmensidad y densidad de los ecosistemas tropicales",
@@ -118,7 +118,7 @@ export const PROJECTS = [
   {
     route: "/proyectos/sangre-y-savia/",
     title: "Sangre y Savia",
-    homepage: false,
+    featured: false,
     venue: "Studio Croma",
     dates: "17 Junio - 15 Julio 2023. Ciudad de México.",
     spanish: "En este ejercicio de ficción especulativa, suceden vínculos interespecie",
@@ -128,7 +128,7 @@ export const PROJECTS = [
   {
     route: "/proyectos/lianas-neotropicales/",
     title: "Lianas Neotropicales",
-    homepage: false,
+    featured: false,
     venue: "Compás 88",
     dates: "13 - 20 de Mayo 2023. Ciudad de México.",
     spanish: "es un despliegue de la investigación de la artista",
@@ -137,8 +137,8 @@ export const PROJECTS = [
   },
 ];
 
-export const HOMEPAGE_PROJECTS = PROJECTS.filter((project) => project.homepage);
-export const ARCHIVE_PROJECTS = PROJECTS.filter((project) => !project.homepage);
+export const HOMEPAGE_PROJECTS = PROJECTS.filter((project) => project.featured);
+export const ARCHIVE_PROJECTS = PROJECTS.filter((project) => !project.featured);
 
 /** Site-wide copy the migration must keep using. */
 export const SITE = {

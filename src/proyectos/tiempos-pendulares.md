@@ -2,12 +2,7 @@
 title: "Tiempos Pendulares"
 venue: "Islera"
 dates: "20 Julio - 17 Agosto, 2024. CDMX."
-current: false
 order: 2
-slug: "tiempos-pendulares"
-layout: project
-variant: standard
-gallery_columns: 1
 media:
   - src: "TP_17_post.webp"
   - src: "TP_02_Post.webp"

@@ -2,12 +2,7 @@
 title: "Vestigios Metabolicos"
 venue: "Más Arte Galería"
 dates: "26 Octubre - 10 Noviembre 2023. Quito, Ecuador."
-current: false
 order: 5
-slug: "vestigios-metabolicos"
-layout: project
-variant: standard
-gallery_columns: 1
 media:
   - src: "_DSC9798.webp"
   - src: "_DSC9800.webp"
