@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
 
 import { ABOUT, ARCHIVE_PROJECTS, HOMEPAGE_PROJECTS, PROJECTS, SITE } from "./support/projects.mjs";
-import { buildSite, localUrl, normalize, PATH_PREFIX, readPage, SITE_URL } from "./support/site.mjs";
+import { buildSite, listOutput, localUrl, normalize, PATH_PREFIX, readPage, readText, SITE_URL } from "./support/site.mjs";
 
 /** About page route (see GLOSSARY: the collective's identity page). */
 const ABOUT_ROUTE = "/acerca-de/";
@@ -36,6 +36,32 @@ describe("project URLs", () => {
     for (const { route } of PROJECTS) {
       assert.doesNotThrow(() => readPage(route), `page ${route}: project URL no longer exists`);
     }
+  });
+
+  it("generates one directory per project and no other entry under /proyectos/", () => {
+    // `index.html` is the archive page itself; everything else must be a project.
+    const generated = listOutput("/proyectos/").filter((entry) => entry !== "index.html");
+
+    assert.deepEqual(
+      generated,
+      PROJECTS.map(({ route }) => route.split("/")[2]).sort(),
+      "page /proyectos/: generated project directories (a stray page or content file such as the directory defaults file would show up here)",
+    );
+  });
+});
+
+describe("sitemap (/sitemap.xml)", () => {
+  const route = "/sitemap.xml";
+
+  it("lists every page, including all twelve projects", () => {
+    const listed = [...readText(route).matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
+    const routes = ["/", ABOUT_ROUTE, "/proyectos/", ...PROJECTS.map((project) => project.route)];
+
+    assert.deepEqual(
+      listed.sort(),
+      routes.map((listedRoute) => `${SITE_URL}${localUrl(listedRoute)}`).sort(),
+      `page ${route}: listed URLs`,
+    );
   });
 });
 
