@@ -20,7 +20,9 @@ export const PROJECTS = [
     spanish: "es un proyecto curatorial realizado en conjunto con lxs artistas Mariana Dussel",
     english: "is a curatorial project developed in collaboration with artists Mariana Dussel",
     images: 11,
-    videos: [{ source: "Reel_chopo_audio.mp4", hasPoster: true, autoplay: false, loop: false, muted: false }],
+    // `position` is the item's zero-based index in the gallery, so a gallery
+    // that reorders media items fails here even when the count is unchanged.
+    videos: [{ source: "Reel_chopo_audio.mp4", position: 1, hasPoster: true, autoplay: false, loop: false, muted: false }],
   },
   {
     route: "/proyectos/y-las-entranas-gritaron/",
@@ -31,7 +33,7 @@ export const PROJECTS = [
     spanish: "es una exposición colectiva que se adentra en la alteración de los compuestos naturales y minerales de la Tierra",
     english: "is a group show that delves into the alteration of Earth's natural and mineral compounds",
     images: 9,
-    videos: [{ source: "LAVA-FLYER-MOTION.mp4", hasPoster: false, autoplay: true, loop: true, muted: true }],
+    videos: [{ source: "LAVA-FLYER-MOTION.mp4", position: 9, hasPoster: false, autoplay: true, loop: true, muted: true }],
   },
   {
     route: "/proyectos/corteza-liquida/",

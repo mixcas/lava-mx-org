@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import yaml from "js-yaml";
+
 import { readRepoFile, REPO_ROOT } from "./site.mjs";
 
 /**
@@ -30,4 +32,21 @@ export function projectFiles() {
     .filter((entry) => entry.endsWith(".md"))
     .sort()
     .map((entry) => `src/proyectos/${entry}`);
+}
+
+/**
+ * A Markdown file's front matter, parsed, so content-contract assertions can
+ * read structured values (the gallery list, its media items).
+ */
+export function projectData(relativePath) {
+  const source = readRepoFile(relativePath).replace(/^---\r?\n/, "");
+  const end = source.search(/^---\r?$/m);
+  if (end === -1) throw new Error(`${relativePath}: no closing front matter delimiter`);
+
+  return yaml.load(source.slice(0, end)) ?? {};
+}
+
+/** Project route for a project content file (the filename is the URL). */
+export function projectRoute(file) {
+  return `/proyectos/${path.basename(file, ".md")}/`;
 }
