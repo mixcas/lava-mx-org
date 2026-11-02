@@ -48,6 +48,15 @@ function projectArticle(route) {
   return article;
 }
 
+/** The blocks of a project page's text column, in document order. */
+function projectBodyBlocks(route) {
+  const body = projectArticle(route).querySelector(".project-body");
+  assert.ok(body, `page ${route}: no project text rendered`);
+  return body.childNodes
+    .filter((node) => node.nodeType === NodeType.ELEMENT_NODE)
+    .map((node) => ({ element: node, text: normalize(node.textContent) }));
+}
+
 describe("project URLs", () => {
   it("keeps all twelve project URLs", () => {
     assert.equal(PROJECTS.length, 12, "fixture: expected twelve baseline projects");
@@ -189,6 +198,38 @@ describe("project content model", () => {
     );
   });
 
+  it("stores each language in its own text field", () => {
+    for (const file of projectFiles()) {
+      const data = projectData(file);
+      const spanish = typeof data.text_es === "string" ? data.text_es.trim() : "";
+      assert.ok(spanish.length > 0, `${file}: "text_es" is the Spanish text and is never empty`);
+      assert.ok(!Object.hasOwn(data, "text"), `${file}: the legacy "text" field is gone`);
+
+      const baseline = PROJECTS.find((project) => project.route === projectRoute(file));
+      assert.ok(baseline, `${file}: no baseline project for this content file`);
+      if (baseline.english) {
+        assert.ok(
+          typeof data.text_en === "string" && data.text_en.trim().length > 0,
+          `${file}: bilingual projects carry the English text in "text_en"`,
+        );
+      }
+    }
+  });
+
+  it("keeps no literal // separator in project text", () => {
+    for (const file of projectFiles()) {
+      const data = projectData(file);
+      for (const key of ["text", "text_es", "text_en"]) {
+        const value = data[key];
+        if (typeof value !== "string") continue;
+        assert.ok(
+          !/^[ \t]*\/\/[ \t]*$/m.test(value),
+          `${file}: "${key}" contains a literal // separator line (the template draws the divider)`,
+        );
+      }
+    }
+  });
+
   it("keeps the three-column variant in the one project that uses it", () => {
     for (const file of projectFiles()) {
       assert.equal(
@@ -240,12 +281,12 @@ describe("Pages CMS project collection (.pages.yml)", () => {
     assert.deepEqual(collection.view?.default, { sort: "order", order: "asc" }, ".pages.yml: default order");
   });
 
-  it("exposes title, venue, dates, homepage status and order with Spanish help text", () => {
+  it("exposes title, venue, dates, both texts, homepage status and order with Spanish help text", () => {
     const fields = collection.fields ?? [];
     assert.deepEqual(
       fields.map((field) => field.name),
-      ["title", "venue", "dates", "featured", "order", "gallery_columns", "media"],
-      ".pages.yml: project fields (text arrives in a later ticket)",
+      ["title", "venue", "dates", "text_es", "text_en", "featured", "order", "gallery_columns", "media"],
+      ".pages.yml: project fields",
     );
 
     for (const field of fields) {
@@ -259,6 +300,31 @@ describe("Pages CMS project collection (.pages.yml)", () => {
     assert.equal(byName("featured").default, false, ".pages.yml: projects start off the homepage");
     assert.equal(byName("order").type, "number", ".pages.yml: order is a number");
     assert.equal(byName("order").default, 0, ".pages.yml: order defaults to zero");
+  });
+
+  it("edits the Spanish and English project text as Markdown rich text", () => {
+    const byName = (name) => collection.fields.find((field) => field.name === name);
+
+    const spanish = byName("text_es");
+    assert.equal(spanish?.type, "rich-text", ".pages.yml: text_es is rich text");
+    assert.equal(spanish?.required, true, ".pages.yml: every project has Spanish text");
+    assert.deepEqual(
+      spanish?.options,
+      { format: "markdown", switcher: true, media: false },
+      ".pages.yml: text_es is Markdown with a source switch and no body media (the text lives in front matter)",
+    );
+
+    const english = byName("text_en");
+    assert.equal(english?.type, "rich-text", ".pages.yml: text_en is rich text");
+    assert.notEqual(english?.required, true, ".pages.yml: English text is optional");
+    assert.deepEqual(
+      english?.options,
+      { format: "markdown", switcher: true, media: false },
+      ".pages.yml: text_en is Markdown with a source switch and no body media",
+    );
+
+    assert.match(spanish.label, /español/i, ".pages.yml: the Spanish text field is labelled in Spanish");
+    assert.match(english.label, /inglés/i, ".pages.yml: the English text field is labelled in Spanish");
   });
 
   it("stores gallery columns as a number of one or two", () => {
@@ -494,6 +560,84 @@ describe("project pages", () => {
   }
 });
 
+describe("bilingual project text", () => {
+  /** Projects the baseline lists an English text for; the rest are Spanish only. */
+  const BILINGUAL = PROJECTS.filter((project) => project.english);
+  const SPANISH_ONLY = PROJECTS.filter((project) => !project.english);
+  const isDivider = ({ element }) => element.classList.contains("project-body__divider");
+
+  /** The page's text column split at its divider: what comes before and after. */
+  function sides(route) {
+    const blocks = projectBodyBlocks(route);
+    const dividers = blocks.filter(isDivider);
+    assert.equal(dividers.length, 1, `page ${route}: a bilingual project has exactly one divider`);
+    assert.equal(dividers[0].text, "//", `page ${route}: the divider is the "//" mark`);
+
+    const at = blocks.indexOf(dividers[0]);
+    return { dividers, spanish: blocks.slice(0, at), english: blocks.slice(at + 1) };
+  }
+
+  it("renders the Spanish text first and the English text after the divider", () => {
+    assert.equal(BILINGUAL.length, 3, "fixture: expected three bilingual projects");
+
+    for (const { route, spanish, english } of BILINGUAL) {
+      const label = `page ${route}`;
+      const { spanish: before, english: after } = sides(route);
+
+      assert.ok(
+        before.map((block) => block.text).join(" ").includes(spanish),
+        `${label}: Spanish text "${spanish}" comes before the divider`,
+      );
+      assert.ok(
+        after.map((block) => block.text).join(" ").includes(english),
+        `${label}: English text "${english}" comes after the divider`,
+      );
+    }
+  });
+
+  it("draws the divider in the template, never as content", () => {
+    for (const { route } of BILINGUAL) {
+      // The mark stands alone in its own block with the styling hook; any other
+      // "//" block would be a leftover content separator.
+      const marks = projectBodyBlocks(route).filter((block) => block.text === "//");
+      assert.equal(marks.length, 1, `page ${route}: exactly one "//" block`);
+      assert.ok(isDivider(marks[0]), `page ${route}: the "//" block is the template divider`);
+    }
+  });
+
+  it("renders Spanish-only projects without a divider", () => {
+    assert.ok(SPANISH_ONLY.length > 0, "fixture: expected Spanish-only projects");
+
+    for (const { route } of SPANISH_ONLY) {
+      assert.deepEqual(
+        projectBodyBlocks(route).filter(isDivider),
+        [],
+        `page ${route}: a Spanish-only project has no divider`,
+      );
+    }
+  });
+
+  it("keeps Corteza Líquida's Spanish artist biography on the Spanish side", () => {
+    const route = "/proyectos/corteza-liquida/";
+    const { spanish, english } = sides(route);
+    const spanishText = spanish.map((block) => block.text).join(" ");
+    const englishText = english.map((block) => block.text).join(" ");
+
+    // The biography exists in both languages; each one stays with its language.
+    assert.ok(
+      spanishText.includes("es una artista visual cuya práctica abarca el dibujo, la escultura"),
+      `page ${route}: the Spanish biography comes before the divider`,
+    );
+    assert.ok(
+      englishText.includes("is a visual artist whose practice encompasses drawing, sculpture"),
+      `page ${route}: the English biography comes after the divider`,
+    );
+
+    // The dossier is language-neutral and must not vanish with the English text.
+    assert.ok(/Dossier/.test(spanishText), `page ${route}: the dossier stays with the Spanish text`);
+  });
+});
+
 describe("gallery media items", () => {
   /** The gallery children of a project page, in document order. */
   const galleryNodes = (route) =>
@@ -581,6 +725,23 @@ describe("page metadata", () => {
       assert.equal(twitterImage, ogImage, `${label}: twitter:image matches og:image`);
     });
   }
+
+  it("describes each project with the start of its Spanish text", () => {
+    for (const file of projectFiles()) {
+      const route = projectRoute(file);
+      const description = normalize(readPage(route).querySelector('meta[name="description"]')?.getAttribute("content"));
+      assert.ok(description.length > 0, `page ${route}: meta description is empty`);
+
+      // The description is the rendered Spanish text with its tags stripped and
+      // truncated, so comparing against the raw field only needs the emphasis
+      // markers removed and the truncation mark ignored.
+      const plain = normalize(String(projectData(file).text_es ?? "").replace(/\*/g, ""));
+      assert.ok(
+        plain.startsWith(description.replace(/(\.{3}|…)$/, "")),
+        `page ${route}: meta description "${description}" starts the Spanish text`,
+      );
+    }
+  });
 });
 
 /**
