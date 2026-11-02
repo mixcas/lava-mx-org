@@ -193,3 +193,102 @@ describe("page metadata", () => {
     });
   }
 });
+
+/**
+ * The three surfaces (project page, homepage, archive page) share one rendering
+ * path. These assertions pin the per-surface differences that path centralizes:
+ * heading level, linked titles, gallery columns, and first-image priority.
+ */
+describe("project rendering contract", () => {
+  /** Projects whose gallery is laid out in two columns (see GLOSSARY: Gallery). */
+  const TWO_COLUMN_PROJECTS = new Set(["/proyectos/lianas-neotropicales/"]);
+  /** The one project that keeps the three-column layout. */
+  const THREE_COLUMN_ROUTE = "/proyectos/infernal-natures/";
+  const LISTING_ROUTES = ["/", "/proyectos/"];
+
+  it("gives project pages an h1 title and listing pages an h2 title", () => {
+    for (const { route } of PROJECTS) {
+      const heading = projectArticle(route).querySelector("h1, h2");
+      assert.equal(heading?.tagName, "H1", `page ${route}: project title heading level`);
+    }
+
+    for (const route of LISTING_ROUTES) {
+      const headings = readPage(route)
+        .querySelectorAll("main article")
+        .map((article) => article.querySelector("h1, h2")?.tagName);
+      assert.ok(headings.length > 0, `page ${route}: no project headings rendered`);
+      assert.deepEqual(
+        headings.filter((tagName) => tagName !== "H2"),
+        [],
+        `page ${route}: listing project titles are section headings`,
+      );
+    }
+  });
+
+  it("links archive titles to their project pages and leaves homepage titles unlinked", () => {
+    for (const { route } of PROJECTS) {
+      assert.equal(projectArticle(route).querySelector("h1 a, h2 a"), null, `page ${route}: project page title is not a link`);
+    }
+
+    const homepageTitles = readPage("/")
+      .querySelectorAll("main article")
+      .map((article) => article.querySelector("h1 a, h2 a")?.getAttribute("href"))
+      .filter(Boolean);
+    assert.deepEqual(homepageTitles, [], "page /: homepage titles do not link to their project pages");
+
+    const archiveRoutes = readPage("/proyectos/")
+      .querySelectorAll("main article")
+      .map((article) => article.querySelector("h1, h2 a")?.getAttribute("href"));
+    assert.deepEqual(
+      archiveRoutes,
+      ARCHIVE_PROJECTS.map((project) => localUrl(project.route)),
+      "page /proyectos/: every archive title links to its project page",
+    );
+  });
+
+  it("renders a standard gallery with its column count", () => {
+    for (const { route } of PROJECTS) {
+      if (route === THREE_COLUMN_ROUTE) continue;
+      const galleries = projectArticle(route).querySelectorAll(".project-gallery");
+      assert.equal(galleries.length, 1, `page ${route}: standard projects have one gallery`);
+      assert.equal(
+        galleries[0].getAttribute("data-columns"),
+        TWO_COLUMN_PROJECTS.has(route) ? "2" : "1",
+        `page ${route}: gallery column count`,
+      );
+    }
+  });
+
+  it("splits the three-column project into two galleries without losing media", () => {
+    const article = projectArticle(THREE_COLUMN_ROUTE);
+    const galleries = article.querySelectorAll(".project-gallery");
+    assert.equal(galleries.length, 2, `page ${THREE_COLUMN_ROUTE}: three-column layout has two galleries`);
+    for (const gallery of galleries) {
+      assert.equal(gallery.hasAttribute("data-columns"), false, `page ${THREE_COLUMN_ROUTE}: three-column galleries take no column count`);
+    }
+    const expected = PROJECTS.find((project) => project.route === THREE_COLUMN_ROUTE).images;
+    const rendered = galleries.reduce((total, gallery) => total + gallery.querySelectorAll("picture").length, 0);
+    assert.equal(rendered, expected, `page ${THREE_COLUMN_ROUTE}: media items across both galleries`);
+  });
+
+  it("loads only one gallery image eagerly per page", () => {
+    const eager = (route) => projectArticle(route).querySelectorAll('img[loading="eager"]');
+
+    // A project page prioritizes its own first gallery image.
+    assert.equal(eager("/proyectos/mineralia-indisciplinada/").length, 1, "page /proyectos/mineralia-indisciplinada/: one eager image");
+
+    // A listing page prioritizes the first gallery image of its first project only.
+    for (const route of LISTING_ROUTES) {
+      const articles = readPage(route).querySelectorAll("main article");
+      assert.equal(eager(route).length, 1, `page ${route}: one eager image`);
+      assert.equal(
+        articles[0].querySelectorAll('img[loading="eager"]').length,
+        1,
+        `page ${route}: the eager image belongs to the first listed project`,
+      );
+    }
+
+    // The legacy three-column layout never prioritizes an image.
+    assert.equal(eager(THREE_COLUMN_ROUTE).length, 0, `page ${THREE_COLUMN_ROUTE}: no eager image`);
+  });
+});

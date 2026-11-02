@@ -1,46 +1,8 @@
 ---
 layout: base.njk
 ---
-{% set titleTag = "h1" %}
-{% if variant == "three-column" %}
-	<article class="project project--three-column">
-		<div class="project-three">
-			<div class="project-three__col">
-				<{{ titleTag }} class="project-header__title">{{ title }}</{{ titleTag }}>
-				<div class="project-gallery">
-					{% for m in media_left %}{% picture m.src, title %}{% endfor %}
-				</div>
-			</div>
-			<div class="project-three__col">
-				<div>{{ venue | mdInline | safe }}</div>
-				<div class="project-gallery">
-					{% for m in media_middle %}{% picture m.src, title %}{% endfor %}
-				</div>
-			</div>
-			<div class="project-three__col">
-				<div>{{ dates | mdInline | safe }}</div>
-				<div class="project-body">{{ text | md | safe }}</div>
-			</div>
-		</div>
-	</article>
-{% else %}
-	<article class="project">
-		<header class="project-header">
-			<{{ titleTag }} class="project-header__title">{{ title }}</{{ titleTag }}>
-			<div>{{ venue | mdInline | safe }}</div>
-			<div>{{ dates | mdInline | safe }}</div>
-		</header>
-		<div class="project-main">
-			<div class="project-gallery" data-columns="{{ gallery_columns }}">
-				{% for m in media %}
-					{% if m.video %}
-						<video class="project-video" src="{{ ('/assets/videos/' + m.src) | url }}"{% if m.poster %} poster="{% imageUrl m.poster, 1200 %}"{% endif %}{% if m.autoplay %} autoplay{% endif %}{% if m.loop %} loop{% endif %}{% if m.muted %} muted{% endif %} playsinline preload="metadata"></video>
-					{% else %}
-						{% picture m.src, title, loop.first %}
-					{% endif %}
-				{% endfor %}
-			</div>
-			<div class="project-body">{{ text | md | safe }}</div>
-		</div>
-	</article>
-{% endif %}
+{% set projects = [projectView] %}
+{% set heading = "h1" %}
+{% set linked = false %}
+{% set priority = true %}
+{% include "partials/projects.njk" %}
