@@ -11,10 +11,12 @@ _Avoid_: Show, event, entry
 **Homepage project**:
 A project selected by an editor to appear on the homepage, independent of its exhibition dates.
 _Avoid_: Current project, active project, featured project, ongoing project
+_Front matter_: `featured: true`; the `featuredProjects` collection.
 
 **Archive project**:
 A project that is not selected for the homepage; it appears on the project archive page.
 _Avoid_: Past project, other project
+_Front matter_: `featured` absent or `false`; the `archiveProjects` collection.
 
 **Gallery**:
 The ordered set of media items shown with a project.

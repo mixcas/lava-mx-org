@@ -4,12 +4,8 @@ venue: |-
   Museo Universitario del Chopo.
   Ciudad de México.
 dates: "**Inauguración:** Octubre 23, 2025 — Marzo 2026"
-current: true
+featured: true
 order: 1
-slug: "mineralia-indisciplinada"
-layout: project
-variant: standard
-gallery_columns: 1
 media:
   - src: "587715752_1242916567868994_3097586358400451986_n.webp"
   - src: "Reel_chopo_audio.mp4"

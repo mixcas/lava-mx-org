@@ -1,10 +1,10 @@
 ---
 layout: base.njk
 title: Lava
-hero: current
+hero: featured
 ---
 <h1 class="visually-hidden">Lava — proyectos actuales</h1>
-{% set projects = collections.currentProjects | projectViews %}
+{% set projects = collections.featuredProjects | projectViews %}
 {% set heading = "h2" %}
 {% set linked = false %}
 {% set priority = true %}

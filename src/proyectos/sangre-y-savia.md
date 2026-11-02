@@ -2,12 +2,7 @@
 title: "Sangre y Savia"
 venue: "Studio Croma"
 dates: "17 Junio - 15 Julio 2023. Ciudad de México."
-current: false
 order: 8
-slug: "sangre-y-savia"
-layout: project
-variant: standard
-gallery_columns: 1
 media:
   - src: "_MG_1730-copy.webp"
   - src: "_MG_1734-copy.webp"

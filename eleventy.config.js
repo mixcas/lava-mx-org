@@ -71,10 +71,10 @@ export default function (eleventyConfig) {
       const project = buildProjectView(data);
       if (project.gallery.length) return project.heroImage;
       const list =
-        data.hero === "past"
-          ? data.collections?.pastProjects
-          : data.hero === "current"
-            ? data.collections?.currentProjects
+        data.hero === "featured"
+          ? data.collections?.featuredProjects
+          : data.hero === "archive"
+            ? data.collections?.archiveProjects
             : null;
       return list?.length ? buildProjectView(list[0].data).heroImage : null;
     },
@@ -143,18 +143,19 @@ export default function (eleventyConfig) {
     },
   );
 
-  // Collections driving the home page (current) and the projects index (past).
+  // Project collections: the editor-selected homepage projects and the
+  // complementary archive projects, each in its configured `order`.
   const byOrder = (a, b) => (a.data.order ?? 0) - (b.data.order ?? 0);
-  eleventyConfig.addCollection("currentProjects", (api) =>
+  eleventyConfig.addCollection("featuredProjects", (api) =>
     api
       .getFilteredByGlob("src/proyectos/*.md")
-      .filter((item) => item.data.current === true)
+      .filter((item) => item.data.featured === true)
       .sort(byOrder),
   );
-  eleventyConfig.addCollection("pastProjects", (api) =>
+  eleventyConfig.addCollection("archiveProjects", (api) =>
     api
       .getFilteredByGlob("src/proyectos/*.md")
-      .filter((item) => item.data.current !== true)
+      .filter((item) => item.data.featured !== true)
       .sort(byOrder),
   );
 

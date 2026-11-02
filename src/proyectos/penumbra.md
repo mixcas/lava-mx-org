@@ -1,12 +1,7 @@
 ---
 title: "Penumbra"
 dates: "1 - 18 Febrero 2024. Ciudad de México."
-current: false
 order: 4
-slug: "penumbra"
-layout: project
-variant: standard
-gallery_columns: 1
 media:
   - src: "ALEX0006.webp"
   - src: "ALEX0007.webp"

@@ -1,8 +1,21 @@
 import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
 
+import yaml from "js-yaml";
+
+import { frontMatter, projectFiles } from "./support/content.mjs";
 import { ABOUT, ARCHIVE_PROJECTS, HOMEPAGE_PROJECTS, PROJECTS, SITE } from "./support/projects.mjs";
-import { buildSite, localUrl, normalize, PATH_PREFIX, readPage, SITE_URL } from "./support/site.mjs";
+import {
+  buildSite,
+  listOutput,
+  localUrl,
+  normalize,
+  PATH_PREFIX,
+  readPage,
+  readRepoFile,
+  readText,
+  SITE_URL,
+} from "./support/site.mjs";
 
 /** About page route (see GLOSSARY: the collective's identity page). */
 const ABOUT_ROUTE = "/acerca-de/";
@@ -36,6 +49,137 @@ describe("project URLs", () => {
     for (const { route } of PROJECTS) {
       assert.doesNotThrow(() => readPage(route), `page ${route}: project URL no longer exists`);
     }
+  });
+
+  it("generates one directory per project and no other entry under /proyectos/", () => {
+    // `index.html` is the archive page itself; everything else must be a project.
+    const generated = listOutput("/proyectos/").filter((entry) => entry !== "index.html");
+
+    assert.deepEqual(
+      generated,
+      PROJECTS.map(({ route }) => route.split("/")[2]).sort(),
+      "page /proyectos/: generated project directories (a stray page or content file such as the directory defaults file would show up here)",
+    );
+  });
+});
+
+describe("project content model", () => {
+  /** Directory-level defaults shared by every project entry (Eleventy directory data file). */
+  const DEFAULTS_FILE = "src/proyectos/proyectos.11tydata.json";
+
+  it("supplies layout, variant, homepage status, order and columns from directory defaults", () => {
+    const defaults = JSON.parse(readRepoFile(DEFAULTS_FILE));
+
+    assert.deepEqual(
+      defaults,
+      { layout: "project", variant: "standard", featured: false, order: 0, gallery_columns: 1 },
+      `${DEFAULTS_FILE}: project defaults`,
+    );
+  });
+
+  it("keeps legacy identity keys out of every project file", () => {
+    const files = projectFiles();
+    assert.equal(files.length, PROJECTS.length, "fixture: expected one content file per project");
+
+    for (const file of files) {
+      const keys = Object.keys(frontMatter(file));
+      for (const legacy of ["current", "slug", "layout"]) {
+        assert.ok(!keys.includes(legacy), `${file}: front matter still carries the legacy "${legacy}" key`);
+      }
+    }
+  });
+
+  it("keeps only non-default values in project front matter", () => {
+    for (const file of projectFiles()) {
+      const keys = frontMatter(file);
+
+      if ("variant" in keys) {
+        assert.equal(keys.variant, "three-column", `${file}: "variant" only appears when it is not the standard variant`);
+      }
+      if ("gallery_columns" in keys) {
+        assert.notEqual(keys.gallery_columns, "1", `${file}: "gallery_columns" only appears when it is not one column`);
+      }
+      if ("featured" in keys) {
+        assert.equal(keys.featured, "true", `${file}: "featured" only appears for homepage projects`);
+      }
+    }
+  });
+});
+
+describe("Pages CMS project collection (.pages.yml)", () => {
+  const config = yaml.load(readRepoFile(".pages.yml"));
+  const collection = config.content?.find((entry) => entry.name === "proyectos");
+
+  it("preserves front-matter keys outside the editor schema", () => {
+    assert.equal(config.settings?.content?.merge, true, ".pages.yml: settings.content.merge keeps unmanaged keys on save");
+  });
+
+  it("edits src/proyectos and hides the directory defaults from the collection", () => {
+    assert.ok(collection, ".pages.yml: no `proyectos` collection");
+    assert.equal(collection.type, "collection", ".pages.yml: proyectos is a collection");
+    assert.equal(collection.path, "src/proyectos", ".pages.yml: proyectos collection path");
+    assert.deepEqual(collection.exclude, ["proyectos.11tydata.json"], ".pages.yml: excluded directory defaults file");
+    assert.doesNotThrow(
+      () => readRepoFile(`${collection.path}/${collection.exclude[0]}`),
+      ".pages.yml: the excluded file is the project directory defaults file",
+    );
+  });
+
+  it("allows creating, renaming and deleting projects", () => {
+    for (const operation of ["create", "rename", "delete"]) {
+      assert.notEqual(collection.operations?.[operation], false, `.pages.yml: "${operation}" blocked for proyectos`);
+    }
+  });
+
+  it("shows the filename on create and edit, seeded from the title", () => {
+    assert.deepEqual(
+      collection.filename,
+      { template: "{primary}.md", field: true },
+      ".pages.yml: filename template and visibility",
+    );
+  });
+
+  it("lists title, homepage status, order and dates, sorted by order", () => {
+    assert.equal(collection.view?.primary, "title", ".pages.yml: primary field");
+    assert.deepEqual(collection.view?.fields, ["title", "featured", "order", "dates"], ".pages.yml: list columns");
+    assert.deepEqual(collection.view?.sort, ["order", "title"], ".pages.yml: sortable columns");
+    assert.deepEqual(collection.view?.default, { sort: "order", order: "asc" }, ".pages.yml: default order");
+  });
+
+  it("exposes title, venue, dates, homepage status and order with Spanish help text", () => {
+    const fields = collection.fields ?? [];
+    assert.deepEqual(
+      fields.map((field) => field.name),
+      ["title", "venue", "dates", "featured", "order"],
+      ".pages.yml: project fields (gallery and text arrive in later tickets)",
+    );
+
+    for (const field of fields) {
+      assert.ok(field.label, `.pages.yml: field "${field.name}" has no label`);
+      assert.ok(field.description, `.pages.yml: field "${field.name}" has no description`);
+    }
+
+    const byName = (name) => fields.find((field) => field.name === name);
+    assert.equal(byName("title").required, true, ".pages.yml: title is required");
+    assert.equal(byName("featured").type, "boolean", ".pages.yml: featured is a boolean");
+    assert.equal(byName("featured").default, false, ".pages.yml: projects start off the homepage");
+    assert.equal(byName("order").type, "number", ".pages.yml: order is a number");
+    assert.equal(byName("order").default, 0, ".pages.yml: order defaults to zero");
+  });
+});
+
+describe("sitemap (/sitemap.xml)", () => {
+  const route = "/sitemap.xml";
+
+  it("lists every page, including all twelve projects", () => {
+    const listed = [...readText(route).matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
+    const routes = ["/", ABOUT_ROUTE, "/proyectos/", ...PROJECTS.map((project) => project.route)];
+
+    assert.deepEqual(
+      listed.sort(),
+      routes.map((listedRoute) => `${SITE_URL}${localUrl(listedRoute)}`).sort(),
+      `page ${route}: listed URLs`,
+    );
   });
 });
 

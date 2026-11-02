@@ -4,6 +4,12 @@ import { parse } from "node-html-parser";
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
 
+/** Repository root, for assertions about committed configuration and content. */
+export const REPO_ROOT = ROOT;
+
+/** Read a committed repository file as text. */
+export const readRepoFile = (relative) => fs.readFileSync(path.join(ROOT, relative), "utf8");
+
 /** Where Eleventy writes the site (same as `npm run build`). */
 export const OUTPUT_DIR = path.join(ROOT, "_site");
 
@@ -50,6 +56,16 @@ export function buildSite() {
 
 const pages = new Map();
 
+/** Generated file for a route, failing with a message that names the route. */
+function outputFile(route) {
+  const relative = path.extname(route) ? route : path.join(route, "index.html");
+  const file = path.join(OUTPUT_DIR, relative);
+  if (!fs.existsSync(file)) {
+    throw new Error(`page ${route}: expected generated file ${path.relative(ROOT, file)} (build did not produce this URL)`);
+  }
+  return file;
+}
+
 /**
  * Read a generated page as a DOM. Throws a message naming the missing route so
  * a removed or renamed URL fails with a readable error.
@@ -57,15 +73,19 @@ const pages = new Map();
 export function readPage(route) {
   if (pages.has(route)) return pages.get(route);
 
-  const relative = route.endsWith(".html") ? route : path.join(route, "index.html");
-  const file = path.join(OUTPUT_DIR, relative);
-  if (!fs.existsSync(file)) {
-    throw new Error(`page ${route}: expected generated file ${path.relative(ROOT, file)} (build did not produce this URL)`);
-  }
-
-  const doc = parse(fs.readFileSync(file, "utf8"), { comment: false });
+  const doc = parse(fs.readFileSync(outputFile(route), "utf8"), { comment: false });
   pages.set(route, doc);
   return doc;
+}
+
+/** Read a generated non-HTML file (sitemap, robots) as text. */
+export function readText(route) {
+  return fs.readFileSync(outputFile(route), "utf8");
+}
+
+/** Entries generated directly under a route's directory, sorted. */
+export function listOutput(route) {
+  return fs.readdirSync(path.dirname(outputFile(route))).sort();
 }
 
 /** Collapse whitespace so rendered text compares against the content. */

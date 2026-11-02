@@ -2,12 +2,7 @@
 title: "Tramas de lo indómito"
 venue: "Galería Municipal"
 dates: "16 octubre - 20 noviembre, 2024. Querétaro."
-current: false
 order: 1
-slug: "tramas-de-lo-indomito"
-layout: project
-variant: standard
-gallery_columns: 1
 media:
   - src: "JL5A3916.webp"
   - src: "JL5A3919.webp"

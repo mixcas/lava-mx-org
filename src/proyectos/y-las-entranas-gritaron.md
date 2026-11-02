@@ -2,12 +2,8 @@
 title: "Y las entrañas gritaron..."
 venue: "guadalajara90210"
 dates: "29 marzo - 26 abril, 2025. Ciudad de México."
-current: true
+featured: true
 order: 2
-slug: "y-las-entranas-gritaron"
-layout: project
-variant: standard
-gallery_columns: 1
 media:
   - src: "xLAVA_guadalajara90210.20.webp"
   - src: "xLAVA_guadalajara90210.22.webp"
