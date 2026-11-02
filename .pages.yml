@@ -9,10 +9,16 @@ settings:
     # Merge the submitted fields into the existing file: front-matter keys
     # outside the schema below (variant, …) are preserved on save.
     merge: true
+  commit:
+    # A save is a commit authored by the editor who made it, not by the app
+    # (US 28). The push still uses the GitHub App installation token; only the
+    # commit's author/committer metadata changes, so the deploy is unaffected.
+    identity: user
 
-# Where uploads are stored and which public URL each field writes into front
-# matter. `output` must be the URL the site serves the file at: images are
-# processed by the Eleventy image pipeline from their masters, videos and
+# Where uploads are stored and which path each field writes into front matter.
+# `output` is the canonical path prefix the site understands, not necessarily a
+# file the server returns: image masters in src/assets/images are referenced by
+# that path and the build emits responsive variants from them, while videos and
 # documents are copied verbatim. `rename: false` keeps the original filename,
 # the only name that matches the media the templates already reference.
 media:
@@ -94,8 +100,10 @@ content:
           admite Markdown.
       # The project text is two fields, one per language: the template renders
       # the Spanish text first, then a divider, then the English text when it
-      # exists. Both live in front matter (the Markdown body is empty), so their
-      # rich-text fields take no media source.
+      # exists. Both live in front matter (the Markdown body is empty). The
+      # rich-text fields insert from the documents library, so an editor can
+      # upload a PDF while writing and link to it (US 30): `categories` widens
+      # the picker's default image formats to the PDFs the source accepts.
       - name: text_es
         label: Texto en español
         type: rich-text
@@ -103,22 +111,27 @@ content:
         options:
           format: markdown
           switcher: true
-          media: false
+          media: documents
+          categories: [document]
         description: >-
           Texto del proyecto en español; admite Markdown. Se muestra primero.
           Los enlaces y descargas del proyecto van aquí, al final de este
-          texto, porque el texto en inglés es opcional.
+          texto, porque el texto en inglés es opcional. Desde el botón de
+          insertar puedes subir un PDF a la biblioteca de Documentos y
+          enlazarlo.
       - name: text_en
         label: Texto en inglés
         type: rich-text
         options:
           format: markdown
           switcher: true
-          media: false
+          media: documents
+          categories: [document]
         description: >-
           Texto del proyecto en inglés; admite Markdown. Aparece después del
           texto en español, separado por «//». Si lo dejas vacío, el proyecto
-          se muestra solo en español.
+          se muestra solo en español. Los PDF se enlazan desde el texto en
+          español.
       - name: featured
         label: Proyecto en portada
         type: boolean
@@ -235,17 +248,21 @@ content:
         options:
           format: markdown
           switcher: true
-          media: false
+          media: documents
+          categories: [document]
         description: >-
           Biografía del colectivo en español; admite Markdown. Se muestra
-          primero, seguida de la biografía en inglés cuando existe.
+          primero, seguida de la biografía en inglés cuando existe. Desde el
+          botón de insertar puedes subir un PDF a la biblioteca de Documentos y
+          enlazarlo.
       - name: bio_en
         label: Biografía en inglés
         type: rich-text
         options:
           format: markdown
           switcher: true
-          media: false
+          media: documents
+          categories: [document]
         description: >-
           Biografía del colectivo en inglés; admite Markdown. Aparece después
           de la biografía en español, separada por «//». No escribas «//»: si
@@ -257,7 +274,8 @@ content:
         options:
           format: markdown
           switcher: true
-          media: false
+          media: documents
+          categories: [document]
         description: >-
           Nombres, cargos y el encabezado de colaboradoras anteriores en un solo
           texto; admite Markdown (negritas y cursivas). Se muestra junto a la
