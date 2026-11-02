@@ -43,12 +43,17 @@ builds the site once into `_site/` (clearing stale HTML but keeping `_site/img`,
 so the responsive-image cache makes re-runs take about a second), then parses
 the generated HTML with `node-html-parser` and asserts the public behaviour —
 
-- all twelve project URLs at `/proyectos/<slug>/`;
-- homepage and `/proyectos/` membership and order;
+- all twelve project URLs at `/proyectos/<filename>/`, and no other entry under
+  `/proyectos/`;
+- homepage and `/proyectos/` membership and order, and a sitemap listing every
+  page;
 - each project page's title, venue, dates, text (Spanish and, when it exists,
   English), and every gallery image and video;
 - the About page biography and team;
-- `description`, canonical URL, and social image metadata on every page.
+- `description`, canonical URL, and social image metadata on every page;
+- the content contract: the project directory defaults, that no project file
+  carries a legacy `current` / `slug` / `layout` key, and that `.pages.yml`
+  still declares the project collection the editors depend on.
 
 Expectations live in `test/support/projects.mjs` as editorial facts about the
 live site, not as a copy of the templates. Failures name the page and the
@@ -72,9 +77,10 @@ used for the deploy build (see `.github/workflows/deploy.yml`), and cache
 src/
   _data/site.json              Site config (nav, emails, footer)
   _includes/layouts/           base / project / about / page layouts
-  proyectos/<slug>.md          One file per exhibition (front matter + text)
-  index.njk                    Home — current exhibitions
-  proyectos.njk                /proyectos/ — past exhibitions index
+  proyectos/<filename>.md      One file per exhibition (front matter + text)
+  proyectos/proyectos.11tydata.json  Directory defaults shared by every project
+  index.njk                    Home — Homepage projects
+  proyectos.njk                /proyectos/ — Archive projects index
   acerca-de.md                 About
   404.njk · sitemap.njk · robots.njk
   assets/                      css, fonts, images (masters), videos, files (PDFs)
@@ -91,30 +97,83 @@ _cargo-export/                 Raw Cargo backup (git-ignored)
 
 ## Content model
 
+### Project directory defaults
+
+`src/proyectos/proyectos.11tydata.json` is an Eleventy directory data file: it
+applies to every Markdown file in `src/proyectos/`, including projects an editor
+creates later. It supplies
+
+```json
+{ "layout": "project", "variant": "standard", "featured": false, "order": 0, "gallery_columns": 1 }
+```
+
+so a project file only carries values that differ from those defaults.
+
+### Front matter
+
 Each project is a Markdown file in `src/proyectos/` with front matter:
 
 ```yaml
 title: "Mineralia indisciplinada"
 venue: "Museo Universitario del Chopo."
 dates: "**Inauguración:** Octubre 23, 2025 — Marzo 2026"
-current: true          # shown on the home page
-order: 1               # sort order within current/past
-slug: "mineralia-indisciplinada"
-variant: standard      # or "three-column"
-gallery_columns: 1     # 2 for a two-column gallery
-media:                 # ordered images/videos (masters live in src/assets/images)
+featured: true          # homepage project; omitted (false) means archive project
+order: 1                # position within its group (homepage or archive)
+media:                  # ordered images/videos (masters live in src/assets/images)
   - src: "DSC01858.webp"
   - src: "Reel_chopo_audio.mp4"
     video: true
     poster: "Mineralia-0143-B2766344.webp"
-text: |-               # the bilingual body (ES // EN); rendered with Markdown
+text: |-                # the bilingual body (ES // EN); rendered with Markdown
   ...
 ```
+
+Only non-default values appear: `variant: three-column` (Infernal Natures) and
+`gallery_columns: 2` (Lianas Neotropicales). The file name is the public URL:
+`src/proyectos/penumbra.md` → `/proyectos/penumbra/`. There is no `slug` key.
 
 Images are referenced by their optimized master filename; `@11ty/eleventy-img`
 generates the responsive variants at build time. Dossier PDFs live in
 `src/assets/files/` and are linked with page-relative paths
 (`../../assets/files/...`) so they work under any base path.
+
+## Pages CMS
+
+`.pages.yml` (repository root) configures [Pages CMS](https://pagescms.org) 2.x.
+Editors sign in at <https://app.pagescms.org>, pick a branch, and edit the
+`proyectos` collection; every save is a commit on that branch, which triggers the
+deploy workflow. Labels and helper text are Spanish.
+
+- `settings.content.merge: true` — keys outside the schema (gallery, text) are
+  preserved when an editor saves a project.
+- The `proyectos` collection edits `src/proyectos` and excludes
+  `proyectos.11tydata.json`, so the directory defaults never appear as a project.
+- The filename field is visible on create and on edit and is seeded from the
+  title (`{primary}.md`).
+- The list view shows title, homepage status, order and dates, sorted by order.
+- The schema decided in `.pages.yml` currently covers title, venue, dates,
+  homepage status and order. Gallery and text fields are added by later work.
+
+### Filename / URL change warning (limitation)
+
+Pages CMS has no built-in warning when a filename change alters a public URL, and
+no way to warn *at* the filename input. The configuration does the most the format
+allows: the collection `description` and the `title` field `description` both state
+that the filename is the public URL and that changing it breaks existing links.
+
+**A maintainer must verify this in the hosted app** (it cannot be checked from the
+repository, because it needs a signed-in session):
+
+1. Open the repository on a non-production branch.
+2. Confirm the collection description is visible on the project list and/or entry.
+3. Confirm the `title` field's helper text appears when creating and when editing.
+4. Confirm the filename input shows on create (pre-filled from the title) and on
+   edit (locked until unlocked).
+5. If the collection description is *not* rendered by the app, move the warning
+   into the field descriptions only, and record the finding in the editor handoff.
+
+Config changes are reviewable in Git and are read per branch, so a branch can be
+tested before merging.
 
 ## CI/CD
 
