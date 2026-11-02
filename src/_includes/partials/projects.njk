@@ -12,12 +12,16 @@
 	view model (`splitAt`): the first column takes the first half rounded up,
 	the second column takes the rest.
 
+	The divider between the Spanish and the optional English text comes from the
+	shared `divider` macro, so the `//` literal lives in one place.
+
 	Context:
 		projects — project view models, in display order
 		heading  — title tag: "h1" on a project page, "h2" on a listing page
 		linked   — link the title to its project page (listing pages)
 		priority — load the first gallery image of the first project eagerly (LCP)
 #}
+{% from "partials/divider.njk" import divider -%}
 {% set projectHeading = heading or "h2" %}
 {% for project in projects %}
 {% if project.variant == "three-column" %}
@@ -33,7 +37,7 @@
 			</div>
 			<div class="project-three__col">
 				<div>{{ project.dates | mdInline | safe }}</div>
-				<div class="project-body">{{ project.text.spanish | md | safe }}{% if project.text.english %}<p class="project-body__divider">//</p>
+				<div class="project-body">{{ project.text.spanish | md | safe }}{% if project.text.english %}{{ divider() }}
 				{{ project.text.english | md | safe }}{% endif %}</div>
 			</div>
 		</div>
@@ -47,7 +51,7 @@
 		</header>
 		<div class="project-main">
 			{% gallery project.gallery, project.columns, (priority and loop.first) %}
-			<div class="project-body">{{ project.text.spanish | md | safe }}{% if project.text.english %}<p class="project-body__divider">//</p>
+			<div class="project-body">{{ project.text.spanish | md | safe }}{% if project.text.english %}{{ divider() }}
 			{{ project.text.english | md | safe }}{% endif %}</div>
 		</div>
 	</article>
