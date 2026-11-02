@@ -25,3 +25,31 @@ _Avoid_: Carousel, slideshow
 **Media item**:
 An image or video in a project's gallery, ordered by the editor.
 _Avoid_: Asset, attachment, file
+
+**Media source**:
+One of the three libraries Pages CMS uploads into and writes canonical paths
+from: images (`src/assets/images` → `/assets/images`), videos
+(`src/assets/videos` → `/assets/videos`) and documents (`src/assets/files` →
+`/assets/files`).
+_Avoid_: Folder, bucket, upload type
+
+**About page**:
+The collective's identity page, one file at `src/acerca-de.md`, holding the
+Spanish and English biography and the team.
+_Avoid_: Bio page, info page
+
+**Site settings**:
+The single data file `src/_data/site.json` shared by every page: site name,
+description, contact details, footer text, and navigation labels and URLs.
+_Avoid_: Config, globals
+
+**Editor**:
+A curator invited by email to Pages CMS who edits projects, the About page and
+the site settings, and whose saves become commits.
+_Avoid_: User, author
+_Pages CMS_: collaborator
+
+**Maintainer**:
+A person with GitHub access to the repository: owns `.pages.yml`, the Pages CMS
+GitHub App installation, the invitations and the deploy.
+_Avoid_: Admin, developer
