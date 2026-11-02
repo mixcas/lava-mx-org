@@ -5,16 +5,26 @@ dates: "1 febrero - 1 abril, 2025. Ciudad de México."
 featured: true
 order: 3
 media:
-  - src: "La-Nao-febrero-2025_019.webp"
-  - src: "La-Nao-febrero-2025_030.webp"
-  - src: "La-Nao-febrero-2025_022.webp"
-  - src: "La-Nao-febrero-2025_048.webp"
-  - src: "La-Nao-febrero-2025_043.webp"
-  - src: "La-Nao-febrero-2025_041.webp"
-  - src: "La-Nao-febrero-2025_045.webp"
-  - src: "La-Nao-febrero-2025_023.webp"
-  - src: "La-Nao-febrero-2025_027.webp"
-  - src: "Corteza-Liquida-x-Lava.-jpg.webp"
+  - type: image
+    src: "/assets/images/La-Nao-febrero-2025_019.webp"
+  - type: image
+    src: "/assets/images/La-Nao-febrero-2025_030.webp"
+  - type: image
+    src: "/assets/images/La-Nao-febrero-2025_022.webp"
+  - type: image
+    src: "/assets/images/La-Nao-febrero-2025_048.webp"
+  - type: image
+    src: "/assets/images/La-Nao-febrero-2025_043.webp"
+  - type: image
+    src: "/assets/images/La-Nao-febrero-2025_041.webp"
+  - type: image
+    src: "/assets/images/La-Nao-febrero-2025_045.webp"
+  - type: image
+    src: "/assets/images/La-Nao-febrero-2025_023.webp"
+  - type: image
+    src: "/assets/images/La-Nao-febrero-2025_027.webp"
+  - type: image
+    src: "/assets/images/Corteza-Liquida-x-Lava.-jpg.webp"
 text: |-
   Fruto de una investigación artística de largo aliento *Corteza líquida* es una exposición individual de la artista Sonia Bandura que explora las relaciones simbióticas entre microorganismos bacterianos y su influencia en los procesos geológicos. Desde las profundidades inhóspitas y húmedas de la Tierra, estos minúsculos y silenciosos organismos emergen como imponentes artífices de la vida.
   

@@ -4,15 +4,24 @@ venue: "Trámite Buró de Coleccionistas"
 dates: "5 - 8 Octubre 2023. Quéretaro."
 order: 6
 media:
-  - src: "T007_458.webp"
-  - src: "T007_461.webp"
-  - src: "T007_465.webp"
-  - src: "T007_471.webp"
-  - src: "T007_472.webp"
-  - src: "T007_476.webp"
-  - src: "T007_484.webp"
-  - src: "T007_723.webp"
-  - src: "T007_724.webp"
+  - type: image
+    src: "/assets/images/T007_458.webp"
+  - type: image
+    src: "/assets/images/T007_461.webp"
+  - type: image
+    src: "/assets/images/T007_465.webp"
+  - type: image
+    src: "/assets/images/T007_471.webp"
+  - type: image
+    src: "/assets/images/T007_472.webp"
+  - type: image
+    src: "/assets/images/T007_476.webp"
+  - type: image
+    src: "/assets/images/T007_484.webp"
+  - type: image
+    src: "/assets/images/T007_723.webp"
+  - type: image
+    src: "/assets/images/T007_724.webp"
 text: |-
   ***Piel de proxy*** es el acontecer de un mundo pospretérito, si acaso futuro, en el que conviven piezas que fragmentan la realidad física y refieren a sucesos de un otro tiempo.
   

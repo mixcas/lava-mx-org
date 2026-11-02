@@ -4,15 +4,24 @@ venue: "Más Arte Galería"
 dates: "26 Octubre - 10 Noviembre 2023. Quito, Ecuador."
 order: 5
 media:
-  - src: "_DSC9798.webp"
-  - src: "_DSC9800.webp"
-  - src: "_DSC9802.webp"
-  - src: "_DSC9824.webp"
-  - src: "_DSC9846.webp"
-  - src: "_DSC9852.webp"
-  - src: "_DSC9860.webp"
-  - src: "_DSC9861.webp"
-  - src: "_DSC9933.webp"
+  - type: image
+    src: "/assets/images/_DSC9798.webp"
+  - type: image
+    src: "/assets/images/_DSC9800.webp"
+  - type: image
+    src: "/assets/images/_DSC9802.webp"
+  - type: image
+    src: "/assets/images/_DSC9824.webp"
+  - type: image
+    src: "/assets/images/_DSC9846.webp"
+  - type: image
+    src: "/assets/images/_DSC9852.webp"
+  - type: image
+    src: "/assets/images/_DSC9860.webp"
+  - type: image
+    src: "/assets/images/_DSC9861.webp"
+  - type: image
+    src: "/assets/images/_DSC9933.webp"
 text: |-
   ***Vestigios Metabólicos*** es el espacio donde se muestran piezas o vestigios de corporalidades indistintas, develando el momento transitorio de un tiempo incierto a otro, de un estado de la materia hasta el momento final donde se convierten seres fantásticos, paisajes místicos y composiciones simbólicas de una mitología desconocida.
   
