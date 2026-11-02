@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
 
+import yaml from "js-yaml";
+
 import { frontMatter, projectFiles } from "./support/content.mjs";
 import { ABOUT, ARCHIVE_PROJECTS, HOMEPAGE_PROJECTS, PROJECTS, SITE } from "./support/projects.mjs";
 import {
@@ -101,6 +103,68 @@ describe("project content model", () => {
         assert.equal(keys.featured, "true", `${file}: "featured" only appears for homepage projects`);
       }
     }
+  });
+});
+
+describe("Pages CMS project collection (.pages.yml)", () => {
+  const config = yaml.load(readRepoFile(".pages.yml"));
+  const collection = config.content?.find((entry) => entry.name === "proyectos");
+
+  it("preserves front-matter keys outside the editor schema", () => {
+    assert.equal(config.settings?.content?.merge, true, ".pages.yml: settings.content.merge keeps unmanaged keys on save");
+  });
+
+  it("edits src/proyectos and hides the directory defaults from the collection", () => {
+    assert.ok(collection, ".pages.yml: no `proyectos` collection");
+    assert.equal(collection.type, "collection", ".pages.yml: proyectos is a collection");
+    assert.equal(collection.path, "src/proyectos", ".pages.yml: proyectos collection path");
+    assert.deepEqual(collection.exclude, ["proyectos.11tydata.json"], ".pages.yml: excluded directory defaults file");
+    assert.doesNotThrow(
+      () => readRepoFile(`${collection.path}/${collection.exclude[0]}`),
+      ".pages.yml: the excluded file is the project directory defaults file",
+    );
+  });
+
+  it("allows creating, renaming and deleting projects", () => {
+    for (const operation of ["create", "rename", "delete"]) {
+      assert.notEqual(collection.operations?.[operation], false, `.pages.yml: "${operation}" blocked for proyectos`);
+    }
+  });
+
+  it("shows the filename on create and edit, seeded from the title", () => {
+    assert.deepEqual(
+      collection.filename,
+      { template: "{primary}.md", field: true },
+      ".pages.yml: filename template and visibility",
+    );
+  });
+
+  it("lists title, homepage status, order and dates, sorted by order", () => {
+    assert.equal(collection.view?.primary, "title", ".pages.yml: primary field");
+    assert.deepEqual(collection.view?.fields, ["title", "featured", "order", "dates"], ".pages.yml: list columns");
+    assert.deepEqual(collection.view?.sort, ["order", "title"], ".pages.yml: sortable columns");
+    assert.deepEqual(collection.view?.default, { sort: "order", order: "asc" }, ".pages.yml: default order");
+  });
+
+  it("exposes title, venue, dates, homepage status and order with Spanish help text", () => {
+    const fields = collection.fields ?? [];
+    assert.deepEqual(
+      fields.map((field) => field.name),
+      ["title", "venue", "dates", "featured", "order"],
+      ".pages.yml: project fields (gallery and text arrive in later tickets)",
+    );
+
+    for (const field of fields) {
+      assert.ok(field.label, `.pages.yml: field "${field.name}" has no label`);
+      assert.ok(field.description, `.pages.yml: field "${field.name}" has no description`);
+    }
+
+    const byName = (name) => fields.find((field) => field.name === name);
+    assert.equal(byName("title").required, true, ".pages.yml: title is required");
+    assert.equal(byName("featured").type, "boolean", ".pages.yml: featured is a boolean");
+    assert.equal(byName("featured").default, false, ".pages.yml: projects start off the homepage");
+    assert.equal(byName("order").type, "number", ".pages.yml: order is a number");
+    assert.equal(byName("order").default, 0, ".pages.yml: order defaults to zero");
   });
 });
 

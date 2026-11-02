@@ -1,0 +1,82 @@
+# Pages CMS configuration (2.x) — https://pagescms.org/docs/configuration/
+#
+# Editors sign in at https://app.pagescms.org and pick a branch; every save is a
+# commit on that branch. Field labels and descriptions are Spanish because the
+# editors are curators; the CMS interface chrome stays English.
+
+settings:
+  content:
+    # Merge the submitted fields into the existing file: front-matter keys
+    # outside the schema below (gallery, text, …) are preserved on save.
+    merge: true
+
+content:
+  - name: proyectos
+    label: Proyectos
+    type: collection
+    path: src/proyectos
+    # Pages CMS has no URL-change warning of its own, so the warning lives in
+    # the only two places the app can render for this collection: this
+    # description and the `title` field description (the filename is seeded
+    # from the title). Verify that both are visible on create and edit before
+    # handing the CMS to editors (see README → «Pages CMS»).
+    description: >-
+      El nombre del archivo (campo «Filename», al inicio del formulario) define
+      la dirección pública del proyecto: /proyectos/nombre-del-archivo/.
+      Cambiarlo cambia la URL pública y rompe los enlaces y marcadores
+      existentes; Git es la única forma de recuperarla después.
+    filename:
+      # Default filename from the title, without Eleventy's date prefix.
+      template: "{primary}.md"
+      # Visible when creating and when editing (the app locks it until the
+      # editor unlocks it), so the URL is never a hidden setting.
+      field: true
+    exclude:
+      # Directory-level defaults for Eleventy, not a project entry. `exclude`
+      # matches exact basenames.
+      - proyectos.11tydata.json
+    operations:
+      create: true
+      rename: true
+      delete: true
+    view:
+      primary: title
+      fields: [title, featured, order, dates]
+      sort: [order, title]
+      default:
+        sort: order
+        order: asc
+    fields:
+      - name: title
+        label: Título
+        type: string
+        required: true
+        description: >-
+          Nombre público del proyecto. Al crear un proyecto, el nombre del
+          archivo (y por tanto la dirección pública) se genera a partir del
+          título; si lo cambias después, cambia la URL.
+      - name: venue
+        label: Sede
+        type: string
+        description: Espacio donde se presentó el proyecto (galería, museo, ciudad).
+      - name: dates
+        label: Fechas
+        type: string
+        description: >-
+          Fechas de exhibición tal como se muestran en la página del proyecto;
+          admite Markdown.
+      - name: featured
+        label: Proyecto en portada
+        type: boolean
+        default: false
+        description: >-
+          Actívalo para que el proyecto aparezca en la portada. Si está
+          desactivado, aparece en «Proyectos anteriores». Es una decisión
+          editorial y no depende de las fechas.
+      - name: order
+        label: Orden
+        type: number
+        default: 0
+        description: >-
+          Posición dentro de su grupo (portada o proyectos anteriores); el
+          número menor aparece primero.
