@@ -11,6 +11,7 @@ import { ABOUT, ARCHIVE_PROJECTS, HOMEPAGE_PROJECTS, PROJECTS, SITE } from "./su
 import {
   buildSite,
   listOutput,
+  listRepoFiles,
   localUrl,
   normalize,
   OUTPUT_DIR,
@@ -487,6 +488,145 @@ describe("Pages CMS gallery editor (.pages.yml)", () => {
   });
 });
 
+describe("Pages CMS site settings (.pages.yml)", () => {
+  const config = yaml.load(readRepoFile(".pages.yml"));
+  const entry = config.content?.find((item) => item.name === "site");
+
+  it("edits the settings file as a JSON single-file entry", () => {
+    assert.ok(entry, ".pages.yml: no `site` entry");
+    assert.equal(entry.type, "file", ".pages.yml: the settings file is a single-file entry");
+    assert.equal(entry.path, "src/_data/site.json", ".pages.yml: settings entry path");
+    assert.equal(entry.format, "json", ".pages.yml: settings are JSON, not front matter");
+    assert.ok(entry.label, ".pages.yml: the settings entry has a label");
+    assert.ok(entry.description, ".pages.yml: the settings entry has a description");
+    assert.doesNotThrow(() => readRepoFile(entry.path), ".pages.yml: the settings entry path is the settings file");
+  });
+
+  it("exposes every settings key, including the ones no template reads", () => {
+    const settingsFile = JSON.parse(readRepoFile("src/_data/site.json"));
+    assert.deepEqual(
+      settingsPaths(entry?.fields ?? []),
+      settingsPathsOfData(settingsFile),
+      ".pages.yml: every key in site.json is editable in the CMS",
+    );
+  });
+
+  it("labels every field and says whether it changes what visitors see", () => {
+    const settingsFile = JSON.parse(readRepoFile("src/_data/site.json"));
+    const fields = entry?.fields ?? [];
+    const read = templateSettingsPaths();
+    const readsPath = (fieldPath) => read.some((path) => path === fieldPath || path.startsWith(`${fieldPath}.`));
+
+    for (const fieldPath of settingsPathsOfData(settingsFile)) {
+      const field = settingsField(fields, fieldPath);
+      assert.ok(field?.label, `.pages.yml: settings field "${fieldPath}" has no label`);
+      assert.ok(field?.description, `.pages.yml: settings field "${fieldPath}" has no description`);
+
+      if (readsPath(fieldPath)) {
+        assert.doesNotMatch(
+          field.description,
+          /no afecta/i,
+          `.pages.yml: settings field "${fieldPath}" changes the site, so it must not say it does not`,
+        );
+        assert.match(
+          field.description,
+          /cambia|se ve|se muestra|aparece/i,
+          `.pages.yml: settings field "${fieldPath}" must say what it changes`,
+        );
+      } else {
+        assert.match(
+          field.description,
+          /no afecta/i,
+          `.pages.yml: settings field "${fieldPath}" changes nothing, so it must say so`,
+        );
+      }
+    }
+  });
+
+  it("round-trips a settings save and keeps keys the schema does not know", () => {
+    const settingsFile = JSON.parse(readRepoFile("src/_data/site.json"));
+
+    // What the CMS writes back: one value per schema field, nested objects
+    // rebuilt from their own fields. Merge mode then layers that over the
+    // file, so a save with no edits must reproduce the file exactly.
+    const submitted = submittedSettings(entry?.fields ?? [], settingsFile);
+    assert.deepEqual(submitted, settingsFile, ".pages.yml: saving settings without edits rewrites site.json unchanged");
+    assert.equal(config.settings?.content?.merge, true, ".pages.yml: merge mode keeps settings outside the schema");
+
+    // A setting added to the file after the schema was written is not in the
+    // editor; merge mode must still carry it through the save.
+    const withUnmanaged = { ...structuredClone(settingsFile), unmanagedSetting: "valor" };
+    assert.deepEqual(
+      mergeSettings(withUnmanaged, submitted),
+      withUnmanaged,
+      ".pages.yml: a settings save preserves keys outside the editor schema",
+    );
+  });
+});
+
+/** The values a CMS save submits: one per declared field, nested objects rebuilt. */
+function submittedSettings(fields, data) {
+  return Object.fromEntries(
+    fields.map((field) => [
+      field.name,
+      field.type === "object" ? submittedSettings(field.fields ?? [], data?.[field.name] ?? {}) : data?.[field.name],
+    ]),
+  );
+}
+
+/** Merge mode: submitted values win, keys outside the schema survive. */
+function mergeSettings(existing, submitted) {
+  const merged = structuredClone(existing);
+  for (const [key, value] of Object.entries(submitted)) {
+    const nested = value !== null && typeof value === "object" && !Array.isArray(value);
+    merged[key] =
+      nested && merged[key] !== null && typeof merged[key] === "object"
+        ? mergeSettings(merged[key], value)
+        : value;
+  }
+  return merged;
+}
+
+/** Field at a dotted settings path, if the entry declares one. */
+function settingsField(fields, fieldPath) {
+  const [head, ...rest] = fieldPath.split(".");
+  const field = fields?.find((candidate) => candidate.name === head);
+  return rest.length ? settingsField(field?.fields, rest.join(".")) : field;
+}
+
+/** Dotted `site.*` paths the templates read: the settings that reach the output. */
+function templateSettingsPaths() {
+  const templates = listRepoFiles("src").filter((file) => /\.(njk|md|html)$/.test(file));
+  return [
+    ...new Set(
+      templates.flatMap((file) =>
+        [...readRepoFile(file).matchAll(/\bsite\.([A-Za-z0-9_.]+)/g)].map((match) => match[1].replace(/\.$/, "")),
+      ),
+    ),
+  ].sort();
+}
+
+/** Dotted paths of the settings entry's fields, nested objects included. */
+function settingsPaths(fields, prefix = "") {
+  return fields
+    .flatMap((field) => {
+      const path = prefix ? `${prefix}.${field.name}` : field.name;
+      return [path, ...(field.type === "object" ? settingsPaths(field.fields ?? [], path) : [])];
+    })
+    .sort();
+}
+
+/** Dotted paths of every key in the settings data, nested objects included. */
+function settingsPathsOfData(data, prefix = "") {
+  return Object.entries(data)
+    .flatMap(([key, value]) => {
+      const path = prefix ? `${prefix}.${key}` : key;
+      const nested = value !== null && typeof value === "object" && !Array.isArray(value);
+      return [path, ...(nested ? settingsPathsOfData(value, path) : [])];
+    })
+    .sort();
+}
+
 describe("sitemap (/sitemap.xml)", () => {
   const route = "/sitemap.xml";
 
@@ -805,6 +945,53 @@ describe("about page (/acerca-de/)", () => {
       normalize(team.textContent).includes(ABOUT.team.at(-1)),
       `page ${route}: the team section carries the whole team copy`,
     );
+  });
+});
+
+describe("site settings in the generated pages", () => {
+  const settings = JSON.parse(readRepoFile("src/_data/site.json"));
+
+  it("renders the header and footer copy from the settings file", () => {
+    const homepage = readPage("/");
+    const text = (selector) => normalize(homepage.querySelector(selector)?.textContent);
+
+    assert.equal(text(`header a[href="${localUrl(ABOUT_ROUTE)}"]`), settings.nav.about.label, "header: About label and target");
+    assert.equal(text(`header a[href="${localUrl("/proyectos/")}"]`), settings.nav.projects.label, "header: archive label and target");
+    assert.equal(text(`header a[href="mailto:${settings.contactEmail}"]`), settings.contactName, "header: contact link");
+    assert.equal(text("header .site-nav__email"), settings.email, "header: the e-mail shown as text");
+
+    const footer = normalize(homepage.querySelector(".site-footer")?.textContent);
+    for (const value of [settings.footer.copyright, settings.footer.city, settings.footer.instagram]) {
+      assert.ok(footer.includes(value), `footer: shows "${value}"`);
+    }
+  });
+
+  it("titles every page and describes the homepage from the settings file", () => {
+    const homepage = readPage("/");
+
+    assert.equal(normalize(homepage.querySelector('meta[property="og:site_name"]')?.getAttribute("content")), settings.title);
+    assert.equal(homepage.querySelector("title")?.textContent, settings.title, "page /: title is the site name");
+    assert.ok(
+      readPage(ABOUT_ROUTE).querySelector("title")?.textContent.endsWith(`— ${settings.title}`),
+      `page ${ABOUT_ROUTE}: the site name follows the page title`,
+    );
+    assert.equal(
+      normalize(homepage.querySelector('meta[name="description"]')?.getAttribute("content")),
+      settings.description,
+      "page /: meta description is the site description",
+    );
+  });
+
+  it("leaves the informational settings out of the pages", () => {
+    // `social.instagram` is the one informational value that no rendered page
+    // repeats or derives from another setting, so its absence is checkable.
+    // (`url` is what the deploy sets as SITE_URL, and `instagram` / `city`
+    // repeat the footer values; the canonical assertions elsewhere pin the
+    // origin to SITE_URL, which is what proves `url` is never read.)
+    const pages = ["/", ABOUT_ROUTE, "/proyectos/"].map((page) => readText(path.posix.join(page, "index.html")));
+    for (const html of pages) {
+      assert.ok(!html.includes(settings.social.instagram), "no page renders the social.instagram reference URL");
+    }
   });
 });
 
