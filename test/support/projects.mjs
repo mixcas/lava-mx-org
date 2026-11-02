@@ -74,6 +74,20 @@ export const PROJECTS = [
     dates: "29 Jun - 7 Jul 2024. Berlín.",
     spanish: "es un intercambio de tres años que busca fortalecer las relaciones",
     images: 8,
+    // The deployed page shows two galleries side by side: this list is the
+    // editor's order after the migration merged them, former left column first.
+    // The template splits it again for the three-column layout, so a gallery
+    // that reorders or loses a media item fails here.
+    gallery: [
+      "20240629-03-roam-BLAM-opening.webp",
+      "20240629-15-roam-BLAM-doku.webp",
+      "20240629-14-roam-BLAM-doku.webp",
+      "20240629-03-roam-BLAM-doku.webp",
+      "20240629-16-roam-BLAM-doku.webp",
+      "20240629-17-roam-BLAM-opening.webp",
+      "20240629-13-roam-BLAM-doku.webp",
+      "20240629-06-roam-BLAM-doku.webp",
+    ],
     videos: [],
   },
   {

@@ -124,9 +124,10 @@ content:
         # Each item stores its media type under `type`, next to that type's
         # fields: the template reads the type, not a boolean video flag.
         #
-        # Infernal Natures keeps its legacy `media_left` / `media_middle`
-        # galleries until the three-column variant is unified; those keys are
-        # outside this schema, so merge mode preserves them on save.
+        # The gallery is one ordered list for every project. The three-column
+        # project keeps only a hidden `variant` key outside this schema; the
+        # template splits its gallery in half (first half rounded up goes to the
+        # first column), so editors reorder a single list.
         blockKey: type
         description: >-
           Los medios del proyecto, en el orden en que se muestran. Añade una

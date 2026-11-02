@@ -135,6 +135,13 @@ Only non-default values appear: `variant: three-column` (Infernal Natures) and
 `gallery_columns: 2` (Lianas Neotropicales). The file name is the public URL:
 `src/proyectos/penumbra.md` → `/proyectos/penumbra/`. There is no `slug` key.
 
+`variant: three-column` is the archived Infernal Natures layout and the only
+place it is written: it is not part of the Pages CMS schema, so the editor never
+shows it and merge mode keeps it on save. That project's gallery is one ordered
+list like every other project's; the template splits it in half for the
+three-column layout — the first column takes the first half rounded up, the
+second column takes the rest (`lib/project-view.js` computes `splitAt`).
+
 Each media item is typed: an image has a `src` and optional `alt`, a video has a
 `src`, optional `poster`, and `autoplay` / `loop` / `mute` flags. Sources are
 canonical asset paths — `/assets/images/…` for images (masters in
@@ -154,8 +161,8 @@ Editors sign in at <https://app.pagescms.org>, pick a branch, and edit the
 `proyectos` collection; every save is a commit on that branch, which triggers the
 deploy workflow. Labels and helper text are Spanish.
 
-- `settings.content.merge: true` — keys outside the schema (variant, media_left,
-  media_middle, text) are preserved when an editor saves a project.
+- `settings.content.merge: true` — keys outside the schema (`variant`, `text`)
+  are preserved when an editor saves a project.
 - The `proyectos` collection edits `src/proyectos` and excludes
   `proyectos.11tydata.json`, so the directory defaults never appear as a project.
 - The filename field is visible on create and on edit and is seeded from the
