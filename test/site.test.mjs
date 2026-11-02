@@ -22,6 +22,9 @@ import {
 /** About page route (see GLOSSARY: the collective's identity page). */
 const ABOUT_ROUTE = "/acerca-de/";
 
+/** The one project that keeps the three-column layout. */
+const THREE_COLUMN_ROUTE = "/proyectos/infernal-natures/";
+
 before(async () => {
   await buildSite();
 });
@@ -85,7 +88,7 @@ describe("project content model", () => {
 
     for (const file of files) {
       const keys = Object.keys(frontMatter(file));
-      for (const legacy of ["current", "slug", "layout"]) {
+      for (const legacy of ["current", "slug", "layout", "media_left", "media_middle"]) {
         assert.ok(!keys.includes(legacy), `${file}: front matter still carries the legacy "${legacy}" key`);
       }
     }
@@ -107,18 +110,15 @@ describe("project content model", () => {
     }
   });
 
-  /** Standard projects: every project except the three-column variant. */
-  const standardProjects = () => projectFiles().filter((file) => !("variant" in projectData(file)));
-
   /** The keys a typed gallery item may carry (see GLOSSARY: Media item). */
   const ITEM_KEYS = { image: ["type", "src", "alt"], video: ["type", "src", "poster", "autoplay", "loop", "mute"] };
   /** Media sources are canonical asset paths; the basename names the master. */
   const CANONICAL = { image: /^\/assets\/images\/[^/]+$/, video: /^\/assets\/videos\/[^/]+$/ };
   const MASTER_DIR = { image: "src/assets/images", video: "src/assets/videos" };
 
-  it("models every standard gallery as ordered typed media items", () => {
-    const files = standardProjects();
-    assert.equal(files.length, PROJECTS.length - 1, "fixture: expected eleven standard projects");
+  it("models every project gallery as ordered typed media items", () => {
+    const files = projectFiles();
+    assert.equal(files.length, PROJECTS.length, "fixture: expected one content file per project");
 
     for (const file of files) {
       const { media } = projectData(file);
@@ -137,7 +137,7 @@ describe("project content model", () => {
   });
 
   it("stores media sources as canonical paths that name existing masters", () => {
-    for (const file of standardProjects()) {
+    for (const file of projectFiles()) {
       const { media } = projectData(file);
 
       media.forEach((item, index) => {
@@ -167,13 +167,34 @@ describe("project content model", () => {
       const project = PROJECTS.find(({ route }) => route === projectRoute(file));
       assert.ok(project, `${file}: no baseline project for this content file`);
 
-      const data = projectData(file);
-      const items = [...(data.media ?? []), ...(data.media_left ?? []), ...(data.media_middle ?? [])];
+      const items = projectData(file).media ?? [];
       assert.equal(items.length, project.images + project.videos.length, `${file}: media items in the gallery`);
       assert.equal(
-        items.filter((item) => item.type !== "video" && item.video !== true).length,
+        items.filter((item) => item.type !== "video").length,
         project.images,
         `${file}: gallery images`,
+      );
+    }
+  });
+
+  it("keeps the former left column first in the merged three-column gallery", () => {
+    const file = projectFiles().find((candidate) => projectRoute(candidate) === THREE_COLUMN_ROUTE);
+    const baseline = PROJECTS.find(({ route }) => route === THREE_COLUMN_ROUTE);
+    assert.ok(file && baseline, "fixture: expected the three-column project");
+
+    assert.deepEqual(
+      (projectData(file).media ?? []).map((item) => path.posix.basename(item.src)),
+      baseline.gallery,
+      `${file}: gallery order of the three-column project (former left column, then the middle column)`,
+    );
+  });
+
+  it("keeps the three-column variant in the one project that uses it", () => {
+    for (const file of projectFiles()) {
+      assert.equal(
+        projectData(file).variant === "three-column",
+        projectRoute(file) === THREE_COLUMN_ROUTE,
+        `${file}: only the three-column project declares the three-column variant`,
       );
     }
   });
@@ -245,6 +266,17 @@ describe("Pages CMS project collection (.pages.yml)", () => {
 
     assert.equal(field.type, "number", ".pages.yml: gallery columns are stored as a real number");
     assert.deepEqual([field.options.min, field.options.max], [1, 2], ".pages.yml: one or two gallery columns");
+  });
+
+  it("keeps the three-column variant out of the editor", () => {
+    // The layout variant is a developer-only setting: no field may write it, so
+    // merge mode carries the project file's own value through every save.
+    const exposed = [...(collection.fields ?? []), ...(collection.view?.fields ?? [])];
+    assert.deepEqual(
+      exposed.filter((entry) => (typeof entry === "string" ? entry : entry.name) === "variant"),
+      [],
+      ".pages.yml: the variant is not editable in the CMS",
+    );
   });
 });
 
@@ -559,8 +591,6 @@ describe("page metadata", () => {
 describe("project rendering contract", () => {
   /** Projects whose gallery is laid out in two columns (see GLOSSARY: Gallery). */
   const TWO_COLUMN_PROJECTS = new Set(["/proyectos/lianas-neotropicales/"]);
-  /** The one project that keeps the three-column layout. */
-  const THREE_COLUMN_ROUTE = "/proyectos/infernal-natures/";
   const LISTING_ROUTES = ["/", "/proyectos/"];
 
   it("gives project pages an h1 title and listing pages an h2 title", () => {
@@ -616,16 +646,46 @@ describe("project rendering contract", () => {
     }
   });
 
-  it("splits the three-column project into two galleries without losing media", () => {
+  it("splits the three-column gallery in half, rounding up, without losing media", () => {
     const article = projectArticle(THREE_COLUMN_ROUTE);
     const galleries = article.querySelectorAll(".project-gallery");
     assert.equal(galleries.length, 2, `page ${THREE_COLUMN_ROUTE}: three-column layout has two galleries`);
     for (const gallery of galleries) {
       assert.equal(gallery.hasAttribute("data-columns"), false, `page ${THREE_COLUMN_ROUTE}: three-column galleries take no column count`);
     }
-    const expected = PROJECTS.find((project) => project.route === THREE_COLUMN_ROUTE).images;
-    const rendered = galleries.reduce((total, gallery) => total + gallery.querySelectorAll("picture").length, 0);
-    assert.equal(rendered, expected, `page ${THREE_COLUMN_ROUTE}: media items across both galleries`);
+
+    // One ordered gallery, split for the layout: the first column takes the
+    // first half of the media items rounded up, the second column the rest.
+    const baseline = PROJECTS.find((project) => project.route === THREE_COLUMN_ROUTE);
+    const total = baseline.gallery.length;
+    const columns = galleries.map((gallery) => gallery.querySelectorAll("picture").length);
+    assert.deepEqual(columns, [Math.ceil(total / 2), Math.floor(total / 2)], `page ${THREE_COLUMN_ROUTE}: media items per column`);
+
+    const sources = galleries.flatMap((gallery) =>
+      gallery.querySelectorAll("picture img").map((img) => img.getAttribute("src")),
+    );
+    assert.equal(sources.length, total, `page ${THREE_COLUMN_ROUTE}: media items across both galleries`);
+    assert.equal(new Set(sources).size, total, `page ${THREE_COLUMN_ROUTE}: every gallery item appears exactly once`);
+  });
+
+  it("leads the three-column second column with the gallery's cover image", () => {
+    // The page's cover image is the media item that heads the second column.
+    // Reading it off the preload/og:image URL identifies that item independently
+    // of the templates: the pipeline names one file per media item.
+    const doc = readPage(THREE_COLUMN_ROUTE);
+    const cover = new URL(doc.querySelector('meta[property="og:image"]')?.getAttribute("content")).pathname;
+    const [first, second] = projectArticle(THREE_COLUMN_ROUTE).querySelectorAll(".project-gallery");
+
+    const srcsetOf = (gallery, position) => gallery.querySelectorAll("picture")[position]?.querySelector("img")?.getAttribute("srcset");
+    assert.ok(srcsetOf(second, 0)?.includes(cover), `page ${THREE_COLUMN_ROUTE}: the second column starts at the cover image`);
+    assert.ok(!srcsetOf(first, 0)?.includes(cover), `page ${THREE_COLUMN_ROUTE}: the first column does not start at the cover image`);
+
+    // The preload names the same media item in AVIF, so compare the file stem.
+    const stem = path.posix.basename(cover, path.posix.extname(cover));
+    assert.ok(
+      doc.querySelector('link[rel="preload"][as="image"]')?.getAttribute("imagesrcset")?.includes(stem),
+      `page ${THREE_COLUMN_ROUTE}: the preload matches the cover image`,
+    );
   });
 
   it("loads only one gallery image eagerly per page", () => {
