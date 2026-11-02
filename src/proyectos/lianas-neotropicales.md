@@ -5,12 +5,18 @@ dates: "13 - 20 de Mayo 2023. Ciudad de México."
 order: 9
 gallery_columns: 2
 media:
-  - src: "_MG_1152-color-copy.webp"
-  - src: "_MG_1154-color-copy.webp"
-  - src: "_MG_1168-copy.webp"
-  - src: "_MG_1171-copy.webp"
-  - src: "_MG_1174-copy.webp"
-  - src: "_MG_1180-copy.webp"
+  - type: image
+    src: "/assets/images/_MG_1152-color-copy.webp"
+  - type: image
+    src: "/assets/images/_MG_1154-color-copy.webp"
+  - type: image
+    src: "/assets/images/_MG_1168-copy.webp"
+  - type: image
+    src: "/assets/images/_MG_1171-copy.webp"
+  - type: image
+    src: "/assets/images/_MG_1174-copy.webp"
+  - type: image
+    src: "/assets/images/_MG_1180-copy.webp"
 text: |-
   ***Lianas Neotropicales*** es un despliegue de la investigación de la artista **Fabiana Mapel,** en torno a su inherente relación con la naturaleza y situaciones cotidianas que le resultan esculturas performáticas. ¿Cómo se desborda la escultura?
   

@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
+import path from "node:path";
 import { before, describe, it } from "node:test";
 
 import yaml from "js-yaml";
+import { NodeType } from "node-html-parser";
 
-import { frontMatter, projectFiles } from "./support/content.mjs";
+import { frontMatter, projectData, projectFiles, projectRoute } from "./support/content.mjs";
 import { ABOUT, ARCHIVE_PROJECTS, HOMEPAGE_PROJECTS, PROJECTS, SITE } from "./support/projects.mjs";
 import {
   buildSite,
@@ -104,6 +106,77 @@ describe("project content model", () => {
       }
     }
   });
+
+  /** Standard projects: every project except the three-column variant. */
+  const standardProjects = () => projectFiles().filter((file) => !("variant" in projectData(file)));
+
+  /** The keys a typed gallery item may carry (see GLOSSARY: Media item). */
+  const ITEM_KEYS = { image: ["type", "src", "alt"], video: ["type", "src", "poster", "autoplay", "loop", "mute"] };
+  /** Media sources are canonical asset paths; the basename names the master. */
+  const CANONICAL = { image: /^\/assets\/images\/[^/]+$/, video: /^\/assets\/videos\/[^/]+$/ };
+  const MASTER_DIR = { image: "src/assets/images", video: "src/assets/videos" };
+
+  it("models every standard gallery as ordered typed media items", () => {
+    const files = standardProjects();
+    assert.equal(files.length, PROJECTS.length - 1, "fixture: expected eleven standard projects");
+
+    for (const file of files) {
+      const { media } = projectData(file);
+      assert.ok(Array.isArray(media) && media.length > 0, `${file}: "media" is a non-empty gallery list`);
+
+      media.forEach((item, index) => {
+        const label = `${file}: media item ${index + 1}`;
+        assert.ok(Object.hasOwn(ITEM_KEYS, item.type ?? ""), `${label}: type "${item.type}" is image or video`);
+        assert.deepEqual(
+          Object.keys(item).filter((key) => !ITEM_KEYS[item.type].includes(key)),
+          [],
+          `${label}: keys outside the typed media item shape`,
+        );
+      });
+    }
+  });
+
+  it("stores media sources as canonical paths that name existing masters", () => {
+    for (const file of standardProjects()) {
+      const { media } = projectData(file);
+
+      media.forEach((item, index) => {
+        const label = `${file}: media item ${index + 1}`;
+        assert.match(item.src, CANONICAL[item.type], `${label}: "${item.src}" is a canonical ${item.type} path`);
+
+        const masters = [item.src, item.type === "video" ? item.poster : null].filter(Boolean);
+        for (const master of masters) {
+          const masterDir = master.startsWith("/assets/images/") ? MASTER_DIR.image : MASTER_DIR.video;
+          assert.doesNotThrow(
+            () => readRepoFile(`${masterDir}/${path.posix.basename(master)}`),
+            `${label}: master for "${master}" exists`,
+          );
+        }
+
+        if (item.type === "video") {
+          for (const flag of ["autoplay", "loop", "mute"]) {
+            if (flag in item) assert.equal(item[flag], true, `${label}: "${flag}" only appears when enabled`);
+          }
+        }
+      });
+    }
+  });
+
+  it("matches the baseline media count of every project", () => {
+    for (const file of projectFiles()) {
+      const project = PROJECTS.find(({ route }) => route === projectRoute(file));
+      assert.ok(project, `${file}: no baseline project for this content file`);
+
+      const data = projectData(file);
+      const items = [...(data.media ?? []), ...(data.media_left ?? []), ...(data.media_middle ?? [])];
+      assert.equal(items.length, project.images + project.videos.length, `${file}: media items in the gallery`);
+      assert.equal(
+        items.filter((item) => item.type !== "video" && item.video !== true).length,
+        project.images,
+        `${file}: gallery images`,
+      );
+    }
+  });
 });
 
 describe("Pages CMS project collection (.pages.yml)", () => {
@@ -150,8 +223,8 @@ describe("Pages CMS project collection (.pages.yml)", () => {
     const fields = collection.fields ?? [];
     assert.deepEqual(
       fields.map((field) => field.name),
-      ["title", "venue", "dates", "featured", "order"],
-      ".pages.yml: project fields (gallery and text arrive in later tickets)",
+      ["title", "venue", "dates", "featured", "order", "gallery_columns", "media"],
+      ".pages.yml: project fields (text arrives in a later ticket)",
     );
 
     for (const field of fields) {
@@ -165,6 +238,102 @@ describe("Pages CMS project collection (.pages.yml)", () => {
     assert.equal(byName("featured").default, false, ".pages.yml: projects start off the homepage");
     assert.equal(byName("order").type, "number", ".pages.yml: order is a number");
     assert.equal(byName("order").default, 0, ".pages.yml: order defaults to zero");
+  });
+
+  it("stores gallery columns as a number of one or two", () => {
+    const field = collection.fields.find(({ name }) => name === "gallery_columns");
+
+    assert.equal(field.type, "number", ".pages.yml: gallery columns are stored as a real number");
+    assert.deepEqual([field.options.min, field.options.max], [1, 2], ".pages.yml: one or two gallery columns");
+  });
+});
+
+describe("Pages CMS media sources (.pages.yml)", () => {
+  const config = yaml.load(readRepoFile(".pages.yml"));
+  const sources = Object.fromEntries((config.media ?? []).map((source) => [source.name, source]));
+
+  /** Images the image pipeline handles; anything else would break the build. */
+  const IMAGE_EXTENSIONS = ["avif", "gif", "jpeg", "jpg", "png", "webp"];
+
+  it("defines image, video and document sources under the folders the site serves", () => {
+    assert.deepEqual(Object.keys(sources), ["images", "videos", "documents"], ".pages.yml: media sources");
+    assert.deepEqual(
+      Object.fromEntries(Object.entries(sources).map(([name, source]) => [name, [source.input, source.output]])),
+      {
+        images: ["src/assets/images", "/assets/images"],
+        videos: ["src/assets/videos", "/assets/videos"],
+        documents: ["src/assets/files", "/assets/files"],
+      },
+      ".pages.yml: media source folders and the canonical paths written into content",
+    );
+  });
+
+  it("accepts only the formats the site can publish", () => {
+    assert.deepEqual([...sources.images.extensions].sort(), IMAGE_EXTENSIONS, ".pages.yml: image upload formats");
+    assert.deepEqual([...sources.videos.extensions].sort(), ["mp4", "webm"], ".pages.yml: video upload formats");
+    assert.deepEqual(sources.documents.extensions, ["pdf"], ".pages.yml: document upload formats");
+  });
+
+  it("preserves original upload filenames", () => {
+    for (const [name, source] of Object.entries(sources)) {
+      assert.equal(source.rename, false, `.pages.yml: the "${name}" source keeps original filenames`);
+    }
+  });
+});
+
+describe("Pages CMS gallery editor (.pages.yml)", () => {
+  const config = yaml.load(readRepoFile(".pages.yml"));
+  const field = config.content?.find((entry) => entry.name === "proyectos")?.fields?.find(({ name }) => name === "media");
+
+  it("edits the typed media list as a block list keyed by type", () => {
+    assert.ok(field, ".pages.yml: no gallery field");
+    assert.equal(field.type, "block", ".pages.yml: the gallery is a block list (one schema per media type)");
+    assert.equal(field.list, true, ".pages.yml: gallery items are a reorderable list");
+    assert.equal(field.blockKey, "type", ".pages.yml: the media item type is stored under `type`");
+    assert.deepEqual(field.blocks.map(({ name }) => name), ["image", "video"], ".pages.yml: media item types");
+  });
+
+  it("stores canonical sources chosen from the media sources", () => {
+    const [image, video] = field.blocks;
+    const blockField = (block, name) => block.fields.find((entry) => entry.name === name);
+
+    assert.deepEqual(
+      [blockField(image, "src").type, blockField(image, "src").options.media],
+      ["image", "images"],
+      ".pages.yml: image sources are picked from the image source",
+    );
+    assert.deepEqual(
+      [blockField(video, "src").type, blockField(video, "src").options.media],
+      ["file", "videos"],
+      ".pages.yml: video sources are picked from the video source",
+    );
+    assert.deepEqual(
+      [blockField(video, "poster").type, blockField(video, "poster").options.media],
+      ["image", "images"],
+      ".pages.yml: video posters are images",
+    );
+  });
+
+  it("lets editors write alt text, a poster and the playback flags", () => {
+    const [image, video] = field.blocks;
+    const alt = image.fields.find(({ name }) => name === "alt");
+    assert.equal(alt?.type, "string", ".pages.yml: image alt text field");
+    assert.notEqual(alt?.required, true, ".pages.yml: alt text is optional (it falls back to the title)");
+
+    for (const name of ["autoplay", "loop", "mute"]) {
+      const flag = video.fields.find((entry) => entry.name === name);
+      assert.equal(flag?.type, "boolean", `.pages.yml: video "${name}" flag`);
+    }
+  });
+
+  it("labels every media field in Spanish", () => {
+    for (const block of field.blocks) {
+      assert.ok(block.label, `.pages.yml: the "${block.name}" block has no label`);
+      for (const entry of block.fields) {
+        assert.ok(entry.label, `.pages.yml: media field "${block.name}.${entry.name}" has no label`);
+        assert.ok(entry.description, `.pages.yml: media field "${block.name}.${entry.name}" has no description`);
+      }
+    }
   });
 });
 
@@ -289,6 +458,50 @@ describe("project pages", () => {
         assert.equal(video.hasAttribute("loop"), expected.loop, `${label}: ${position} loop`);
         assert.equal(video.hasAttribute("muted"), expected.muted, `${label}: ${position} muted`);
       });
+    });
+  }
+});
+
+describe("gallery media items", () => {
+  /** The gallery children of a project page, in document order. */
+  const galleryNodes = (route) =>
+    projectArticle(route)
+      .querySelectorAll(".project-gallery")
+      .flatMap((gallery) => gallery.childNodes.filter((node) => node.nodeType === NodeType.ELEMENT_NODE));
+
+  for (const project of PROJECTS) {
+    const { route, images, videos } = project;
+    const label = `page ${route}`;
+    const total = images + videos.length;
+
+    it(`${route} renders every media item exactly once`, () => {
+      const nodes = galleryNodes(route);
+      assert.equal(nodes.length, total, `${label}: gallery items`);
+      assert.equal(nodes.filter((node) => node.tagName === "PICTURE").length, images, `${label}: gallery images`);
+      assert.equal(nodes.filter((node) => node.tagName === "VIDEO").length, videos.length, `${label}: gallery videos`);
+
+      const sources = nodes
+        .filter((node) => node.tagName === "PICTURE")
+        .map((picture) => picture.querySelector("img")?.getAttribute("src"));
+      assert.equal(new Set(sources).size, images, `${label}: every gallery image is a distinct media item`);
+    });
+
+    it(`${route} renders its media items in the editor's order`, () => {
+      const nodes = galleryNodes(route);
+
+      // Expected item types from the baseline: images fill every position
+      // except the ones the baseline records a video at.
+      const expected = Array.from({ length: total }, () => "PICTURE");
+      for (const video of videos) expected[video.position] = "VIDEO";
+
+      assert.deepEqual(nodes.map((node) => node.tagName), expected, `${label}: gallery item order`);
+      for (const video of videos) {
+        assert.equal(
+          nodes[video.position].getAttribute("src"),
+          localUrl(`/assets/videos/${video.source}`),
+          `${label}: video at gallery position ${video.position + 1}`,
+        );
+      }
     });
   }
 });

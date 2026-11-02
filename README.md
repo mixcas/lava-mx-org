@@ -119,11 +119,14 @@ venue: "Museo Universitario del Chopo."
 dates: "**Inauguración:** Octubre 23, 2025 — Marzo 2026"
 featured: true          # homepage project; omitted (false) means archive project
 order: 1                # position within its group (homepage or archive)
-media:                  # ordered images/videos (masters live in src/assets/images)
-  - src: "DSC01858.webp"
-  - src: "Reel_chopo_audio.mp4"
-    video: true
-    poster: "Mineralia-0143-B2766344.webp"
+media:                  # ordered media items; the list order is the display order
+  - type: image
+    src: "/assets/images/DSC01858.webp"
+    # alt: optional; omitted means the project title is used
+  - type: video
+    src: "/assets/videos/Reel_chopo_audio.mp4"
+    poster: "/assets/images/Mineralia-0143-B2766344.webp"   # optional
+    # autoplay / loop / mute: only written when enabled
 text: |-                # the bilingual body (ES // EN); rendered with Markdown
   ...
 ```
@@ -132,10 +135,17 @@ Only non-default values appear: `variant: three-column` (Infernal Natures) and
 `gallery_columns: 2` (Lianas Neotropicales). The file name is the public URL:
 `src/proyectos/penumbra.md` → `/proyectos/penumbra/`. There is no `slug` key.
 
-Images are referenced by their optimized master filename; `@11ty/eleventy-img`
-generates the responsive variants at build time. Dossier PDFs live in
-`src/assets/files/` and are linked with page-relative paths
-(`../../assets/files/...`) so they work under any base path.
+Each media item is typed: an image has a `src` and optional `alt`, a video has a
+`src`, optional `poster`, and `autoplay` / `loop` / `mute` flags. Sources are
+canonical asset paths — `/assets/images/…` for images (masters in
+`src/assets/images/`), `/assets/videos/…` for videos, `/assets/files/…` for
+documents. `lib/project-view.js` normalizes both canonical paths and legacy bare
+filenames to the master basename, and also still reads the legacy
+`{ src, video: true, poster, autoplay, loop, muted }` shape until ticket #11
+removes it. Images are processed by `@11ty/eleventy-img` into the responsive
+variants at build time. Dossier PDFs live in `src/assets/files/` and are linked
+with page-relative paths (`../../assets/files/...`) so they work under any base
+path.
 
 ## Pages CMS
 
@@ -144,15 +154,25 @@ Editors sign in at <https://app.pagescms.org>, pick a branch, and edit the
 `proyectos` collection; every save is a commit on that branch, which triggers the
 deploy workflow. Labels and helper text are Spanish.
 
-- `settings.content.merge: true` — keys outside the schema (gallery, text) are
-  preserved when an editor saves a project.
+- `settings.content.merge: true` — keys outside the schema (variant, media_left,
+  media_middle, text) are preserved when an editor saves a project.
 - The `proyectos` collection edits `src/proyectos` and excludes
   `proyectos.11tydata.json`, so the directory defaults never appear as a project.
 - The filename field is visible on create and on edit and is seeded from the
   title (`{primary}.md`).
 - The list view shows title, homepage status, order and dates, sorted by order.
-- The schema decided in `.pages.yml` currently covers title, venue, dates,
-  homepage status and order. Gallery and text fields are added by later work.
+- Three media sources write canonical paths into front matter, keep original
+  filenames, and reject formats the site cannot publish: images
+  (`src/assets/images` → `/assets/images`: WebP, JPG, JPEG, PNG, AVIF, GIF),
+  videos (`src/assets/videos` → `/assets/videos`: MP4, WebM) and documents
+  (`src/assets/files` → `/assets/files`: PDF).
+- The gallery field (`media`) is a reorderable block list keyed by `type`
+  (`image` / `video`): add an existing item or upload, reorder, remove, set alt
+  text, choose a video poster, and toggle autoplay / loop / mute.
+  `gallery_columns` stores the number of gallery columns (1 or 2).
+- The schema currently covers title, venue, dates, homepage status, order,
+  gallery columns and the gallery. Text and the remaining media sources are
+  handled by later work.
 
 ### Filename / URL change warning (limitation)
 
@@ -174,6 +194,24 @@ repository, because it needs a signed-in session):
 
 Config changes are reviewable in Git and are read per branch, so a branch can be
 tested before merging.
+
+### Gallery and media (manual check)
+
+The gallery editor, the media browser and the upload restrictions live in the
+hosted app and cannot be exercised from the repository. **A maintainer must
+verify this on a non-production branch**, then discard the test commits:
+
+1. Open a project and confirm the gallery list renders as typed items (an
+   image item shows its image, a video item its video, poster and flags).
+2. Add an existing image from the library, upload a new image, add a video,
+   drag items to reorder, and remove one item.
+3. Save and confirm the committed front matter keeps the canonical paths
+   (`/assets/images/…`, `/assets/videos/…`), the original filename and the
+   item order.
+4. Try uploading an unsupported format (e.g. SVG, TIFF, MOV) and confirm the
+   media source rejects it.
+5. Set `gallery_columns` to 1 and 2 and confirm the saved value is a number and
+   the deployed page changes layout accordingly.
 
 ## CI/CD
 

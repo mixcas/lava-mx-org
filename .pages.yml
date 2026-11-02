@@ -7,8 +7,35 @@
 settings:
   content:
     # Merge the submitted fields into the existing file: front-matter keys
-    # outside the schema below (gallery, text, …) are preserved on save.
+    # outside the schema below (variant, …) are preserved on save.
     merge: true
+
+# Where uploads are stored and which public URL each field writes into front
+# matter. `output` must be the URL the site serves the file at: images are
+# processed by the Eleventy image pipeline from their masters, videos and
+# documents are copied verbatim. `rename: false` keeps the original filename,
+# the only name that matches the media the templates already reference.
+media:
+  - name: images
+    label: Imágenes
+    input: src/assets/images
+    output: /assets/images
+    # Formats the image pipeline can process. Anything else (SVG, TIFF, ICO,
+    # HEIC, …) is rejected here rather than breaking the build.
+    extensions: [webp, jpg, jpeg, png, avif, gif]
+    rename: false
+  - name: videos
+    label: Videos
+    input: src/assets/videos
+    output: /assets/videos
+    extensions: [mp4, webm]
+    rename: false
+  - name: documents
+    label: Documentos
+    input: src/assets/files
+    output: /assets/files
+    extensions: [pdf]
+    rename: false
 
 content:
   - name: proyectos
@@ -80,3 +107,84 @@ content:
         description: >-
           Posición dentro de su grupo (portada o proyectos anteriores); el
           número menor aparece primero.
+      - name: gallery_columns
+        label: Columnas de la galería
+        type: number
+        default: 1
+        options:
+          min: 1
+          max: 2
+        description: >-
+          Una columna (1) para imágenes que se ven una debajo de otra, dos
+          columnas (2) para pares de obras. Solo se admiten los valores 1 y 2.
+      - name: media
+        label: Galería
+        type: block
+        list: true
+        # Each item stores its media type under `type`, next to that type's
+        # fields: the template reads the type, not a boolean video flag.
+        #
+        # Infernal Natures keeps its legacy `media_left` / `media_middle`
+        # galleries until the three-column variant is unified; those keys are
+        # outside this schema, so merge mode preserves them on save.
+        blockKey: type
+        description: >-
+          Los medios del proyecto, en el orden en que se muestran. Añade una
+          imagen o un video, elige uno existente o sube uno nuevo, y arrastra
+          los elementos para reordenarlos.
+        blocks:
+          - name: image
+            label: Imagen
+            fields:
+              - name: src
+                label: Imagen
+                type: image
+                required: true
+                options:
+                  media: images
+                description: >-
+                  Elige una imagen de la biblioteca o sube una nueva. Solo se
+                  aceptan WebP, JPG, JPEG, PNG, AVIF y GIF.
+              - name: alt
+                label: Texto alternativo
+                type: string
+                description: >-
+                  Describe la imagen para quien usa lector de pantalla. Si lo
+                  dejas vacío, se usa el título del proyecto.
+          - name: video
+            label: Video
+            fields:
+              - name: src
+                label: Video
+                type: file
+                required: true
+                options:
+                  media: videos
+                description: >-
+                  Elige un video de la biblioteca o sube uno nuevo. Solo se
+                  aceptan MP4 y WebM.
+              - name: poster
+                label: Imagen de portada del video
+                type: image
+                options:
+                  media: images
+                description: >-
+                  Imagen fija que se ve antes de reproducir el video y que se
+                  usa al compartir el proyecto.
+              - name: autoplay
+                label: Reproducción automática
+                type: boolean
+                default: false
+                description: >-
+                  Reproduce el video al cargar la página. Los navegadores solo
+                  lo permiten si el video también está silenciado.
+              - name: loop
+                label: Repetir
+                type: boolean
+                default: false
+                description: Vuelve a empezar el video cuando termina.
+              - name: mute
+                label: Silenciar
+                type: boolean
+                default: false
+                description: Reproduce el video sin sonido.
