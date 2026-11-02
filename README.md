@@ -21,6 +21,7 @@ deployed to GitHub Pages.
 |---|---|
 | `npm run serve` | Build and serve locally with live reload |
 | `npm run build` | Build the site into `_site/` |
+| `npm test` | Build once and assert the generated site (`test/site.test.mjs`) |
 | `npm run clean` | Remove the build output |
 | `npm run backup` | Mirror the live Cargo site into `_cargo-export/` |
 | `npm run extract` | Parse the backup into `src/proyectos/*.md`, `src/acerca-de.md`, site data |
@@ -30,6 +31,40 @@ deployed to GitHub Pages.
 npm install
 npm run serve   # http://localhost:8080
 ```
+
+## Tests
+
+```bash
+npm test
+```
+
+`npm test` runs the Node built-in test runner against the generated site: it
+builds the site once into `_site/` (clearing stale HTML but keeping `_site/img`,
+so the responsive-image cache makes re-runs take about a second), then parses
+the generated HTML with `node-html-parser` and asserts the public behaviour —
+
+- all twelve project URLs at `/proyectos/<slug>/`;
+- homepage and `/proyectos/` membership and order;
+- each project page's title, venue, dates, text (Spanish and, when it exists,
+  English), and every gallery image and video;
+- the About page biography and team;
+- `description`, canonical URL, and social image metadata on every page.
+
+Expectations live in `test/support/projects.mjs` as editorial facts about the
+live site, not as a copy of the templates. Failures name the page and the
+assertion, for example
+`page /proyectos/penumbra/: gallery images rendered`.
+
+The build honours the same variables as `npm run build`, so the suite can be
+run for a subpath deployment or any origin:
+
+```bash
+PATH_PREFIX=/lava-mx-org/ SITE_URL=https://example.github.io npm test
+```
+
+In CI, run it after `npm ci` with the same `PATH_PREFIX` / `SITE_URL` values
+used for the deploy build (see `.github/workflows/deploy.yml`), and cache
+`_site/img` between runs as the deploy workflow already does.
 
 ## Project structure
 
@@ -47,6 +82,9 @@ scripts/
   backup.mjs                   Phase 0 — mirror Cargo
   extract.mjs                  Phase 1 — Cargo → Markdown/JSON
   fetch-assets.mjs             Phase 2 — download + optimize assets
+test/
+  site.test.mjs                Generated-site assertions (`npm test`)
+  support/                     Build-once harness + baseline expectations
 .github/workflows/deploy.yml   Build + deploy to GitHub Pages
 _cargo-export/                 Raw Cargo backup (git-ignored)
 ```
