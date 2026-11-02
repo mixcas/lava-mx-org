@@ -32,7 +32,9 @@ deployed to GitHub Pages.
 
 ## Requirements
 
-- Node **18+** and npm
+- Node **20.19+** and npm (the build reads `import.meta.dirname`, which needs
+  20.11+, and the suite uses the built-in test runner; the installed tooling
+  declares 20.19+ as well)
 
 ## Commands
 
