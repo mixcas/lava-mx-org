@@ -7,6 +7,7 @@ import Image from "@11ty/eleventy-img";
 import MarkdownIt from "markdown-it";
 
 import { buildProjectView } from "./lib/project-view.js";
+import { applyPathPrefix } from "./lib/path-prefix.js";
 
 // `/` for a custom domain; `/<repo>/` when served from a GitHub Pages subpath.
 const PATH_PREFIX = (process.env.PATH_PREFIX || "/").replace(/\/+$/, ""); // "" | "/repo"
@@ -81,9 +82,12 @@ export default function (eleventyConfig) {
   });
 
   // Render Markdown stored in front matter (bilingual body, venue/dates, about).
+  // Content links local assets root-relative (`/assets/files/…`), so the
+  // rendered HTML gets the deployment path prefix here — the same prefix the
+  // templates get from Eleventy's `url` filter (see lib/path-prefix.js).
   const mdLib = new MarkdownIt({ html: true, breaks: true });
-  eleventyConfig.addFilter("md", (value) => mdLib.render(String(value ?? "")));
-  eleventyConfig.addFilter("mdInline", (value) => mdLib.renderInline(String(value ?? "")));
+  eleventyConfig.addFilter("md", (value) => applyPathPrefix(mdLib.render(String(value ?? "")), PATH_PREFIX));
+  eleventyConfig.addFilter("mdInline", (value) => applyPathPrefix(mdLib.renderInline(String(value ?? "")), PATH_PREFIX));
 
   // Responsive <picture> for a master filename in src/assets/images.
   // `priority` marks the LCP image (eager + high fetch priority).
