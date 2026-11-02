@@ -4,16 +4,23 @@ venue: "B-LA-M > Roam Space + Wonzimer + Lava"
 dates: "29 Jun - 7 Jul 2024. Berlín."
 order: 3
 variant: three-column
-media_left:
-  - src: "20240629-03-roam-BLAM-opening.webp"
-  - src: "20240629-15-roam-BLAM-doku.webp"
-  - src: "20240629-14-roam-BLAM-doku.webp"
-  - src: "20240629-03-roam-BLAM-doku.webp"
-media_middle:
-  - src: "20240629-16-roam-BLAM-doku.webp"
-  - src: "20240629-17-roam-BLAM-opening.webp"
-  - src: "20240629-13-roam-BLAM-doku.webp"
-  - src: "20240629-06-roam-BLAM-doku.webp"
+media:
+  - type: image
+    src: "/assets/images/20240629-03-roam-BLAM-opening.webp"
+  - type: image
+    src: "/assets/images/20240629-15-roam-BLAM-doku.webp"
+  - type: image
+    src: "/assets/images/20240629-14-roam-BLAM-doku.webp"
+  - type: image
+    src: "/assets/images/20240629-03-roam-BLAM-doku.webp"
+  - type: image
+    src: "/assets/images/20240629-16-roam-BLAM-doku.webp"
+  - type: image
+    src: "/assets/images/20240629-17-roam-BLAM-opening.webp"
+  - type: image
+    src: "/assets/images/20240629-13-roam-BLAM-doku.webp"
+  - type: image
+    src: "/assets/images/20240629-06-roam-BLAM-doku.webp"
 text: |-
   B-L-A-M es un intercambio de tres años que busca fortalecer las relaciones entre la escena artística independiente de Berlín, Los Ángeles y Ciudad de México.
   
