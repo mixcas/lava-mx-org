@@ -262,3 +262,144 @@ content:
           Nombres, cargos y el encabezado de colaboradoras anteriores en un solo
           texto; admite Markdown (negritas y cursivas). Se muestra junto a la
           biografía.
+
+  # Site settings: one JSON data file shared by every page. Every key is
+  # exposed — including the keys no template reads and the duplicates — so a
+  # save from the CMS never drops a setting. Each description says whether the
+  # value reaches the rendered site; the ones that do not say "no afecta".
+  - name: site
+    label: Ajustes del sitio
+    type: file
+    path: src/_data/site.json
+    format: json
+    description: >-
+      Textos y datos que se repiten en todas las páginas. Los campos que hoy no
+      cambian nada en el sitio lo dicen en su propia descripción.
+    fields:
+      - name: title
+        label: Nombre del sitio
+        type: string
+        required: true
+        description: >-
+          Cambia el título de todas las páginas («… — Lava»), el nombre que se
+          ve al compartir un enlace y el texto alternativo del logotipo.
+      - name: description
+        label: Descripción del sitio
+        type: text
+        required: true
+        description: >-
+          Se muestra como descripción para buscadores y redes sociales en la
+          portada. En los proyectos y en «Acerca de» se usa el texto de cada
+          página, no este.
+      - name: url
+        label: Dirección del sitio (referencia)
+        type: string
+        description: >-
+          Dirección del sitio guardada como referencia. No afecta al sitio: las
+          direcciones canónicas, las imágenes al compartir y el mapa del sitio
+          se construyen con la variable SITE_URL de la publicación. Escribir
+          otra dirección aquí no cambia nada.
+      - name: email
+        label: Correo visible en el encabezado
+        type: string
+        description: >-
+          Correo que se ve en el encabezado, junto al enlace de contacto. Es
+          texto, no un enlace: quien lo lea tendrá que copiarlo.
+      - name: contactEmail
+        label: Correo del enlace de contacto
+        type: string
+        description: >-
+          Destinatario del enlace de contacto del encabezado (mailto:).
+          Cambiarlo cambia a dónde llegan los correos de quien escribe desde el
+          sitio.
+      - name: contactName
+        label: Texto del enlace de contacto
+        type: string
+        description: >-
+          Texto del enlace de contacto del encabezado; se ve tal cual, por
+          ejemplo «info.lavamx».
+      - name: instagram
+        label: Usuario de Instagram (referencia)
+        type: string
+        description: >-
+          Usuario de Instagram sin la dirección completa. No afecta al sitio:
+          ninguna página lo lee. El usuario que se ve en el pie de página se
+          edita en «Pie de página → Usuario de Instagram».
+      - name: city
+        label: Ciudad del colectivo (referencia)
+        type: string
+        description: >-
+          Ciudad del colectivo, guardada como referencia. No afecta al sitio: la
+          ciudad que aparece en el pie de página se edita en «Pie de página →
+          Ciudad».
+      - name: social
+        label: Redes sociales
+        type: object
+        description: >-
+          Enlaces a las redes del colectivo, guardados como referencia. No
+          afecta al sitio: ninguna página los muestra todavía.
+        fields:
+          - name: instagram
+            label: Dirección del perfil de Instagram
+            type: string
+            description: >-
+              Dirección completa del perfil de Instagram. No afecta al sitio:
+              hoy ningún enlace del sitio la usa.
+      - name: footer
+        label: Pie de página
+        type: object
+        description: Texto del pie de página que se muestra en todas las páginas.
+        fields:
+          - name: copyright
+            label: Copyright
+            type: string
+            description: Texto de copyright del pie de página; se ve tal cual, por ejemplo «©LAVA».
+          - name: city
+            label: Ciudad
+            type: string
+            description: >-
+              Ciudad que se ve en el pie de página. Es el valor que se muestra
+              (no el de «Ciudad del colectivo» en el nivel superior).
+          - name: instagram
+            label: Usuario de Instagram
+            type: string
+            description: >-
+              Usuario de Instagram que se muestra en el pie de página, con o sin
+              @. Es texto, no un enlace.
+      - name: nav
+        label: Navegación del encabezado
+        type: object
+        description: Cambia las etiquetas y las direcciones de los dos enlaces del encabezado.
+        fields:
+          - name: about
+            label: Enlace «Acerca de»
+            type: object
+            description: Cambia la etiqueta y la dirección del enlace «Acerca de».
+            fields:
+              - name: label
+                label: Etiqueta
+                type: string
+                description: Texto del enlace que se ve en el encabezado.
+              - name: url
+                label: Dirección
+                type: string
+                description: >-
+                  Dirección a la que lleva el enlace; se usa en todas las
+                  páginas. Cámbiala solo si la página cambia de dirección: una
+                  dirección equivocada deja el enlace roto.
+          - name: projects
+            label: Enlace «Proyectos anteriores»
+            type: object
+            description: Cambia la etiqueta y la dirección del enlace a los proyectos anteriores.
+            fields:
+              - name: label
+                label: Etiqueta
+                type: string
+                description: Texto del enlace que se ve en el encabezado.
+              - name: url
+                label: Dirección
+                type: string
+                description: >-
+                  Dirección a la que lleva el enlace; se usa en todas las
+                  páginas. Cámbiala solo si la página cambia de dirección: una
+                  dirección equivocada deja el enlace roto.

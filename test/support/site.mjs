@@ -10,6 +10,15 @@ export const REPO_ROOT = ROOT;
 /** Read a committed repository file as text. */
 export const readRepoFile = (relative) => fs.readFileSync(path.join(ROOT, relative), "utf8");
 
+/** Every file under a repository directory, as repo-relative paths. */
+export function listRepoFiles(relative) {
+  const dir = path.join(ROOT, relative);
+  return fs
+    .readdirSync(dir, { recursive: true })
+    .filter((entry) => fs.statSync(path.join(dir, entry)).isFile())
+    .map((entry) => path.posix.join(relative, ...entry.split(path.sep)));
+}
+
 /** Where Eleventy writes the site (same as `npm run build`). */
 export const OUTPUT_DIR = path.join(ROOT, "_site");
 
