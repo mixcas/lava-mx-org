@@ -127,13 +127,24 @@ media:                  # ordered media items; the list order is the display ord
     src: "/assets/videos/Reel_chopo_audio.mp4"
     poster: "/assets/images/Mineralia-0143-B2766344.webp"   # optional
     # autoplay / loop / mute: only written when enabled
-text: |-                # the bilingual body (ES // EN); rendered with Markdown
+text_es: |-             # Spanish text, required; rendered first, with Markdown
+  ...
+text_en: |-             # English text, optional; rendered after the divider
   ...
 ```
 
 Only non-default values appear: `variant: three-column` (Infernal Natures) and
 `gallery_columns: 2` (Lianas Neotropicales). The file name is the public URL:
 `src/proyectos/penumbra.md` → `/proyectos/penumbra/`. There is no `slug` key.
+
+A project's text is two explicit fields: `text_es` (Spanish, required) and
+`text_en` (English, optional). The template renders the Spanish text, then a
+`//` divider, then the English text — the divider is markup
+(`project-body__divider`), never content, so no project file contains it. A
+project without `text_en` renders Spanish only. Language-neutral links and
+downloads belong at the end of `text_es`, so they do not disappear when the
+English text is empty. The page `<meta name="description">` falls back to the
+start of `text_es`.
 
 `variant: three-column` is the archived Infernal Natures layout and the only
 place it is written: it is not part of the Pages CMS schema, so the editor never
@@ -161,8 +172,8 @@ Editors sign in at <https://app.pagescms.org>, pick a branch, and edit the
 `proyectos` collection; every save is a commit on that branch, which triggers the
 deploy workflow. Labels and helper text are Spanish.
 
-- `settings.content.merge: true` — keys outside the schema (`variant`, `text`)
-  are preserved when an editor saves a project.
+- `settings.content.merge: true` — keys outside the schema (`variant`) are
+  preserved when an editor saves a project.
 - The `proyectos` collection edits `src/proyectos` and excludes
   `proyectos.11tydata.json`, so the directory defaults never appear as a project.
 - The filename field is visible on create and on edit and is seeded from the
@@ -177,8 +188,11 @@ deploy workflow. Labels and helper text are Spanish.
   (`image` / `video`): add an existing item or upload, reorder, remove, set alt
   text, choose a video poster, and toggle autoplay / loop / mute.
   `gallery_columns` stores the number of gallery columns (1 or 2).
-- The schema currently covers title, venue, dates, homepage status, order,
-  gallery columns and the gallery. Text and the remaining media sources are
+- The text is two rich-text fields, `text_es` (Spanish, required) and `text_en`
+  (English, optional), both Markdown with the editor/source switch and no media
+  (the text lives in front matter, not in the Markdown body).
+- The schema currently covers title, venue, dates, both texts, homepage status,
+  order, gallery columns and the gallery. The remaining media sources are
   handled by later work.
 
 ### Filename / URL change warning (limitation)
