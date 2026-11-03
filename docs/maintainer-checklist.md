@@ -75,8 +75,7 @@ from the repository.
 4. **Gallery editor**
    - Add an existing image from the media library.
    - Upload a new image.
-   - Add a video, choose a poster, and toggle autoplay / loop / mute; ticking
-     autoplay, mute and loop together is what removes the control bar.
+   - Add a video, choose a poster, and toggle autoplay / loop / mute.
    - Set the alt text on the image items (leave one empty to see the title
      fallback on the deployed page).
    - Drag items to reorder and remove one item.

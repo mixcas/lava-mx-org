@@ -95,6 +95,57 @@ function expectedImageAlt(route) {
     .map((item) => (typeof item.alt === "string" ? item.alt.trim() : "") || data.title);
 }
 
+/**
+ * Whether a video keeps the browser's control bar. Only a self-sustaining video
+ * — autoplay + mute + loop — is decoration with nothing for a viewer to
+ * operate; every other video is meant to be operated. Derived from the video's
+ * own flags, never from a list of which video on the site is which.
+ */
+const keepsControls = (video) => !(video.autoplay && video.muted && video.loop);
+
+/**
+ * The article for one project on a listing surface (homepage, archive page),
+ * found by its rendered title.
+ */
+function listedArticle(doc, route, title) {
+  const article = doc
+    .querySelectorAll("article")
+    .find((element) => normalize(element.querySelector("h1, h2")?.textContent) === title);
+  assert.ok(article, `page ${route}: no article for ${title}`);
+  return article;
+}
+
+/**
+ * Assert the gallery videos rendered inside `container` — a project article,
+ * on any surface — against the baseline's videos for that project: source,
+ * poster, the autoplay / loop / mute flags, and the control bar those flags
+ * call for. Called once per surface (project page, homepage, archive page) so
+ * no surface can lose a video's controls on its own.
+ */
+function assertGalleryVideos(container, project, route) {
+  const label = `page ${route}`;
+  const videos = container.querySelectorAll("video");
+  assert.equal(videos.length, project.videos.length, `${label}: gallery videos rendered`);
+  videos.forEach((video, index) => {
+    const position = `gallery video ${index + 1}`;
+    const expected = project.videos[index];
+    assert.equal(video.getAttribute("src"), localUrl(`/assets/videos/${expected.source}`), `${label}: ${position} source`);
+    assert.equal(video.hasAttribute("poster"), expected.hasPoster, `${label}: ${position} poster attribute`);
+    if (expected.hasPoster) {
+      assert.ok(
+        (video.getAttribute("poster") ?? "").startsWith(`${PATH_PREFIX}/img/`),
+        `${label}: ${position} poster uses the responsive image pipeline`,
+      );
+    }
+    assert.equal(video.hasAttribute("autoplay"), expected.autoplay, `${label}: ${position} autoplay`);
+    assert.equal(video.hasAttribute("loop"), expected.loop, `${label}: ${position} loop`);
+    assert.equal(video.hasAttribute("muted"), expected.muted, `${label}: ${position} muted`);
+    assert.equal(video.hasAttribute("controls"), keepsControls(expected), `${label}: ${position} controls`);
+    assert.equal(video.hasAttribute("playsinline"), true, `${label}: ${position} playsinline`);
+    assert.equal(video.getAttribute("preload"), "metadata", `${label}: ${position} preload`);
+  });
+}
+
 describe("project URLs", () => {
   it("keeps all twelve project URLs", () => {
     assert.equal(PROJECTS.length, PROJECT_COUNT, "fixture: expected twelve baseline projects");
@@ -712,6 +763,15 @@ describe("homepage (/)", () => {
       `page ${route}: homepage project titles and order`,
     );
   });
+
+  // The homepage renders the same gallery as the project page, so a listed
+  // video must keep its control bar here too.
+  it("renders every listed gallery video with the control bar its flags call for", () => {
+    const doc = readPage(route);
+    for (const project of HOMEPAGE_PROJECTS.filter(({ videos }) => videos.length)) {
+      assertGalleryVideos(listedArticle(doc, route, project.title), project, route);
+    }
+  });
 });
 
 describe("archive page (/proyectos/)", () => {
@@ -728,10 +788,7 @@ describe("archive page (/proyectos/)", () => {
   for (const project of ARCHIVE_PROJECTS) {
     it(`links ${project.title} to its project page`, () => {
       const doc = readPage(route);
-      const article = doc
-        .querySelectorAll("article")
-        .find((element) => normalize(element.querySelector("h1, h2")?.textContent) === project.title);
-      assert.ok(article, `page ${route}: no article for ${project.title}`);
+      const article = listedArticle(doc, route, project.title);
       assert.equal(
         article.querySelector("a")?.getAttribute("href"),
         localUrl(project.route),
@@ -739,6 +796,15 @@ describe("archive page (/proyectos/)", () => {
       );
     });
   }
+
+  // No archive project carries a video today, so this is a no-op until one
+  // does; it keeps the archive surface covered the moment that changes.
+  it("renders every listed gallery video with the control bar its flags call for", () => {
+    const doc = readPage(route);
+    for (const project of ARCHIVE_PROJECTS.filter(({ videos }) => videos.length)) {
+      assertGalleryVideos(listedArticle(doc, route, project.title), project, route);
+    }
+  });
 });
 
 describe("project pages", () => {
@@ -792,30 +858,8 @@ describe("project pages", () => {
         );
       });
 
-      const videos = article.querySelectorAll("video");
-      assert.equal(videos.length, project.videos.length, `${label}: gallery videos rendered`);
-      videos.forEach((video, index) => {
-        const position = `gallery video ${index + 1}`;
-        const expected = project.videos[index];
-        assert.equal(video.getAttribute("src"), localUrl(`/assets/videos/${expected.source}`), `${label}: ${position} source`);
-        assert.equal(video.hasAttribute("poster"), expected.hasPoster, `${label}: ${position} poster attribute`);
-        if (expected.hasPoster) {
-          assert.ok(
-            (video.getAttribute("poster") ?? "").startsWith(`${PATH_PREFIX}/img/`),
-            `${label}: ${position} poster uses the responsive image pipeline`,
-          );
-        }
-        assert.equal(video.hasAttribute("autoplay"), expected.autoplay, `${label}: ${position} autoplay`);
-        assert.equal(video.hasAttribute("loop"), expected.loop, `${label}: ${position} loop`);
-        assert.equal(video.hasAttribute("muted"), expected.muted, `${label}: ${position} muted`);
-        // A self-sustaining video — autoplay + mute + loop — is decoration and
-        // carries no control bar; every other video is meant to be operated, so
-        // the expectation is derived from this video's own flags, not a list.
-        const selfSustaining = expected.autoplay && expected.muted && expected.loop;
-        assert.equal(video.hasAttribute("controls"), !selfSustaining, `${label}: ${position} controls`);
-        assert.equal(video.hasAttribute("playsinline"), true, `${label}: ${position} playsinline`);
-        assert.equal(video.getAttribute("preload"), "metadata", `${label}: ${position} preload`);
-      });
+      // Source, poster, flags and control bar, the same way on every surface.
+      assertGalleryVideos(article, project, route);
     });
   }
 });
@@ -1365,11 +1409,21 @@ describe(`subpath deployment (${SUBPATH_PREFIX})`, () => {
   it("serves the gallery video and the dossier links under the prefix", () => {
     const project = PROJECTS.find(({ videos }) => videos.length);
     assert.ok(project, "fixture: expected a project with a video");
+    const video = page(project.route).querySelector("video");
     assert.equal(
-      page(project.route).querySelector("video")?.getAttribute("src"),
+      video?.getAttribute("src"),
       `${PREFIX}/assets/videos/${project.videos[0].source}`,
       `page ${project.route}: video source under the subpath`,
     );
+    // The control bar travels with the markup, so the subpath build must not
+    // lose it: the same expectation, derived from this video's own flags.
+    assert.equal(
+      video?.hasAttribute("controls"),
+      keepsControls(project.videos[0]),
+      `page ${project.route}: gallery video 1 controls under the subpath`,
+    );
+    assert.equal(video?.hasAttribute("playsinline"), true, `page ${project.route}: gallery video 1 playsinline under the subpath`);
+    assert.equal(video?.getAttribute("preload"), "metadata", `page ${project.route}: gallery video 1 preload under the subpath`);
 
     const { route, file } = LOCAL_DOCUMENTS[0];
     const hrefs = page(route)
