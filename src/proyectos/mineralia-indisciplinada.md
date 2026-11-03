@@ -12,9 +12,6 @@ media:
   - type: video
     src: /assets/videos/Reel_chopo_audio.mp4
     poster: /assets/images/Mineraliaindisciplinada-0143-B2766344.webp
-    autoplay: false
-    loop: false
-    mute: false
   - type: image
     src: /assets/images/587712401_1242916671202317_2545464800785283322_n.webp
   - type: image
@@ -81,5 +78,4 @@ text_en: >-
   Museo Universitario del Chopo (UNAM)  
 
   Asistencia Artistica
-gallery_columns: 1
 ---
