@@ -1872,10 +1872,27 @@ describe("about page in both languages", () => {
       const heading = normalize(doc.querySelector("main h1")?.textContent);
       assert.equal(heading, title, `${label}: the page heading is the page language's own`);
       assert.equal(normalize(doc.querySelector("title")?.textContent), `${title} — ${SITE.title}`, `${label}: <title>`);
+      // The description is the page's own text, the way a project page's is:
+      // the biography of the page's language version, never the site
+      // description and never the other language's biography.
+      const description = normalize(doc.querySelector('meta[name="description"]')?.getAttribute("content"));
+      assert.ok(description.startsWith(expected.bio), `${label}: the meta description starts the page's own biography`);
+      assert.ok(!description.startsWith(expected.other), `${label}: the meta description is not the other language's biography`);
+    });
+
+    it(`keeps the social descriptions of ${route} in step with its meta description`, () => {
+      const doc = readPage(route);
+      const description = normalize(doc.querySelector('meta[name="description"]')?.getAttribute("content"));
+
       assert.equal(
-        normalize(doc.querySelector('meta[name="description"]')?.getAttribute("content")),
-        language.code === SPANISH.code ? SITE.description : SITE.englishDescription,
-        `${label}: the meta description is the page language's own`,
+        normalize(doc.querySelector('meta[property="og:description"]')?.getAttribute("content")),
+        description,
+        `page ${route}: og:description is the page's own text`,
+      );
+      assert.equal(
+        normalize(doc.querySelector('meta[name="twitter:description"]')?.getAttribute("content")),
+        description,
+        `page ${route}: twitter:description is the page's own text`,
       );
     });
 
@@ -1910,6 +1927,27 @@ describe("about page in both languages", () => {
       assert.equal(doc.querySelector('link[rel="canonical"]')?.getAttribute("href"), `${SITE_URL}${localUrl(route)}`, `${label}: self canonical`);
     });
   }
+
+  it("describes the two About pages differently, each from its own biography", () => {
+    const described = Object.fromEntries(
+      LANGUAGES.map((language) => [
+        language.code,
+        normalize(readPage(aboutRoute(language)).querySelector('meta[name="description"]')?.getAttribute("content")),
+      ]),
+    );
+
+    assert.equal(
+      new Set(Object.values(described)).size,
+      LANGUAGES.length,
+      `each About page describes itself in its own language: ${JSON.stringify(described)}`,
+    );
+    for (const language of LANGUAGES) {
+      assert.ok(
+        described[language.code].startsWith(copy[language.code].bio),
+        `page ${aboutRoute(language)}: the description starts that language's biography`,
+      );
+    }
+  });
 
   it("stores each language version in its own object, without the separator", () => {
     const data = projectData("src/acerca-de.md");
@@ -1989,6 +2027,22 @@ describe("about page with no English version written (Untranslated field)", () =
     assert.equal(heading(`${ENGLISH.prefix}${UNTRANSLATED_ROUTE}`), ABOUT.title.spanish, "page /en/acerca-de/: the heading is the Spanish title");
     assert.equal(title(`${ENGLISH.prefix}${UNTRANSLATED_ROUTE}`), `${ABOUT.title.spanish} — ${SITE.title}`, "page /en/acerca-de/: <title>");
     assert.equal(heading(UNTRANSLATED_ROUTE), ABOUT.title.spanish, `page ${UNTRANSLATED_ROUTE}: the Spanish page keeps its own title`);
+  });
+
+  it("describes the English page with the Spanish biography until one is written", () => {
+    const description = (route) =>
+      normalize(readOutputPage(outputDir, route).querySelector('meta[name="description"]')?.getAttribute("content"));
+    const spanish = normalize(String(projectData("src/acerca-de.md").es?.bio ?? "").replace(/\s+/g, " "));
+
+    assert.ok(
+      spanish.startsWith(description(`${ENGLISH.prefix}${UNTRANSLATED_ROUTE}`).replace(/(\.{3}|…)$/, "")),
+      "page /en/acerca-de/: the description is the Spanish biography, since the English one is unwritten",
+    );
+    assert.equal(
+      description(`${ENGLISH.prefix}${BLANK_ROUTE}`),
+      description(`${ENGLISH.prefix}${UNTRANSLATED_ROUTE}`),
+      "a blank English biography describes the page the same way an absent one does",
+    );
   });
 
   it("resolves each field on its own, so a written English title stays English", () => {
@@ -2089,7 +2143,7 @@ describe("page metadata", () => {
   const pages = [
     ...LANGUAGES.map((language) => [homeRoute(language), language.code === SPANISH.code ? SITE.description : SITE.englishDescription]),
     ...LANGUAGES.flatMap((language) => PROJECTS.map((project) => [projectRouteIn(project.route, language), null])),
-    ...LANGUAGES.map((language) => [aboutRoute(language), language.code === SPANISH.code ? SITE.description : SITE.englishDescription]),
+    ...LANGUAGES.map((language) => [aboutRoute(language), null]),
   ];
 
   for (const [route, expectedDescription] of pages) {

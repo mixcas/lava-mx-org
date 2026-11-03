@@ -467,15 +467,19 @@ the same fields:
 - `sitemap.xml` lists one `<url>` per built language version with `xhtml:link`
   alternates; `robots.txt` still advertises that one sitemap.
 - `<title>` and the meta description come from the page's own language version:
-  a project page uses its own title and the start of its own body (the Spanish
-  body only when the English one is untranslated).
+  a project page uses its own title and the start of its own body, the About
+  page its own title and the start of its own biography (the Spanish ones only
+  when the English version is unwritten), and a page with neither text falls
+  back to the site description of its language.
 - Each page's header carries one plain anchor to the counterpart page, labelled
   in that language ("English" / "Español"); it is rendered only when that page
   was built. There is no auto-detection, cookie or script.
 - `404.html` is the one page that cannot know which language was wanted, so it
-  is the only one that speaks both: Spanish chrome, `<html lang="es">`, and one
-  short line per language — each marked with its own `lang` and linking to that
-  language's homepage.
+  is the only one that speaks both: Spanish chrome (its `<title>` included, from
+  `site.es.notFound.title`), `<html lang="es">`, and one short line per language
+  — each marked with its own `lang` and linking to that language's homepage.
+- The header navigation is a grid of one equal column per item, so the pages
+  without a Language link (the 404) get four columns rather than an empty fifth.
 
 ## Pages CMS
 

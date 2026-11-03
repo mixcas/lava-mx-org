@@ -17,8 +17,14 @@ permalink: "{{ lang.prefix }}/acerca-de/"
 # each renders its own text rather than one language borrowing the other's.
 # `localizedText` applies the Untranslated field rule (GLOSSARY, ADR-0002): with
 # no English title written, the English page carries the Spanish one.
+#
+# The meta description is the same rule applied to the biography: the page is
+# described by its own language version's text, which is the Spanish biography
+# on an English page whose biography is unwritten (base.njk renders, strips and
+# truncates it exactly as it does a project's body).
 eleventyComputed:
   title: "{{ { es: es, en: en } | localizedText(lang.code, 'title') }}"
+  description: "{{ { es: es, en: en } | localizedText(lang.code, 'bio') }}"
 es:
   title: "Acerca de"
   bio: |-
