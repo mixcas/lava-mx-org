@@ -1,0 +1,58 @@
+{#
+	Shared project renderer: the single project markup used by the project page
+	(`layouts/project.njk`), the homepage (`index.njk`), and the archive page
+	(`proyectos.njk`). Everything project-specific comes from the view model
+	(`lib/project-view.js`); galleries are rendered by the `gallery` shortcode,
+	which owns all media markup.
+
+	Included once per surface (an include inside a loop cannot host the async
+	image shortcodes), so this partial renders every listed project.
+
+	The three-column layout renders one ordered gallery split in half by the
+	view model (`splitAt`): the first column takes the first half rounded up,
+	the second column takes the rest.
+
+	The title and the bilingual text come from the `projectTitle` and
+	`projectBody` macros (`partials/project-content.njk`), so both variants
+	share one copy of that markup.
+
+	Context:
+		projects — project view models, in display order
+		heading  — title tag: "h1" on a project page, "h2" on a listing page
+		linked   — link the title to its project page (listing pages)
+		priority — load the first gallery image of the first project eagerly (LCP)
+#}
+{% from "partials/project-content.njk" import projectTitle, projectBody -%}
+{% set projectHeading = heading or "h2" %}
+{% for project in projects %}
+{% if project.variant == "three-column" %}
+	<article class="project project--three-column">
+		<div class="project-three">
+			<div class="project-three__col">
+				{{ projectTitle(project, projectHeading, linked) }}
+				{% gallery project.gallery.slice(0, project.splitAt) %}
+			</div>
+			<div class="project-three__col">
+				<div>{{ project.venue | mdInline | safe }}</div>
+				{% gallery project.gallery.slice(project.splitAt) %}
+			</div>
+			<div class="project-three__col">
+				<div>{{ project.dates | mdInline | safe }}</div>
+				{{ projectBody(project.text) }}
+			</div>
+		</div>
+	</article>
+{% else %}
+	<article class="project">
+		<header class="project-header">
+			{{ projectTitle(project, projectHeading, linked) }}
+			<div>{{ project.venue | mdInline | safe }}</div>
+			<div>{{ project.dates | mdInline | safe }}</div>
+		</header>
+		<div class="project-main">
+			{% gallery project.gallery, project.columns, (priority and loop.first) %}
+			{{ projectBody(project.text) }}
+		</div>
+	</article>
+{% endif %}
+{% endfor %}

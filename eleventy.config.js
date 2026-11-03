@@ -6,6 +6,13 @@ import path from "node:path";
 import Image from "@11ty/eleventy-img";
 import MarkdownIt from "markdown-it";
 
+import { buildProjectView } from "./lib/project-view.js";
+import { applyPathPrefix, withPathPrefix } from "./lib/path-prefix.js";
+import { assertProjectsValid } from "./lib/project-contract.js";
+import { ASSET_URL } from "./lib/media-assets.js";
+
+const ROOT = import.meta.dirname;
+
 // `/` for a custom domain; `/<repo>/` when served from a GitHub Pages subpath.
 const PATH_PREFIX = (process.env.PATH_PREFIX || "/").replace(/\/+$/, ""); // "" | "/repo"
 const SITE_URL = (process.env.SITE_URL || "https://lava-mx.org").replace(/\/$/, "");
@@ -35,6 +42,13 @@ async function processImage(src, widths) {
 }
 
 export default function (eleventyConfig) {
+  // Project content contract (lib/project-contract.js): reject invalid project
+  // front matter before any page renders, with a message naming the project file
+  // and field — a broken project must never reach the output.
+  eleventyConfig.on("eleventy.before", ({ inputDir, dir }) => {
+    assertProjectsValid({ inputDir: path.resolve(ROOT, inputDir ?? dir.input) });
+  });
+
   // Static assets copied verbatim. Image masters are NOT copied — they are
   // processed by @11ty/eleventy-img into responsive variants under /img/.
   eleventyConfig.addPassthroughCopy({ "src/assets/css": "assets/css" });
@@ -53,54 +67,82 @@ export default function (eleventyConfig) {
   // Absolute site origin (for canonical/OG/sitemap URLs).
   eleventyConfig.addGlobalData("siteUrl", SITE_URL);
 
-  // Hero image (LCP) per page: first image of the page/project, else first item
-  // of the current/past project collections (per the `hero` front-matter flag).
+  // Canonical project view model (see lib/project-view.js): every project
+  // surface renders this, so content shapes are interpreted in one place.
+  // `projectView` computed data serves the page being built (the project layout);
+  // the `projectView` / `projectViews` filters serve collection items on the
+  // listing pages.
+  eleventyConfig.addFilter("projectView", (item) => buildProjectView(item?.data ?? item ?? {}));
+  eleventyConfig.addFilter("projectViews", (items = []) => items.map((item) => buildProjectView(item?.data ?? item ?? {})));
   eleventyConfig.addGlobalData("eleventyComputed", {
+    projectView: (data) => buildProjectView(data),
+    // Hero image (LCP/OG) per page: the first image of the page's own gallery,
+    // else the first image of the homepage/archive project collections (per the
+    // `hero` front-matter flag).
     heroImage: (data) => {
-      const pick = (m) => (!m ? null : m.video ? m.poster || null : m.src);
-      if (data.media?.length) return pick(data.media[0]);
-      if (data.media_middle?.length) return pick(data.media_middle[0]);
-      if (data.media_left?.length) return pick(data.media_left[0]);
+      const project = buildProjectView(data);
+      if (project.gallery.length) return project.heroImage;
       const list =
-        data.hero === "past"
-          ? data.collections?.pastProjects
-          : data.hero === "current"
-            ? data.collections?.currentProjects
+        data.hero === "featured"
+          ? data.collections?.featuredProjects
+          : data.hero === "archive"
+            ? data.collections?.archiveProjects
             : null;
-      if (list?.length) {
-        const d = list[0].data;
-        return pick(d.media?.[0] || d.media_left?.[0] || d.media_middle?.[0]);
-      }
-      return null;
+      return list?.length ? buildProjectView(list[0].data).heroImage : null;
     },
   });
 
   // Render Markdown stored in front matter (bilingual body, venue/dates, about).
+  // Content links local assets root-relative (`/assets/files/…`), so the
+  // rendered HTML gets the deployment path prefix here — the same prefix the
+  // templates get from Eleventy's `url` filter (see lib/path-prefix.js).
   const mdLib = new MarkdownIt({ html: true, breaks: true });
-  eleventyConfig.addFilter("md", (value) => mdLib.render(String(value ?? "")));
-  eleventyConfig.addFilter("mdInline", (value) => mdLib.renderInline(String(value ?? "")));
+  eleventyConfig.addFilter("md", (value) => applyPathPrefix(mdLib.render(String(value ?? "")), PATH_PREFIX));
+  eleventyConfig.addFilter("mdInline", (value) => applyPathPrefix(mdLib.renderInline(String(value ?? "")), PATH_PREFIX));
 
   // Responsive <picture> for a master filename in src/assets/images.
   // `priority` marks the LCP image (eager + high fetch priority).
-  eleventyConfig.addShortcode(
-    "picture",
-    async (src, alt = "", priority = false, sizes = "(min-width: 900px) 66vw, 100vw") => {
-      const metadata = await processImage(src, RESPONSIVE_WIDTHS);
-      return Image.generateHTML(metadata, {
-        alt,
-        sizes,
-        loading: priority ? "eager" : "lazy",
-        decoding: priority ? "sync" : "async",
-        fetchpriority: priority ? "high" : "low",
-      });
-    },
-  );
+  const picture = async (src, alt = "", priority = false, sizes = "(min-width: 900px) 66vw, 100vw") => {
+    const metadata = await processImage(src, RESPONSIVE_WIDTHS);
+    return Image.generateHTML(metadata, {
+      alt,
+      sizes,
+      loading: priority ? "eager" : "lazy",
+      decoding: priority ? "sync" : "async",
+      fetchpriority: priority ? "high" : "low",
+    });
+  };
+  eleventyConfig.addShortcode("picture", picture);
 
   // Single URL (e.g. for a video poster or OG image). WebP is widely supported.
-  eleventyConfig.addShortcode("imageUrl", async (src, width = 1200) => {
+  const imageUrl = async (src, width = 1200) => {
     const metadata = await processImage(src, [Number(width)]);
     const format = metadata.webp ? "webp" : "avif";
     return metadata[format][metadata[format].length - 1].url;
+  };
+  eleventyConfig.addShortcode("imageUrl", imageUrl);
+
+  // A project gallery: the one place media items become markup. It renders the
+  // view model's typed media items (`lib/project-view.js`) for every project
+  // surface — image, video, and its flags — and keeps `data-columns` here too.
+  eleventyConfig.addShortcode("gallery", async (gallery, columns = null, priority = false) => {
+    const items = await Promise.all(
+      (Array.isArray(gallery) ? gallery : []).map(async (item, index) => {
+        if (item.type === "video") {
+          const poster = item.poster ? ` poster="${await imageUrl(item.poster, 1200)}"` : "";
+          const autoplay = item.autoplay ? " autoplay" : "";
+          const loop = item.loop ? " loop" : "";
+          const mute = item.mute ? " muted" : "";
+          // Videos are copied verbatim, so the same path-prefix rule applies
+          // as for every other URL the site owns (lib/path-prefix.js).
+          const src = withPathPrefix(`${ASSET_URL.videos}/${item.src}`, PATH_PREFIX);
+          return `<video class="project-video" src="${src}"${poster}${autoplay}${loop}${mute} playsinline preload="metadata"></video>`;
+        }
+        return picture(item.src, item.alt, priority && index === 0);
+      }),
+    );
+    const columnCount = columns ? ` data-columns="${columns}"` : "";
+    return `<div class="project-gallery"${columnCount}>\n\t${items.join("\n\t")}\n</div>`;
   });
 
   // Preload the LCP image early (uses the same responsive srcset as <picture>).
@@ -117,18 +159,19 @@ export default function (eleventyConfig) {
     },
   );
 
-  // Collections driving the home page (current) and the projects index (past).
+  // Project collections: the editor-selected homepage projects and the
+  // complementary archive projects, each in its configured `order`.
   const byOrder = (a, b) => (a.data.order ?? 0) - (b.data.order ?? 0);
-  eleventyConfig.addCollection("currentProjects", (api) =>
+  eleventyConfig.addCollection("featuredProjects", (api) =>
     api
       .getFilteredByGlob("src/proyectos/*.md")
-      .filter((item) => item.data.current === true)
+      .filter((item) => item.data.featured === true)
       .sort(byOrder),
   );
-  eleventyConfig.addCollection("pastProjects", (api) =>
+  eleventyConfig.addCollection("archiveProjects", (api) =>
     api
       .getFilteredByGlob("src/proyectos/*.md")
-      .filter((item) => item.data.current !== true)
+      .filter((item) => item.data.featured !== true)
       .sort(byOrder),
   );
 

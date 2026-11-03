@@ -1,0 +1,423 @@
+# Pages CMS configuration (2.x) — https://pagescms.org/docs/configuration/
+#
+# Editors sign in at https://app.pagescms.org and pick a branch; every save is a
+# commit on that branch. Field labels and descriptions are Spanish because the
+# editors are curators; the CMS interface chrome stays English.
+
+settings:
+  content:
+    # Merge the submitted fields into the existing file: front-matter keys
+    # outside the schema below (variant, …) are preserved on save.
+    merge: true
+  commit:
+    # A save is a commit authored by the editor who made it, not by the app
+    # (US 28). The push still uses the GitHub App installation token; only the
+    # commit's author/committer metadata changes, so the deploy is unaffected.
+    identity: user
+
+# Where uploads are stored and which path each field writes into front matter.
+# `output` is the canonical path prefix the site understands, not necessarily a
+# file the server returns: image masters in src/assets/images are referenced by
+# that path and the build emits responsive variants from them, while videos and
+# documents are copied verbatim. `rename: false` keeps the original filename,
+# the only name that matches the media the templates already reference.
+media:
+  - name: images
+    label: Imágenes
+    input: src/assets/images
+    output: /assets/images
+    # Formats the image pipeline can process. Anything else (SVG, TIFF, ICO,
+    # HEIC, …) is rejected here rather than breaking the build.
+    extensions: [webp, jpg, jpeg, png, avif, gif]
+    rename: false
+  - name: videos
+    label: Videos
+    input: src/assets/videos
+    output: /assets/videos
+    extensions: [mp4, webm]
+    rename: false
+  - name: documents
+    label: Documentos
+    input: src/assets/files
+    output: /assets/files
+    extensions: [pdf]
+    rename: false
+
+content:
+  - name: proyectos
+    label: Proyectos
+    type: collection
+    path: src/proyectos
+    # Pages CMS has no URL-change warning of its own, so the warning lives in
+    # the only two places the app can render for this collection: this
+    # description and the `title` field description (the filename is seeded
+    # from the title). Verify that both are visible on create and edit before
+    # handing the CMS to editors (see README → «Pages CMS»).
+    description: >-
+      El nombre del archivo (campo «Filename», al inicio del formulario) define
+      la dirección pública del proyecto: /proyectos/nombre-del-archivo/.
+      Cambiarlo cambia la URL pública y rompe los enlaces y marcadores
+      existentes; Git es la única forma de recuperarla después.
+    filename:
+      # Default filename from the title, without Eleventy's date prefix.
+      template: "{primary}.md"
+      # Visible when creating and when editing (the app locks it until the
+      # editor unlocks it), so the URL is never a hidden setting.
+      field: true
+    exclude:
+      # Directory-level defaults for Eleventy, not a project entry. `exclude`
+      # matches exact basenames.
+      - proyectos.11tydata.json
+    operations:
+      create: true
+      rename: true
+      delete: true
+    view:
+      primary: title
+      fields: [title, featured, order, dates]
+      sort: [order, title]
+      default:
+        sort: order
+        order: asc
+    fields:
+      - name: title
+        label: Título
+        type: string
+        required: true
+        description: >-
+          Nombre público del proyecto. Al crear un proyecto, el nombre del
+          archivo (y por tanto la dirección pública) se genera a partir del
+          título; si lo cambias después, cambia la URL.
+      - name: venue
+        label: Sede
+        type: string
+        description: Espacio donde se presentó el proyecto (galería, museo, ciudad).
+      - name: dates
+        label: Fechas
+        type: string
+        description: >-
+          Fechas de exhibición tal como se muestran en la página del proyecto;
+          admite Markdown.
+      # The project text is two fields, one per language: the template renders
+      # the Spanish text first, then a divider, then the English text when it
+      # exists. Both live in front matter (the Markdown body is empty). The
+      # rich-text fields insert from the documents library, so an editor can
+      # upload a PDF while writing and link to it (US 30): `categories` widens
+      # the picker's default image formats to the PDFs the source accepts.
+      - name: text_es
+        label: Texto en español
+        type: rich-text
+        required: true
+        options:
+          format: markdown
+          switcher: true
+          media: documents
+          categories: [document]
+        description: >-
+          Texto del proyecto en español; admite Markdown. Se muestra primero.
+          Los enlaces y descargas del proyecto van aquí, al final de este
+          texto, porque el texto en inglés es opcional. Desde el botón de
+          insertar puedes subir un PDF a la biblioteca de Documentos y
+          enlazarlo.
+      - name: text_en
+        label: Texto en inglés
+        type: rich-text
+        options:
+          format: markdown
+          switcher: true
+          media: documents
+          categories: [document]
+        description: >-
+          Texto del proyecto en inglés; admite Markdown. Aparece después del
+          texto en español, separado por «//». Si lo dejas vacío, el proyecto
+          se muestra solo en español. Los PDF se enlazan desde el texto en
+          español.
+      - name: featured
+        label: Proyecto en portada
+        type: boolean
+        default: false
+        description: >-
+          Actívalo para que el proyecto aparezca en la portada. Si está
+          desactivado, aparece en «Proyectos anteriores». Es una decisión
+          editorial y no depende de las fechas.
+      - name: order
+        label: Orden
+        type: number
+        default: 0
+        description: >-
+          Posición dentro de su grupo (portada o proyectos anteriores); el
+          número menor aparece primero.
+      - name: gallery_columns
+        label: Columnas de la galería
+        type: number
+        default: 1
+        options:
+          min: 1
+          max: 2
+        description: >-
+          Una columna (1) para imágenes que se ven una debajo de otra, dos
+          columnas (2) para pares de obras. Solo se admiten los valores 1 y 2.
+      - name: media
+        label: Galería
+        type: block
+        list: true
+        # Each item stores its media type under `type`, next to that type's
+        # fields: the template reads the type, not a boolean video flag.
+        #
+        # The gallery is one ordered list for every project. The three-column
+        # project keeps only a hidden `variant` key outside this schema; the
+        # template splits its gallery in half (first half rounded up goes to the
+        # first column), so editors reorder a single list.
+        blockKey: type
+        description: >-
+          Los medios del proyecto, en el orden en que se muestran. Añade una
+          imagen o un video, elige uno existente o sube uno nuevo, y arrastra
+          los elementos para reordenarlos.
+        blocks:
+          - name: image
+            label: Imagen
+            fields:
+              - name: src
+                label: Imagen
+                type: image
+                required: true
+                options:
+                  media: images
+                description: >-
+                  Elige una imagen de la biblioteca o sube una nueva. Solo se
+                  aceptan WebP, JPG, JPEG, PNG, AVIF y GIF.
+              - name: alt
+                label: Texto alternativo
+                type: string
+                description: >-
+                  Describe la imagen para quien usa lector de pantalla. Si lo
+                  dejas vacío, se usa el título del proyecto.
+          - name: video
+            label: Video
+            fields:
+              - name: src
+                label: Video
+                type: file
+                required: true
+                options:
+                  media: videos
+                description: >-
+                  Elige un video de la biblioteca o sube uno nuevo. Solo se
+                  aceptan MP4 y WebM.
+              - name: poster
+                label: Imagen de portada del video
+                type: image
+                options:
+                  media: images
+                description: >-
+                  Imagen fija que se ve antes de reproducir el video y que se
+                  usa al compartir el proyecto.
+              - name: autoplay
+                label: Reproducción automática
+                type: boolean
+                default: false
+                description: >-
+                  Reproduce el video al cargar la página. Los navegadores solo
+                  lo permiten si el video también está silenciado.
+              - name: loop
+                label: Repetir
+                type: boolean
+                default: false
+                description: Vuelve a empezar el video cuando termina.
+              - name: mute
+                label: Silenciar
+                type: boolean
+                default: false
+                description: Reproduce el video sin sonido.
+
+  # Single-file entry: the About page lives in one Markdown file. `title` and
+  # `layout` stay out of the editor so merge mode preserves them on save; the
+  # template draws the divider between the two biographies (never store `//`).
+  - name: about
+    label: Acerca de
+    type: file
+    path: src/acerca-de.md
+    description: >-
+      Biografía y equipo de la página «Acerca de». El título y el diseño de la
+      página no se editan aquí: se conservan tal como están en el archivo.
+    fields:
+      - name: bio_es
+        label: Biografía en español
+        type: rich-text
+        required: true
+        options:
+          format: markdown
+          switcher: true
+          media: documents
+          categories: [document]
+        description: >-
+          Biografía del colectivo en español; admite Markdown. Se muestra
+          primero, seguida de la biografía en inglés cuando existe. Desde el
+          botón de insertar puedes subir un PDF a la biblioteca de Documentos y
+          enlazarlo.
+      - name: bio_en
+        label: Biografía en inglés
+        type: rich-text
+        options:
+          format: markdown
+          switcher: true
+          media: documents
+          categories: [document]
+        description: >-
+          Biografía del colectivo en inglés; admite Markdown. Aparece después
+          de la biografía en español, separada por «//». No escribas «//»: si
+          dejas este campo vacío, la página se muestra solo en español.
+      - name: team
+        label: Equipo
+        type: rich-text
+        required: true
+        options:
+          format: markdown
+          switcher: true
+          media: documents
+          categories: [document]
+        description: >-
+          Nombres, cargos y el encabezado de colaboradoras anteriores en un solo
+          texto; admite Markdown (negritas y cursivas). Se muestra junto a la
+          biografía.
+
+  # Site settings: one JSON data file shared by every page. Every key is
+  # exposed — including the keys no template reads and the duplicates — so a
+  # save from the CMS never drops a setting. Each description says whether the
+  # value reaches the rendered site; the ones that do not say "no afecta".
+  - name: site
+    label: Ajustes del sitio
+    type: file
+    path: src/_data/site.json
+    format: json
+    description: >-
+      Textos y datos que se repiten en todas las páginas. Los campos que hoy no
+      cambian nada en el sitio lo dicen en su propia descripción.
+    fields:
+      - name: title
+        label: Nombre del sitio
+        type: string
+        required: true
+        description: >-
+          Cambia el título de todas las páginas («… — Lava»), el nombre que se
+          ve al compartir un enlace y el texto alternativo del logotipo.
+      - name: description
+        label: Descripción del sitio
+        type: text
+        required: true
+        description: >-
+          Se muestra como descripción para buscadores y redes sociales en la
+          portada. En los proyectos y en «Acerca de» se usa el texto de cada
+          página, no este.
+      - name: url
+        label: Dirección del sitio (referencia)
+        type: string
+        description: >-
+          Dirección del sitio guardada como referencia. No afecta al sitio: las
+          direcciones canónicas, las imágenes al compartir y el mapa del sitio
+          se construyen con la variable SITE_URL de la publicación. Escribir
+          otra dirección aquí no cambia nada.
+      - name: email
+        label: Correo visible en el encabezado
+        type: string
+        description: >-
+          Correo que se ve en el encabezado, junto al enlace de contacto. Es
+          texto, no un enlace: quien lo lea tendrá que copiarlo.
+      - name: contactEmail
+        label: Correo del enlace de contacto
+        type: string
+        description: >-
+          Destinatario del enlace de contacto del encabezado (mailto:).
+          Cambiarlo cambia a dónde llegan los correos de quien escribe desde el
+          sitio.
+      - name: contactName
+        label: Texto del enlace de contacto
+        type: string
+        description: >-
+          Texto del enlace de contacto del encabezado; se ve tal cual, por
+          ejemplo «info.lavamx».
+      - name: instagram
+        label: Usuario de Instagram (referencia)
+        type: string
+        description: >-
+          Usuario de Instagram sin la dirección completa. No afecta al sitio:
+          ninguna página lo lee. El usuario que se ve en el pie de página se
+          edita en «Pie de página → Usuario de Instagram».
+      - name: city
+        label: Ciudad del colectivo (referencia)
+        type: string
+        description: >-
+          Ciudad del colectivo, guardada como referencia. No afecta al sitio: la
+          ciudad que aparece en el pie de página se edita en «Pie de página →
+          Ciudad».
+      - name: social
+        label: Redes sociales
+        type: object
+        description: >-
+          Enlaces a las redes del colectivo, guardados como referencia. No
+          afecta al sitio: ninguna página los muestra todavía.
+        fields:
+          - name: instagram
+            label: Dirección del perfil de Instagram
+            type: string
+            description: >-
+              Dirección completa del perfil de Instagram. No afecta al sitio:
+              hoy ningún enlace del sitio la usa.
+      - name: footer
+        label: Pie de página
+        type: object
+        description: Texto del pie de página que se muestra en todas las páginas.
+        fields:
+          - name: copyright
+            label: Copyright
+            type: string
+            description: Texto de copyright del pie de página; se ve tal cual, por ejemplo «©LAVA».
+          - name: city
+            label: Ciudad
+            type: string
+            description: >-
+              Ciudad que se ve en el pie de página. Es el valor que se muestra
+              (no el de «Ciudad del colectivo» en el nivel superior).
+          - name: instagram
+            label: Usuario de Instagram
+            type: string
+            description: >-
+              Usuario de Instagram que se muestra en el pie de página, con o sin
+              @. Es texto, no un enlace.
+      - name: nav
+        label: Navegación del encabezado
+        type: object
+        description: Cambia las etiquetas y las direcciones de los dos enlaces del encabezado.
+        fields:
+          - name: about
+            label: Enlace «Acerca de»
+            type: object
+            description: Cambia la etiqueta y la dirección del enlace «Acerca de».
+            fields:
+              - name: label
+                label: Etiqueta
+                type: string
+                description: Texto del enlace que se ve en el encabezado.
+              - name: url
+                label: Dirección
+                type: string
+                description: >-
+                  Dirección a la que lleva el enlace; se usa en todas las
+                  páginas. Cámbiala solo si la página cambia de dirección: una
+                  dirección equivocada deja el enlace roto.
+          - name: projects
+            label: Enlace «Proyectos anteriores»
+            type: object
+            description: Cambia la etiqueta y la dirección del enlace a los proyectos anteriores.
+            fields:
+              - name: label
+                label: Etiqueta
+                type: string
+                description: Texto del enlace que se ve en el encabezado.
+              - name: url
+                label: Dirección
+                type: string
+                description: >-
+                  Dirección a la que lleva el enlace; se usa en todas las
+                  páginas. Cámbiala solo si la página cambia de dirección: una
+                  dirección equivocada deja el enlace roto.

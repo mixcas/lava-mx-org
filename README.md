@@ -4,6 +4,25 @@ Static site for [Lava](https://lava-mx.org), a curatorial collective in Mexico
 City. Migrated from Cargo to an [Eleventy](https://www.11ty.dev/) site and
 deployed to GitHub Pages.
 
+## Documentation
+
+- [`docs/editor-guide.md`](docs/editor-guide.md) — curator guide (Spanish):
+  signing in with the invitation, finding and editing a project, the gallery,
+  the bilingual text, the About page and the site settings, publishing, waiting
+  for the deploy, and the filename/URL warning.
+- [`docs/maintainer-checklist.md`](docs/maintainer-checklist.md) — installing
+  the Pages CMS GitHub App, inviting editors by email, verifying the CMS on a
+  non-production branch, and merging to production. App installation and
+  invitations are **manual maintainer actions**.
+- [`GLOSSARY.md`](GLOSSARY.md) — the domain vocabulary: project, homepage
+  project, archive project, gallery, media item, media source, and the editor and
+  maintainer roles.
+- [`docs/adr/0001-pages-cms.md`](docs/adr/0001-pages-cms.md) — the Pages CMS
+  decision and its trade-offs.
+- [`MIGRATION-PLAN.md`](MIGRATION-PLAN.md) — historical: the original Cargo →
+  Eleventy plan, kept for reference (its content model predates the current
+  schema; see the note at its top).
+
 ## Stack
 
 - **Eleventy v3** (Nunjucks templates, Markdown content)
@@ -13,7 +32,9 @@ deployed to GitHub Pages.
 
 ## Requirements
 
-- Node **18+** and npm
+- Node **20.19+** and npm (the build reads `import.meta.dirname`, which needs
+  20.11+, and the suite uses the built-in test runner; the installed tooling
+  declares 20.19+ as well)
 
 ## Commands
 
@@ -21,6 +42,7 @@ deployed to GitHub Pages.
 |---|---|
 | `npm run serve` | Build and serve locally with live reload |
 | `npm run build` | Build the site into `_site/` |
+| `npm test` | Build once and assert the generated site plus the content contract (`test/*.test.mjs`) |
 | `npm run clean` | Remove the build output |
 | `npm run backup` | Mirror the live Cargo site into `_cargo-export/` |
 | `npm run extract` | Parse the backup into `src/proyectos/*.md`, `src/acerca-de.md`, site data |
@@ -31,15 +53,67 @@ npm install
 npm run serve   # http://localhost:8080
 ```
 
+## Tests
+
+```bash
+npm test
+```
+
+`npm test` runs the Node built-in test runner against the generated site: it
+builds the site once into `_site/` (clearing stale HTML but keeping `_site/img`,
+so the responsive-image cache makes re-runs take about a second), then parses
+the generated HTML with `node-html-parser` and asserts the public behaviour —
+
+- all twelve project URLs at `/proyectos/<filename>/`, and no other entry under
+  `/proyectos/`;
+- homepage and `/proyectos/` membership and order, and a sitemap listing every
+  page;
+- each project page's title, venue, dates, text (Spanish and, when it exists,
+  English), and every gallery image and video;
+- the About page biography and team;
+- `description`, canonical URL, and social image metadata on every page;
+- the content contract: the project directory defaults, that no project file
+  carries a legacy `current` / `slug` / `layout` key, and that `.pages.yml`
+  still declares the project collection the editors depend on.
+
+`test/project-contract.test.mjs` covers build-time validation: the migrated
+content passes, and each broken rule (a missing title, a non-numeric `order`, a
+legacy key, a bad media item, a missing master…) fails a real build with a
+message naming the file and the field. `test/project-view.test.mjs` pins the
+view model's canonical reading of media items.
+
+Expectations live in `test/support/projects.mjs` as editorial facts about the
+live site, not as a copy of the templates. Failures name the page and the
+assertion, for example
+`page /proyectos/penumbra/: gallery images rendered`.
+
+The suite builds twice: the primary build under `PATH_PREFIX` (the root when it
+is unset) and a second build under `/lava-mx-org/` in a child process, so every
+run also checks the subpath deployment. Both reuse the `_site/img` cache. The
+primary build honours the same variables as `npm run build`, so the suite can be
+run for another subpath or origin:
+
+```bash
+PATH_PREFIX=/lava-mx-org/ SITE_URL=https://example.github.io npm test
+```
+
+When `PATH_PREFIX` is already `/lava-mx-org/`, both builds are the same and the
+suite builds once.
+
+In CI, run it after `npm ci` with the same `PATH_PREFIX` / `SITE_URL` values
+used for the deploy build (see `.github/workflows/deploy.yml`), and cache
+`_site/img` between runs as the deploy workflow already does.
+
 ## Project structure
 
 ```
 src/
   _data/site.json              Site config (nav, emails, footer)
   _includes/layouts/           base / project / about / page layouts
-  proyectos/<slug>.md          One file per exhibition (front matter + text)
-  index.njk                    Home — current exhibitions
-  proyectos.njk                /proyectos/ — past exhibitions index
+  proyectos/<filename>.md      One file per exhibition (front matter + text)
+  proyectos/proyectos.11tydata.json  Directory defaults shared by every project
+  index.njk                    Home — Homepage projects
+  proyectos.njk                /proyectos/ — Archive projects index
   acerca-de.md                 About
   404.njk · sitemap.njk · robots.njk
   assets/                      css, fonts, images (masters), videos, files (PDFs)
@@ -47,11 +121,31 @@ scripts/
   backup.mjs                   Phase 0 — mirror Cargo
   extract.mjs                  Phase 1 — Cargo → Markdown/JSON
   fetch-assets.mjs             Phase 2 — download + optimize assets
+test/
+  site.test.mjs                Generated-site assertions (`npm test`)
+  project-contract.test.mjs    Build-time validation rules
+  project-view.test.mjs        View model's reading of media items
+  docs.test.mjs                Handoff documents exist, are linked, are committed
+  support/                     Build-once harness + editorial fixture facts
 .github/workflows/deploy.yml   Build + deploy to GitHub Pages
 _cargo-export/                 Raw Cargo backup (git-ignored)
 ```
 
 ## Content model
+
+### Project directory defaults
+
+`src/proyectos/proyectos.11tydata.json` is an Eleventy directory data file: it
+applies to every Markdown file in `src/proyectos/`, including projects an editor
+creates later. It supplies
+
+```json
+{ "layout": "project", "variant": "standard", "featured": false, "order": 0, "gallery_columns": 1 }
+```
+
+so a project file only carries values that differ from those defaults.
+
+### Front matter
 
 Each project is a Markdown file in `src/proyectos/` with front matter:
 
@@ -59,24 +153,182 @@ Each project is a Markdown file in `src/proyectos/` with front matter:
 title: "Mineralia indisciplinada"
 venue: "Museo Universitario del Chopo."
 dates: "**Inauguración:** Octubre 23, 2025 — Marzo 2026"
-current: true          # shown on the home page
-order: 1               # sort order within current/past
-slug: "mineralia-indisciplinada"
-variant: standard      # or "three-column"
-gallery_columns: 1     # 2 for a two-column gallery
-media:                 # ordered images/videos (masters live in src/assets/images)
-  - src: "DSC01858.webp"
-  - src: "Reel_chopo_audio.mp4"
-    video: true
-    poster: "Mineralia-0143-B2766344.webp"
-text: |-               # the bilingual body (ES // EN); rendered with Markdown
+featured: true          # homepage project; omitted (false) means archive project
+order: 1                # position within its group (homepage or archive)
+media:                  # ordered media items; the list order is the display order
+  - type: image
+    src: "/assets/images/DSC01858.webp"
+    # alt: optional; omitted means the project title is used
+  - type: video
+    src: "/assets/videos/Reel_chopo_audio.mp4"
+    poster: "/assets/images/Mineraliaindisciplinada-0143-B2766344.webp"   # optional
+    # autoplay / loop / mute: only written when enabled
+text_es: |-             # Spanish text, required; rendered first, with Markdown
+  ...
+text_en: |-             # English text, optional; rendered after the divider
   ...
 ```
 
-Images are referenced by their optimized master filename; `@11ty/eleventy-img`
-generates the responsive variants at build time. Dossier PDFs live in
-`src/assets/files/` and are linked with page-relative paths
-(`../../assets/files/...`) so they work under any base path.
+Only non-default values appear: `variant: three-column` (Infernal Natures) and
+`gallery_columns: 2` (Lianas Neotropicales). The file name is the public URL:
+`src/proyectos/penumbra.md` → `/proyectos/penumbra/`. There is no `slug` key.
+
+The listing pages set a page-level `hero` flag in their own front matter —
+`hero: featured` on the homepage (`index.njk`), `hero: archive` on
+`/proyectos/` (`proyectos.njk`). It names the collection whose first image
+becomes the page's preloaded LCP image and social image; a project page uses its
+own first gallery image instead.
+
+A project's text is two explicit fields: `text_es` (Spanish, required) and
+`text_en` (English, optional). The template renders the Spanish text, then a
+`//` divider, then the English text — the divider is markup
+(`project-body__divider`), never content, so no project file contains it. A
+project without `text_en` renders Spanish only. Language-neutral links and
+downloads belong at the end of `text_es`, so they do not disappear when the
+English text is empty. The page `<meta name="description">` falls back to the
+start of `text_es`.
+
+`variant: three-column` is the archived Infernal Natures layout and the only
+place it is written: it is not part of the Pages CMS schema, so the editor never
+shows it and merge mode keeps it on save. That project's gallery is one ordered
+list like every other project's; the template splits it in half for the
+three-column layout — the first column takes the first half rounded up, the
+second column takes the rest (`lib/project-view.js` computes `splitAt`).
+
+Each media item is typed: an image has a `src` and optional `alt`, a video has a
+`src`, optional `poster`, and `autoplay` / `loop` / `mute` flags. Sources are
+canonical asset paths — `/assets/images/…` for images (masters in
+`src/assets/images/`), `/assets/videos/…` for videos, `/assets/files/…` for
+documents. `lib/project-view.js` normalizes those paths to the master basename
+the image pipeline reads. Images are processed by `@11ty/eleventy-img` into the
+responsive variants at build time. Dossier PDFs live in `src/assets/files/` and
+are linked root-relative (`/assets/files/...`); the build applies the deployment
+path prefix (`lib/path-prefix.js`), so they work under any base path.
+
+Content is edited by hand or through Pages CMS, and always in this one canonical
+shape: one typed gallery, `text_es` / `text_en`, `bio_es` / `bio_en` / `team` on
+the About page, and canonical asset paths. The build rejects any other shape
+(see the content contract below) instead of guessing what it meant.
+
+### Content contract (build validation)
+
+Before rendering anything, the build checks every file in `src/proyectos/`
+(`lib/project-contract.js`) and refuses to publish content an editor could not
+have saved:
+
+- `title` and `text_es` are non-empty, `order` is a number, `featured` is a
+  boolean, `gallery_columns` is 1 or 2 (the three-column variant included), and
+  `variant` is `standard` or `three-column`;
+- every media item has a `type` (`image` / `video`) and a `src` under the right
+  assets folder; image sources (and video posters) use webp, jpg, jpeg, png,
+  avif or gif, video sources use mp4 or webm;
+- the master file each source names exists in `src/assets/images/` or
+  `src/assets/videos/`;
+- no project file still carries a key or per-item flag from the pre-CMS content
+  that the schema replaced — the build names every one of them in the error
+  message.
+
+Every problem is reported in one build failure, naming the project file and the
+field (gallery items are numbered from 1):
+
+```text
+Invalid project content (2 problems):
+  - src/proyectos/penumbra.md: "order" must be a number (found: "primero")
+  - src/proyectos/penumbra.md: media[2] ("/assets/images/foto.tiff"): "src" has an unsupported image format ".tiff"; use webp, jpg, jpeg, png, avif or gif
+Fix the front matter under src/proyectos/ (.pages.yml describes each field).
+```
+
+`npm test` runs the same checks against throwaway content directories and
+through a real Eleventy build, so each rule is proven to stop the build.
+
+### About page
+
+`src/acerca-de.md` is the About page. Its front matter keeps the biography in
+two language fields plus the team:
+
+```yaml
+title: "Acerca de"
+layout: about
+bio_es: |-              # Spanish biography, required; rendered first
+  ...
+bio_en: |-              # English biography, optional; rendered after the divider
+  ...
+team: |-                # names, roles and the former-collaborators heading
+  ...
+```
+
+The layout renders `bio_es`, then the `//` divider when `bio_en` has text, then
+`bio_en`, with the team beside the biography. The divider comes from the shared
+`divider` macro (`_includes/partials/divider.njk`) — the same markup the project
+renderer uses — so no content file stores `//`. `team` stays one rich-text field
+because the editors keep free-form control of names, roles and the
+former-collaborators heading. The page keeps the site description as its
+`<meta name="description">`.
+
+## Pages CMS
+
+`.pages.yml` (repository root) configures [Pages CMS](https://pagescms.org) 2.x.
+Editors sign in at <https://app.pagescms.org>, pick a branch, and edit the
+`proyectos` collection, the About page and the site settings; every save is a
+commit on that branch. A commit on `main` triggers the deploy workflow and the
+site is live about four minutes later. Labels and helper text are Spanish.
+
+**There is no rendered page preview inside the CMS.** Editors review the live
+site after the deploy. [`docs/editor-guide.md`](docs/editor-guide.md) is the
+curator-facing workflow; [`docs/maintainer-checklist.md`](docs/maintainer-checklist.md)
+covers installing the GitHub App, inviting editors and verifying the app on a
+branch (all manual steps).
+
+- `settings.content.merge: true` — keys outside the schema (`variant`) are
+  preserved when an editor saves a project.
+- `settings.commit.identity: user` — every save is committed under the editor's
+  own name and email. The push still uses the GitHub App installation token, so
+  the deploy is unaffected.
+- The `proyectos` collection edits `src/proyectos` and excludes
+  `proyectos.11tydata.json`, so the directory defaults never appear as a project.
+- The filename field is visible on create and on edit and is seeded from the
+  title (`{primary}.md`).
+- The list view shows title, homepage status, order and dates, sorted by order.
+- Three media sources write canonical paths into front matter, keep original
+  filenames, and reject formats the site cannot publish: images
+  (`src/assets/images` → `/assets/images`: WebP, JPG, JPEG, PNG, AVIF, GIF),
+  videos (`src/assets/videos` → `/assets/videos`: MP4, WebM) and documents
+  (`src/assets/files` → `/assets/files`: PDF).
+- The gallery field (`media`) is a reorderable block list keyed by `type`
+  (`image` / `video`): add an existing item or upload, reorder, remove, set alt
+  text, choose a video poster, and toggle autoplay / loop / mute.
+  `gallery_columns` stores the number of gallery columns (1 or 2).
+- The text is two rich-text fields, `text_es` (Spanish, required) and `text_en`
+  (English, optional), both Markdown with the editor/source switch (the text
+  lives in front matter, not in the Markdown body). Their insert button reads
+  the documents library, so an editor can upload a PDF while writing and link to
+  it; no other media is inserted.
+- The `about` entry edits `src/acerca-de.md`: `bio_es` (Spanish, required),
+  `bio_en` (English, optional) and `team`, all Markdown rich text with the
+  source switch and the same documents library. `title` and `layout` stay out of
+  the editor, so merge mode preserves them and the page keeps its layout on
+  save.
+- The schema covers the `proyectos` collection (title, venue, dates, both texts,
+  homepage status, order, gallery columns and the gallery), the About file
+  (`bio_es`, `bio_en`, `team`) and the site settings file (every key in
+  `src/_data/site.json`, including the ones no template reads).
+
+### Filename / URL change warning (limitation)
+
+Pages CMS has no built-in warning when a filename change alters a public URL, and
+no way to warn *at* the filename input. The configuration does the most the format
+allows: the collection `description` and the `title` field `description` both state
+that the filename is the public URL and that changing it breaks existing links.
+The editor guide repeats the warning for the editors.
+
+Because the app renders this copy, a maintainer confirms it in the hosted app on
+a non-production branch — step 3 of
+[`docs/maintainer-checklist.md`](docs/maintainer-checklist.md) — together with the
+gallery editor, the upload restrictions, the About and settings saves, and
+create/rename/delete.
+
+Config changes are reviewable in Git and are read per branch, so a branch can be
+tested before merging.
 
 ## CI/CD
 

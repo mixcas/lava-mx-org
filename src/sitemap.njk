@@ -7,10 +7,10 @@ eleventyExcludeFromCollections: true
 	<url><loc>{{ siteUrl }}{{ '/' | url }}</loc></url>
 	<url><loc>{{ siteUrl }}{{ '/acerca-de/' | url }}</loc></url>
 	<url><loc>{{ siteUrl }}{{ '/proyectos/' | url }}</loc></url>
-{%- for item in collections.currentProjects %}
+{%- for item in collections.featuredProjects %}
 	<url><loc>{{ siteUrl }}{{ item.url | url }}</loc></url>
 {%- endfor %}
-{%- for item in collections.pastProjects %}
+{%- for item in collections.archiveProjects %}
 	<url><loc>{{ siteUrl }}{{ item.url | url }}</loc></url>
 {%- endfor %}
 </urlset>
