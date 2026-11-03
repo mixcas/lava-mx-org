@@ -1470,7 +1470,7 @@ describe("local document links", () => {
 
   it("leaves external links exactly as the content wrote them", () => {
     for (const project of PROJECTS) {
-      const source = String(projectData(sourceOf(project.route)).text_es ?? "");
+      const source = String(projectData(sourceOf(project.route)).es?.text ?? "");
       const external = [...source.matchAll(/\]\((https?:\/\/[^)\s]+)\)/g)].map((match) => match[1]);
       if (!external.length) continue;
 
