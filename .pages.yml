@@ -452,8 +452,8 @@ content:
         type: object
         description: >-
           Textos que se muestran en la versión en español del sitio: la
-          descripción para buscadores, el pie de página y las etiquetas de la
-          navegación.
+          descripción para buscadores, el encabezado de la portada, el pie de
+          página y las etiquetas de la navegación.
         fields:
           - name: description
             label: Descripción del sitio
@@ -463,6 +463,21 @@ content:
               Se muestra como descripción para buscadores y redes sociales en la
               portada. En los proyectos y en «Acerca de» se usa el texto de cada
               página, no este.
+          - name: navLabel
+            label: Nombre de la navegación
+            type: string
+            description: >-
+              Nombre con el que se anuncia la navegación del encabezado a los
+              lectores de pantalla, por ejemplo «Principal». No se ve en la
+              página; cambiarlo cambia esa etiqueta oculta en todas las páginas
+              de la versión en español.
+          - name: homeHeading
+            label: Encabezado de la portada
+            type: string
+            description: >-
+              Título de la portada que solo leen los lectores de pantalla, por
+              ejemplo «Lava — proyectos actuales». No se ve en la página;
+              cambiarlo cambia ese texto en la portada en español.
           - name: footer
             label: Pie de página
             type: object
@@ -528,9 +543,9 @@ content:
         type: object
         description: >-
           Textos que se muestran en la versión en inglés del sitio: la
-          descripción para buscadores, el pie de página y las etiquetas de la
-          navegación. Los campos son opcionales; los que dejes vacíos se
-          muestran en español.
+          descripción para buscadores, el encabezado de la portada, el pie de
+          página y las etiquetas de la navegación. Los campos son opcionales;
+          los que dejes vacíos se muestran en español.
         fields:
           - name: description
             label: Descripción del sitio en inglés
@@ -539,6 +554,21 @@ content:
               Se muestra como descripción para buscadores y redes sociales en la
               portada de la versión en inglés. Si la dejas vacía, se muestra la
               descripción en español.
+          - name: navLabel
+            label: Nombre de la navegación en inglés
+            type: string
+            description: >-
+              Nombre con el que se anuncia la navegación del encabezado a los
+              lectores de pantalla en las páginas en inglés, por ejemplo «Main».
+              No se ve en la página; cambiarlo cambia esa etiqueta oculta en la
+              versión en inglés. Si lo dejas vacío, no se anuncia ningún nombre.
+          - name: homeHeading
+            label: Encabezado de la portada en inglés
+            type: string
+            description: >-
+              Título de la portada en inglés que solo leen los lectores de
+              pantalla, por ejemplo «Lava — current projects». No se ve en la
+              página; cambiarlo cambia ese texto en la portada en inglés.
           - name: footer
             label: Pie de página en inglés
             type: object

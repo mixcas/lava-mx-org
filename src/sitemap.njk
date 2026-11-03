@@ -3,14 +3,18 @@ permalink: /sitemap.xml
 eleventyExcludeFromCollections: true
 ---
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-	<url><loc>{{ siteUrl }}{{ '/' | url }}</loc></url>
-	<url><loc>{{ siteUrl }}{{ '/acerca-de/' | url }}</loc></url>
-	<url><loc>{{ siteUrl }}{{ '/proyectos/' | url }}</loc></url>
-{%- for item in collections.featuredProjects %}
-	<url><loc>{{ siteUrl }}{{ item.url | url }}</loc></url>
-{%- endfor %}
-{%- for item in collections.archiveProjects %}
-	<url><loc>{{ siteUrl }}{{ item.url | url }}</loc></url>
+{#
+	One <url> per built language version of every route, each carrying the
+	xhtml:link alternates for the languages that route exists in (ADR-0002:
+	es, en and x-default, the last pointing at the Spanish URL).
+
+	Both come from the `languageRoutes` registry — the routes Eleventy actually
+	built, per language (see lib/languages.js) — so a route that gains an
+	English version appears here with its alternates without editing this file,
+	and a route built in one language alone carries no alternate.
+#}
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+{%- for entry in collections.languageRoutes | sitemapEntries %}
+	<url><loc>{{ siteUrl }}{{ entry.url | url }}</loc>{% for alternate in entry.alternates %}<xhtml:link rel="alternate" hreflang="{{ alternate.hreflang }}" href="{{ siteUrl }}{{ alternate.url | url }}"/>{% endfor %}</url>
 {%- endfor %}
 </urlset>

@@ -1,0 +1,14 @@
+[
+	{
+		"code": "es",
+		"prefix": "",
+		"locale": "es_MX",
+		"label": "Español"
+	},
+	{
+		"code": "en",
+		"prefix": "/en",
+		"locale": "en_US",
+		"label": "English"
+	}
+]

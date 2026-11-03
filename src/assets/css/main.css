@@ -120,9 +120,16 @@ h6 {
 
 .site-nav {
 	display: grid;
-	grid-template-columns: repeat(4, 1fr);
+	/* About · contact · archive · language · e-mail */
+	grid-template-columns: repeat(5, 1fr);
 	gap: var(--gutter);
 	padding: var(--pad);
+}
+
+/* The link to the same page in the other language (ADR-0002): a plain anchor,
+   set apart from the page's own navigation. */
+.site-nav__language {
+	text-transform: uppercase;
 }
 
 .site-nav__item {

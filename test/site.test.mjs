@@ -52,6 +52,39 @@ const RICH_TEXT_OPTIONS = { format: "markdown", switcher: true, media: "document
 /** The one project that keeps the three-column layout. */
 const THREE_COLUMN_ROUTE = THREE_COLUMN_PROJECT.route;
 
+/**
+ * The site's languages, read from the one data file that declares them
+ * (`src/_data/languages.json`): the prefix of each language tree, its HTML
+ * language code, its Open Graph locale, and the name it goes by in its own
+ * language — the text the counterpart page's language link carries. A third
+ * language would be a third entry there, so every assertion below iterates the
+ * file instead of naming a code.
+ */
+const LANGUAGES = JSON.parse(readRepoFile("src/_data/languages.json"));
+
+/** One declared language, failing loudly when the file no longer declares it. */
+function declaredLanguage(code) {
+  const entry = LANGUAGES.find((language) => language.code === code);
+  assert.ok(entry, `src/_data/languages.json: no "${code}" language declared`);
+  return entry;
+}
+
+const SPANISH = declaredLanguage("es");
+const ENGLISH = declaredLanguage("en");
+
+/** The homepage route in one language tree: its prefix plus "/". */
+const homeRoute = (language) => `${language.prefix}/`;
+
+/** Whether an absolute (or root-relative) site URL resolves to a built page. */
+function isGeneratedUrl(url) {
+  const absolute = url?.startsWith("/") ? `${SITE_URL}${url}` : String(url ?? "");
+  if (!absolute.startsWith(SITE_URL)) return false;
+  const route = absolute.slice(SITE_URL.length);
+  const local = route.startsWith(`${PATH_PREFIX}/`) ? route.slice(PATH_PREFIX.length) : route;
+  const file = path.join(OUTPUT_DIR, path.extname(local) ? local : path.join(local, "index.html"));
+  return fs.existsSync(file);
+}
+
 before(async () => {
   await buildSite();
 });
@@ -741,6 +774,36 @@ describe("Pages CMS site settings (.pages.yml)", () => {
     }
   });
 
+  it("edits the navigation aria-label and the hidden homepage heading, per language", () => {
+    const fields = entry?.fields ?? [];
+
+    for (const language of LANGUAGES) {
+      for (const name of ["navLabel", "homeHeading"]) {
+        const field = settingsField(fields, `${language.code}.${name}`);
+        assert.ok(field, `.pages.yml: settings field "${language.code}.${name}" is editable`);
+        assert.ok(field.label, `.pages.yml: settings field "${language.code}.${name}" has a label`);
+        assert.ok(field.description, `.pages.yml: settings field "${language.code}.${name}" has a description`);
+      }
+    }
+
+    // The chrome strings are the settings' own, not a copy hardwired in a
+    // template: each language version renders its own.
+    const settingsFile = JSON.parse(readRepoFile("src/_data/site.json"));
+    for (const language of LANGUAGES) {
+      const doc = readPage(homeRoute(language));
+      assert.equal(
+        normalize(doc.querySelector(".site-nav")?.getAttribute("aria-label")),
+        settingsFile[language.code].navLabel,
+        `page ${homeRoute(language)}: nav aria-label comes from the settings`,
+      );
+      assert.equal(
+        normalize(doc.querySelector("main h1")?.textContent),
+        settingsFile[language.code].homeHeading,
+        `page ${homeRoute(language)}: hidden heading comes from the settings`,
+      );
+    }
+  });
+
   it("round-trips a settings save and keeps keys the schema does not know", () => {
     const settingsFile = JSON.parse(readRepoFile("src/_data/site.json"));
 
@@ -795,13 +858,22 @@ function settingsField(fields, fieldPath) {
 /** Dotted `site.*` paths the templates read: the settings that reach the output. */
 function templateSettingsPaths() {
   const templates = listRepoFiles("src").filter((file) => /\.(njk|md|html)$/.test(file));
-  return [
-    ...new Set(
-      templates.flatMap((file) =>
-        [...readRepoFile(file).matchAll(/\bsite\.([A-Za-z0-9_.]+)/g)].map((match) => match[1].replace(/\.$/, "")),
-      ),
-    ),
-  ].sort();
+  return [...new Set(templates.flatMap((file) => settingsPathsInTemplate(readRepoFile(file))))].sort();
+}
+
+/**
+ * The `site.*` paths one template reads. A path written for a single language
+ * object (`site.es.footer.city`) speaks for the same slot in every language;
+ * a language picked while rendering (`site[language.code].footer.city`) names
+ * the slot only, so it stands for that path under each declared language.
+ */
+function settingsPathsInTemplate(source) {
+  const literal = [...source.matchAll(/\bsite\.([A-Za-z0-9_.]+)/g)].map((match) => match[1].replace(/\.$/, ""));
+  const indexed = [...source.matchAll(/\bsite\[[^\]]+\](?:\.([A-Za-z0-9_.]*))?/g)].flatMap((match) => {
+    const slot = (match[1] ?? "").replace(/\.$/, "");
+    return LANGUAGES.map((language) => (slot ? `${language.code}.${slot}` : language.code));
+  });
+  return [...literal, ...indexed];
 }
 
 /** Dotted paths of the settings entry's fields, nested objects included. */
@@ -825,18 +897,263 @@ function settingsPathsOfData(data, prefix = "") {
     .sort();
 }
 
+describe("the site's languages (src/_data/languages.json)", () => {
+  it("declares Spanish at the root and English under /en/", () => {
+    assert.deepEqual(
+      LANGUAGES.map((language) => language.code),
+      ["es", "en"],
+      "languages.json: the site's languages, Spanish first",
+    );
+    assert.equal(SPANISH.prefix, "", "languages.json: Spanish keeps the root of the site");
+    assert.equal(ENGLISH.prefix, "/en", "languages.json: English mirrors the site under /en");
+
+    assert.equal(SPANISH.locale, "es_MX", "languages.json: the Spanish Open Graph locale");
+    assert.equal(ENGLISH.locale, "en_US", "languages.json: the English Open Graph locale");
+  });
+
+  it("names each language in its own language, for the counterpart page's link", () => {
+    // The link on the Spanish page names English in English, and the other way
+    // round: a reader who does not read the page's language still recognises it.
+    assert.equal(SPANISH.label, "Español", "languages.json: the Spanish language's own name");
+    assert.equal(ENGLISH.label, "English", "languages.json: the English language's own name");
+  });
+
+  it("has a settings object for every declared language", () => {
+    const settings = JSON.parse(readRepoFile("src/_data/site.json"));
+    for (const language of LANGUAGES) {
+      assert.ok(settings[language.code], `site.json: no "${language.code}" object for the declared language`);
+    }
+  });
+});
+
+describe("homepage in both languages", () => {
+  it("serves the Spanish homepage at the root and the English one at its mirrored URL", () => {
+    for (const language of LANGUAGES) {
+      const doc = readPage(homeRoute(language));
+      assert.equal(doc.querySelector("html")?.getAttribute("lang"), language.code, `page ${homeRoute(language)}: <html lang>`);
+    }
+  });
+
+  it("keeps the root URL serving the Spanish homepage, with no redirect or chooser", () => {
+    const doc = readPage("/");
+    assert.equal(doc.querySelector("html")?.getAttribute("lang"), "es", "page /: the root page is the Spanish homepage");
+    assert.equal(doc.querySelectorAll('meta[http-equiv="refresh"]').length, 0, "page /: no redirect");
+    assert.equal(normalize(doc.querySelector("title")?.textContent), SITE.title, "page /: the site's own page, not a chooser");
+  });
+
+  it("renders the chrome in the page's own language", () => {
+    const settings = JSON.parse(readRepoFile("src/_data/site.json"));
+    const expected = {
+      es: { navLabel: "Principal", heading: /proyectos actuales/ },
+      en: { navLabel: "Main", heading: /current projects/ },
+    };
+
+    for (const language of LANGUAGES) {
+      const route = homeRoute(language);
+      const doc = readPage(route);
+      const label = `page ${route}`;
+      const chrome = settings[language.code];
+
+      assert.equal(chrome.navLabel, expected[language.code].navLabel, `site.json: the ${language.code} nav label`);
+      assert.equal(normalize(doc.querySelector(".site-nav")?.getAttribute("aria-label")), chrome.navLabel, `${label}: nav aria-label`);
+      assert.equal(
+        normalize(doc.querySelector(`header a[href="${localUrl(`${language.prefix}/acerca-de/`)}"]`)?.textContent),
+        chrome.nav.about.label,
+        `${label}: the About link is labelled in the page's language`,
+      );
+      assert.equal(
+        normalize(doc.querySelector(`header a[href="${localUrl(`${language.prefix}/proyectos/`)}"]`)?.textContent),
+        chrome.nav.projects.label,
+        `${label}: the archive link is labelled in the page's language`,
+      );
+
+      const footer = normalize(doc.querySelector(".site-footer")?.textContent);
+      for (const value of [chrome.footer.copyright, chrome.footer.city, chrome.footer.instagram]) {
+        assert.ok(footer.includes(value), `${label}: footer shows "${value}"`);
+      }
+
+      const heading = normalize(doc.querySelector("main h1")?.textContent);
+      assert.equal(heading, chrome.homeHeading, `${label}: the hidden heading is the page language's own`);
+      assert.match(heading, expected[language.code].heading, `${label}: hidden heading`);
+    }
+  });
+
+  it("links to the counterpart language version of the same page with a plain anchor", () => {
+    for (const language of LANGUAGES) {
+      const route = homeRoute(language);
+      const doc = readPage(route);
+      const label = `page ${route}`;
+      const other = LANGUAGES.find((candidate) => candidate.code !== language.code);
+
+      const links = doc.querySelectorAll("header a[hreflang]");
+      assert.equal(links.length, 1, `${label}: one language link in the header`);
+      const link = links[0];
+      assert.equal(link.getAttribute("href"), localUrl(homeRoute(other)), `${label}: the language link points at the counterpart page`);
+      assert.equal(link.getAttribute("hreflang"), other.code, `${label}: the link declares the language it leads to`);
+      assert.equal(link.getAttribute("lang"), other.code, `${label}: the link text is written in the language it names`);
+      assert.equal(normalize(link.textContent), other.label, `${label}: the link names the language in its own language`);
+
+      // No script, no cookie, no auto-detection: the link works with JavaScript off.
+      assert.equal(doc.querySelectorAll("script").length, 0, `${label}: the language link needs no script`);
+    }
+  });
+
+  it("declares hreflang, the page locale and its alternate, and a self canonical", () => {
+    const homeUrls = Object.fromEntries(LANGUAGES.map((language) => [language.code, `${SITE_URL}${localUrl(homeRoute(language))}`]));
+
+    for (const language of LANGUAGES) {
+      const route = homeRoute(language);
+      const doc = readPage(route);
+      const label = `page ${route}`;
+      const other = LANGUAGES.find((candidate) => candidate.code !== language.code);
+
+      const hreflang = Object.fromEntries(
+        doc.querySelectorAll('link[rel="alternate"]').map((link) => [link.getAttribute("hreflang"), link.getAttribute("href")]),
+      );
+      assert.deepEqual(
+        hreflang,
+        {
+          [SPANISH.code]: homeUrls[SPANISH.code],
+          [ENGLISH.code]: homeUrls[ENGLISH.code],
+          "x-default": homeUrls[SPANISH.code],
+        },
+        `${label}: hreflang links, x-default pointing at the Spanish homepage`,
+      );
+
+      assert.equal(doc.querySelector('meta[property="og:locale"]')?.getAttribute("content"), language.locale, `${label}: og:locale`);
+      assert.deepEqual(
+        doc.querySelectorAll('meta[property="og:locale:alternate"]').map((meta) => meta.getAttribute("content")),
+        [other.locale],
+        `${label}: og:locale:alternate names the other language version`,
+      );
+
+      assert.equal(doc.querySelector('link[rel="canonical"]')?.getAttribute("href"), `${SITE_URL}${localUrl(route)}`, `${label}: self canonical`);
+    }
+  });
+
+  it("titles and describes each homepage in its own language", () => {
+    const descriptions = { [SPANISH.code]: SITE.description, [ENGLISH.code]: SITE.englishDescription };
+
+    for (const language of LANGUAGES) {
+      const route = homeRoute(language);
+      const doc = readPage(route);
+      assert.equal(normalize(doc.querySelector("title")?.textContent), SITE.title, `page ${route}: <title>`);
+      assert.equal(
+        normalize(doc.querySelector('meta[name="description"]')?.getAttribute("content")),
+        descriptions[language.code],
+        `page ${route}: meta description is the page language's own`,
+      );
+    }
+  });
+
+  it("renders no navigation label that mixes the two languages", () => {
+    const mixed = ["Lava es — Lava is", "Proyectos anteriores — Previous projects"];
+    for (const route of LANGUAGES.map(homeRoute).concat([ABOUT_ROUTE, "/proyectos/"])) {
+      const html = readText(path.posix.join(route, "index.html"));
+      for (const label of mixed) {
+        assert.ok(!html.includes(label), `page ${route}: no half-and-half label "${label}"`);
+      }
+    }
+
+    const settings = JSON.parse(readRepoFile("src/_data/site.json"));
+    assert.equal(settings.es.nav.about.label, "Lava es", "site.json: the Spanish About label is Spanish only");
+    assert.equal(settings.es.nav.projects.label, "Proyectos anteriores", "site.json: the Spanish archive label is Spanish only");
+    assert.equal(settings.en.nav.about.label, "Lava is", "site.json: the English About label is English");
+    assert.equal(settings.en.nav.projects.label, "Previous projects", "site.json: the English archive label is English");
+  });
+});
+
+describe("language alternates follow the routes that were built", () => {
+  /** The pages this phase still builds in Spanish only. */
+  const SPANISH_ONLY = [ABOUT_ROUTE, "/proyectos/", ...PROJECTS.map((project) => project.route), "/404.html"];
+
+  it("advertises no English version of a page that exists in Spanish only", () => {
+    for (const route of SPANISH_ONLY) {
+      const doc = readPage(route);
+      const label = `page ${route}`;
+
+      assert.equal(doc.querySelector("html")?.getAttribute("lang"), "es", `${label}: page language`);
+      assert.deepEqual(
+        doc.querySelectorAll('link[rel="alternate"]').map((link) => link.getAttribute("hreflang")),
+        [],
+        `${label}: no hreflang, since no English counterpart was built`,
+      );
+      assert.equal(doc.querySelectorAll('meta[property="og:locale:alternate"]').length, 0, `${label}: no alternate locale`);
+      assert.equal(doc.querySelectorAll("header a[hreflang]").length, 0, `${label}: no language link`);
+    }
+  });
+
+  it("never points a language link or an hreflang at a page the build does not produce", () => {
+    const pages = [...LANGUAGES.map(homeRoute), ...SPANISH_ONLY];
+
+    for (const route of pages) {
+      const doc = readPage(route);
+      const urls = [
+        ...doc.querySelectorAll('link[rel="alternate"]').map((link) => link.getAttribute("href")),
+        ...doc.querySelectorAll("header a[hreflang]").map((link) => link.getAttribute("href")),
+      ];
+      for (const url of urls) {
+        assert.ok(isGeneratedUrl(url), `page ${route}: ${url} resolves to a page the build produced`);
+      }
+    }
+  });
+});
+
 describe("sitemap (/sitemap.xml)", () => {
   const route = "/sitemap.xml";
+  const xml = () => readText(route);
 
-  it("lists every page, including all twelve projects", () => {
-    const listed = [...readText(route).matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
-    const routes = ["/", ABOUT_ROUTE, "/proyectos/", ...PROJECTS.map((project) => project.route)];
+  it("lists every page in every language version it was built in", () => {
+    const listed = [...xml().matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
+    const routes = [
+      ...LANGUAGES.map(homeRoute),
+      ABOUT_ROUTE,
+      "/proyectos/",
+      ...PROJECTS.map((project) => project.route),
+    ];
 
     assert.deepEqual(
       listed.sort(),
       routes.map((listedRoute) => `${SITE_URL}${localUrl(listedRoute)}`).sort(),
       `page ${route}: listed URLs`,
     );
+  });
+
+  it("carries xhtml alternates between the two homepages, and none for a single-language page", () => {
+    assert.ok(xml().includes('xmlns:xhtml="http://www.w3.org/1999/xhtml"'), `page ${route}: declares the xhtml namespace`);
+
+    const entries = [...xml().matchAll(/<url>[\s\S]*?<\/url>/g)].map(([block]) => ({
+      loc: block.match(/<loc>([^<]+)<\/loc>/)?.[1],
+      alternates: [...block.matchAll(/<xhtml:link rel="alternate" hreflang="([^"]+)" href="([^"]+)"/g)].map(([, hreflang, href]) => [
+        hreflang,
+        href,
+      ]),
+    }));
+    assert.ok(entries.length > 0, `page ${route}: no <url> entries`);
+
+    const expected = [
+      [SPANISH.code, `${SITE_URL}${localUrl(homeRoute(SPANISH))}`],
+      [ENGLISH.code, `${SITE_URL}${localUrl(homeRoute(ENGLISH))}`],
+      ["x-default", `${SITE_URL}${localUrl(homeRoute(SPANISH))}`],
+    ];
+    const homeLocs = new Set(LANGUAGES.map((language) => `${SITE_URL}${localUrl(homeRoute(language))}`));
+
+    for (const language of LANGUAGES) {
+      const loc = `${SITE_URL}${localUrl(homeRoute(language))}`;
+      const entry = entries.find((candidate) => candidate.loc === loc);
+      assert.ok(entry, `page ${route}: ${loc} is listed`);
+      assert.deepEqual(entry.alternates, expected, `page ${route}: ${loc} carries the alternates between both homepages`);
+    }
+
+    for (const entry of entries.filter((candidate) => !homeLocs.has(candidate.loc))) {
+      assert.deepEqual(entry.alternates, [], `page ${route}: ${entry.loc} was built in one language, so it carries no alternate`);
+    }
+  });
+
+  it("keeps robots.txt advertising exactly one sitemap", () => {
+    const robots = readText("/robots.txt");
+    assert.equal((robots.match(/^Sitemap:/gim) ?? []).length, 1, "robots.txt: exactly one sitemap line");
+    assert.match(robots, new RegExp(`^Sitemap: ${SITE_URL}${localUrl(route)}$`, "m"), "robots.txt: advertises the sitemap");
   });
 });
 
@@ -1197,20 +1514,31 @@ describe("about page (/acerca-de/)", () => {
 describe("site settings in the generated pages", () => {
   const settings = JSON.parse(readRepoFile("src/_data/site.json"));
 
-  it("keeps the header and footer copy on the pages as the settings write it", () => {
-    const homepage = readPage("/");
-    const text = (selector) => normalize(homepage.querySelector(selector)?.textContent);
-    // Every page renders the Spanish language version of the chrome.
-    const chrome = settings.es;
+  it("keeps the header and footer copy on the pages as the settings write it, per language", () => {
+    for (const language of LANGUAGES) {
+      const doc = readPage(homeRoute(language));
+      const label = `page ${homeRoute(language)}`;
+      const text = (selector) => normalize(doc.querySelector(selector)?.textContent);
+      // Each language version of a page renders its own language's chrome.
+      const chrome = settings[language.code];
 
-    assert.equal(text(`header a[href="${localUrl(ABOUT_ROUTE)}"]`), chrome.nav.about.label, "header: About label and target");
-    assert.equal(text(`header a[href="${localUrl("/proyectos/")}"]`), chrome.nav.projects.label, "header: archive label and target");
-    assert.equal(text(`header a[href="mailto:${settings.contactEmail}"]`), settings.contactName, "header: contact link");
-    assert.equal(text("header .site-nav__email"), settings.email, "header: the e-mail shown as text");
+      assert.equal(
+        text(`header a[href="${localUrl(`${language.prefix}${ABOUT_ROUTE}`)}"]`),
+        chrome.nav.about.label,
+        `${label}: header About label and target`,
+      );
+      assert.equal(
+        text(`header a[href="${localUrl(`${language.prefix}/proyectos/`)}"]`),
+        chrome.nav.projects.label,
+        `${label}: header archive label and target`,
+      );
+      assert.equal(text(`header a[href="mailto:${settings.contactEmail}"]`), settings.contactName, `${label}: contact link`);
+      assert.equal(text("header .site-nav__email"), settings.email, `${label}: the e-mail shown as text`);
 
-    const footer = normalize(homepage.querySelector(".site-footer")?.textContent);
-    for (const value of [chrome.footer.copyright, chrome.footer.city, chrome.footer.instagram]) {
-      assert.ok(footer.includes(value), `footer: shows "${value}"`);
+      const footer = normalize(doc.querySelector(".site-footer")?.textContent);
+      for (const value of [chrome.footer.copyright, chrome.footer.city, chrome.footer.instagram]) {
+        assert.ok(footer.includes(value), `${label}: footer shows "${value}"`);
+      }
     }
   });
 
@@ -1227,19 +1555,23 @@ describe("site settings in the generated pages", () => {
     }
   });
 
-  it("titles every page and describes the homepage from the settings file", () => {
-    const homepage = readPage("/");
+  it("titles every page and describes each homepage from its own language", () => {
+    for (const language of LANGUAGES) {
+      const doc = readPage(homeRoute(language));
+      const label = `page ${homeRoute(language)}`;
 
-    assert.equal(normalize(homepage.querySelector('meta[property="og:site_name"]')?.getAttribute("content")), settings.title);
-    assert.equal(homepage.querySelector("title")?.textContent, settings.title, "page /: title is the site name");
+      assert.equal(normalize(doc.querySelector('meta[property="og:site_name"]')?.getAttribute("content")), settings.title, `${label}: og:site_name`);
+      assert.equal(doc.querySelector("title")?.textContent, settings.title, `${label}: the title is the site name`);
+      assert.equal(
+        normalize(doc.querySelector('meta[name="description"]')?.getAttribute("content")),
+        settings[language.code].description,
+        `${label}: the meta description is the page language's own`,
+      );
+    }
+
     assert.ok(
       readPage(ABOUT_ROUTE).querySelector("title")?.textContent.endsWith(`— ${settings.title}`),
       `page ${ABOUT_ROUTE}: the site name follows the page title`,
-    );
-    assert.equal(
-      normalize(homepage.querySelector('meta[name="description"]')?.getAttribute("content")),
-      settings.es.description,
-      "page /: meta description is the Spanish site description",
     );
   });
 
@@ -1257,7 +1589,11 @@ describe("site settings in the generated pages", () => {
 });
 
 describe("page metadata", () => {
-  const pages = [["/", SITE.description], ...PROJECTS.map((project) => [project.route, null]), [ABOUT_ROUTE, SITE.description]];
+  const pages = [
+    ...LANGUAGES.map((language) => [homeRoute(language), language.code === SPANISH.code ? SITE.description : SITE.englishDescription]),
+    ...PROJECTS.map((project) => [project.route, null]),
+    [ABOUT_ROUTE, SITE.description],
+  ];
 
   for (const [route, expectedDescription] of pages) {
     it(`${route} has a description and social image`, () => {
@@ -1528,13 +1864,56 @@ describe(`subpath deployment (${SUBPATH_PREFIX})`, () => {
       .filter((url) => url?.startsWith("/") && !url.startsWith("//"));
 
   it("prefixes every URL the site owns, exactly once", () => {
-    for (const route of ["/", "/proyectos/", PROJECTS[0].route, THREE_COLUMN_ROUTE, ABOUT_ROUTE]) {
+    for (const route of [...LANGUAGES.map(homeRoute), "/proyectos/", PROJECTS[0].route, THREE_COLUMN_ROUTE, ABOUT_ROUTE]) {
       const urls = localUrls(page(route));
       assert.ok(urls.length > 0, `page ${route}: no local URLs rendered`);
       for (const url of urls) {
         assert.ok(url.startsWith(`${PREFIX}/`), `page ${route}: ${url} carries the path prefix`);
         assert.ok(!url.startsWith(`${PREFIX}${PREFIX}/`), `page ${route}: ${url} is prefixed exactly once`);
       }
+    }
+  });
+
+  it("serves both language versions of the homepage under the prefix", () => {
+    const english = page(homeRoute(ENGLISH));
+    assert.equal(english.querySelector("html")?.getAttribute("lang"), ENGLISH.code, `page ${homeRoute(ENGLISH)}: page language under the subpath`);
+
+    const backToSpanish = english.querySelector("header a[hreflang]");
+    assert.equal(backToSpanish?.getAttribute("href"), `${PREFIX}${homeRoute(SPANISH)}`, `page ${homeRoute(ENGLISH)}: the language link points at the prefixed Spanish homepage`);
+    assert.equal(normalize(backToSpanish?.textContent), SPANISH.label, `page ${homeRoute(ENGLISH)}: the language link names Español`);
+
+    const toEnglish = page(homeRoute(SPANISH)).querySelector("header a[hreflang]");
+    assert.equal(toEnglish?.getAttribute("href"), `${PREFIX}${homeRoute(ENGLISH)}`, `page ${homeRoute(SPANISH)}: the language link points at the prefixed English homepage`);
+
+    for (const language of LANGUAGES) {
+      assert.deepEqual(
+        page(homeRoute(language))
+          .querySelectorAll('link[rel="alternate"]')
+          .map((node) => node.getAttribute("href")),
+        [
+          `${SITE_URL}${PREFIX}${homeRoute(SPANISH)}`,
+          `${SITE_URL}${PREFIX}${homeRoute(ENGLISH)}`,
+          `${SITE_URL}${PREFIX}${homeRoute(SPANISH)}`,
+        ],
+        `page ${homeRoute(language)}: hreflang links carry the path prefix`,
+      );
+    }
+  });
+
+  it("lists both homepages in the prefixed sitemap with prefixed alternates", () => {
+    const xml = readOutputText(output, "/sitemap.xml");
+
+    for (const language of LANGUAGES) {
+      assert.ok(
+        xml.includes(`<loc>${SITE_URL}${PREFIX}${homeRoute(language)}</loc>`),
+        `page /sitemap.xml: ${homeRoute(language)} is listed under the prefix`,
+      );
+    }
+
+    const alternates = [...xml.matchAll(/<xhtml:link rel="alternate" hreflang="[^"]+" href="([^"]+)"/g)].map((match) => match[1]);
+    assert.ok(alternates.length > 0, "page /sitemap.xml: no alternates under the prefix");
+    for (const href of alternates) {
+      assert.ok(href.startsWith(`${SITE_URL}${PREFIX}/`), `page /sitemap.xml: alternate ${href} carries the path prefix`);
     }
   });
 

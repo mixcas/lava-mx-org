@@ -197,6 +197,10 @@ export const SITE = {
   title: "Lava",
   description:
     "Lava es una plataforma de encuentros transversales entre investigación, gestión y curaduría de prácticas artísticas ubicada en la Ciudad de México.",
+  // The English homepage's own description (the `en` language version of the
+  // site settings).
+  englishDescription:
+    "Lava is a platform for transversal encounters between research, management and curation of artistic practices, based in Mexico City.",
 };
 
 /** About page copy the migration must keep rendering. */
