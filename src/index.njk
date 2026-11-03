@@ -2,8 +2,21 @@
 layout: base.njk
 title: Lava
 hero: featured
+# One template, one homepage per language version (ADR-0002): the pagination
+# yields `/` for Spanish and `/en/` for English, so the root URL keeps serving
+# the Spanish homepage — no redirect, no chooser, no detection.
+pagination:
+  data: languages
+  size: 1
+  alias: lang
+  resolve: values
+  # Every page of the pagination must enter the collections: the
+  # `languageRoutes` registry is derived from them, and it is what tells the
+  # chrome that this route exists in both languages (see layouts/base.njk).
+  addAllPagesToCollections: true
+permalink: "{{ lang.prefix }}/"
 ---
-<h1 class="visually-hidden">Lava — proyectos actuales</h1>
+<h1 class="visually-hidden">{{ lang.homeHeading }}</h1>
 {% set projects = collections.featuredProjects | projectViews %}
 {% set heading = "h2" %}
 {% set linked = false %}

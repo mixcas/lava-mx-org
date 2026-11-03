@@ -9,8 +9,9 @@ import MarkdownIt from "markdown-it";
 import { buildProjectView } from "./lib/project-view.js";
 import { applyPathPrefix, withPathPrefix } from "./lib/path-prefix.js";
 import { assertProjectsValid, untranslatedFields, untranslatedReport } from "./lib/project-contract.js";
+import { languageAlternates, languageRoutes, sitemapEntries } from "./lib/languages.js";
 import { ASSET_URL } from "./lib/media-assets.js";
-import { routeUrl } from "./lib/routes.js";
+import { languageRouteUrl } from "./lib/routes.js";
 
 const ROOT = import.meta.dirname;
 
@@ -111,8 +112,17 @@ export default function (eleventyConfig) {
   eleventyConfig.addFilter("mdInline", (value) => applyPathPrefix(mdLib.renderInline(String(value ?? "")), PATH_PREFIX));
 
   // The site settings store a route key for each header link, not a URL; the
-  // layout builds the address from it (see lib/routes.js).
-  eleventyConfig.addFilter("routeUrl", routeUrl);
+  // layout builds the address from it inside the page's language tree (see
+  // lib/routes.js): `/proyectos/` in Spanish, `/en/proyectos/` in English.
+  eleventyConfig.addFilter("languageRouteUrl", languageRouteUrl);
+
+  // The language registry and its two readers (see lib/languages.js): every
+  // route Eleventy built, mapped to the language versions that exist. The
+  // chrome's language link, the hreflang metadata and the sitemap all read it,
+  // so a page that gains a language version advertises it in the same build.
+  eleventyConfig.addCollection("languageRoutes", (api) => languageRoutes(api.getAll()));
+  eleventyConfig.addFilter("languageAlternates", languageAlternates);
+  eleventyConfig.addFilter("sitemapEntries", sitemapEntries);
 
   // Responsive <picture> for a master filename in src/assets/images.
   // `priority` marks the LCP image (eager + high fetch priority).

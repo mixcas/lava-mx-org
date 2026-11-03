@@ -1,22 +1,39 @@
 {#
-	Chrome comes from the Spanish language version of the site settings: every
-	page renders the Spanish description, navigation and footer today, and the
-	`en` object carries the same slots for the English routes.
+	One layout, two language versions (ADR-0002).
+
+	The page language is derived from the route the page was built at, never
+	from content: `src/_data/languages.json` declares the languages, and the
+	`languageRoutes` collection is the registry of the routes Eleventy actually
+	built, per language. From those come `<html lang>`, the chrome's language
+	(`site[<language code>]`), the link to the counterpart page, and the
+	hreflang / `og:locale` metadata.
+
+	To give a page an English version, paginate it over `languages` the way
+	`src/index.njk` does (`resolve: values`, a permalink built from the language
+	prefix, and `addAllPagesToCollections: true` so the registry sees both
+	pages). Nothing here needs editing: the language link, the hreflang set and
+	the sitemap alternates appear for that route in the same build, and a page
+	that exists in one language only keeps advertising just that one.
 #}
+{%- set languageVersions = page.url | languageAlternates(collections.languageRoutes) -%}
+{%- set language = languageVersions.language -%}
 {%- set pageTitle = title or projectView.title -%}
-{% if description %}{% set metaDescription = description %}{% elif projectView.text.spanish %}{% set metaDescription = projectView.text.spanish | md | striptags | replace('\n', ' ') | truncate(160) %}{% else %}{% set metaDescription = site.es.description %}{% endif %}
+{% if description %}{% set metaDescription = description %}{% elif projectView.text.spanish %}{% set metaDescription = projectView.text.spanish | md | striptags | replace('\n', ' ') | truncate(160) %}{% else %}{% set metaDescription = site[language.code].description %}{% endif %}
 {% if pageTitle and pageTitle != site.title %}{% set metaTitle = pageTitle + ' — ' + site.title %}{% else %}{% set metaTitle = site.title %}{% endif %}
 <!doctype html>
-<html lang="es">
+<html lang="{{ language.code }}">
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 		<title>{{ metaTitle }}</title>
 		<meta name="description" content="{{ metaDescription }}">
 		<link rel="canonical" href="{{ siteUrl }}{{ page.url | url }}">
-		<meta property="og:site_name" content="{{ site.title }}">
+		{% for alternate in languageVersions.alternates %}<link rel="alternate" hreflang="{{ alternate.hreflang }}" href="{{ siteUrl }}{{ alternate.url | url }}">
+		{% endfor %}<meta property="og:site_name" content="{{ site.title }}">
 		<meta property="og:type" content="website">
-		<meta property="og:title" content="{{ metaTitle }}">
+		<meta property="og:locale" content="{{ language.locale }}">
+		{% if languageVersions.counterpart %}<meta property="og:locale:alternate" content="{{ languageVersions.counterpart.locale }}">
+		{% endif %}<meta property="og:title" content="{{ metaTitle }}">
 		<meta property="og:description" content="{{ metaDescription }}">
 		<meta property="og:url" content="{{ siteUrl }}{{ page.url | url }}">
 		{% if heroImage %}
@@ -39,14 +56,18 @@
 	</head>
 	<body>
 		<header class="site-header">
-			<nav class="site-nav" aria-label="Principal">
-				<a class="site-nav__item" href="{{ site.es.nav.about.route | routeUrl | url }}">{{ site.es.nav.about.label }}</a>
+			<nav class="site-nav" aria-label="{{ language.navLabel }}">
+				<a class="site-nav__item" href="{{ site[language.code].nav.about.route | languageRouteUrl(language) | url }}">{{ site[language.code].nav.about.label }}</a>
 				<a class="site-nav__item" href="mailto:{{ site.contactEmail }}">{{ site.contactName }}</a>
-				<a class="site-nav__item" href="{{ site.es.nav.projects.route | routeUrl | url }}"><svg class="site-nav__icon" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="square"><path d="M2 4.5h12M2 8h12M2 11.5h12"/></svg>{{ site.es.nav.projects.label }}</a>
+				<a class="site-nav__item" href="{{ site[language.code].nav.projects.route | languageRouteUrl(language) | url }}"><svg class="site-nav__icon" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="square"><path d="M2 4.5h12M2 8h12M2 11.5h12"/></svg>{{ site[language.code].nav.projects.label }}</a>
+				{#- One plain anchor to the same page in the other language: no script,
+				    no cookie, no auto-detection. It is rendered only when that page
+				    was built, and names its language in that language. -#}
+				{% if languageVersions.counterpart %}<a class="site-nav__item site-nav__language" href="{{ languageVersions.counterpart.url | url }}" hreflang="{{ languageVersions.counterpart.code }}" lang="{{ languageVersions.counterpart.code }}">{{ languageVersions.counterpart.label }}</a>{% endif %}
 				<div class="site-nav__item site-nav__email">{{ site.email }}</div>
 			</nav>
 			<div class="site-brand">
-				<a class="site-brand__link" href="{{ '/' | url }}" aria-label="{{ site.title }}">
+				<a class="site-brand__link" href="{{ (language.prefix + '/') | url }}" aria-label="{{ site.title }}">
 					<img src="{{ '/assets/images/lava-logo.png' | url }}" alt="{{ site.title }}" width="1400" height="551">
 				</a>
 			</div>
@@ -56,9 +77,9 @@
 		</main>
 		<footer class="site-footer">
 			<div class="site-footer__inner">
-				<span>{{ site.es.footer.copyright }}</span>
-				<span>{{ site.es.footer.city }}</span>
-				<span>{{ site.es.footer.instagram }}</span>
+				<span>{{ site[language.code].footer.copyright }}</span>
+				<span>{{ site[language.code].footer.city }}</span>
+				<span>{{ site[language.code].footer.instagram }}</span>
 			</div>
 		</footer>
 	</body>

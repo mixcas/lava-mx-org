@@ -1,0 +1,18 @@
+[
+	{
+		"code": "es",
+		"prefix": "",
+		"locale": "es_MX",
+		"label": "Español",
+		"navLabel": "Principal",
+		"homeHeading": "Lava — proyectos actuales"
+	},
+	{
+		"code": "en",
+		"prefix": "/en",
+		"locale": "en_US",
+		"label": "English",
+		"navLabel": "Main",
+		"homeHeading": "Lava — current projects"
+	}
+]

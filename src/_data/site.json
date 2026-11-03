@@ -18,11 +18,11 @@
     },
     "nav": {
       "about": {
-        "label": "Lava es — Lava is",
+        "label": "Lava es",
         "route": "about"
       },
       "projects": {
-        "label": "Proyectos anteriores — Previous projects",
+        "label": "Proyectos anteriores",
         "route": "projects"
       }
     }
