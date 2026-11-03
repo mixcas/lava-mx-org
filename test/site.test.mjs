@@ -1039,43 +1039,88 @@ describe("about page (/acerca-de/)", () => {
     assert.ok(dividers[0] < english, `page ${route}: the English biography comes after the divider`);
   });
 
-  it("renders the team", () => {
-    for (const member of ABOUT.team) {
+  it("renders the team in both language versions", () => {
+    for (const member of [...ABOUT.team.spanish, ...ABOUT.team.english]) {
       assert.ok(text().includes(member), `page ${route}: team copy "${member}"`);
     }
   });
 
-  it("stores each biography language in its own field, without the separator", () => {
+  it("stores each language version in its own object, without the separator", () => {
     const data = projectData("src/acerca-de.md");
-    const spanish = String(data.bio_es ?? "").trim();
-    const english = String(data.bio_en ?? "").trim();
 
-    assert.ok(spanish.startsWith(ABOUT.spanish), `page ${route}: "bio_es" starts the Spanish biography`);
-    assert.ok(english.startsWith(ABOUT.english), `page ${route}: "bio_en" starts the English biography`);
-    assert.ok(!Object.hasOwn(data, "bio"), `page ${route}: the legacy "bio" field is gone`);
-    assert.equal(typeof data.team, "string", `page ${route}: the team is one rich-text field`);
+    assert.ok(
+      String(data.es?.bio ?? "").trim().startsWith(ABOUT.spanish),
+      `page ${route}: "es.bio" starts the Spanish biography`,
+    );
+    assert.ok(
+      String(data.en?.bio ?? "").trim().startsWith(ABOUT.english),
+      `page ${route}: "en.bio" starts the English biography`,
+    );
 
-    for (const key of ["bio_es", "bio_en", "team"]) {
+    for (const flat of ["bio", "bio_es", "bio_en", "team"]) {
+      assert.ok(!Object.hasOwn(data, flat), `page ${route}: the flat "${flat}" field is gone`);
+    }
+    for (const language of ["es", "en"]) {
+      assert.equal(typeof data[language]?.team, "string", `page ${route}: "${language}.team" is one rich-text field`);
+    }
+
+    for (const key of ["es.bio", "en.bio", "es.team", "en.team"]) {
+      const value = key.split(".").reduce((value, step) => value?.[step], data);
       assert.ok(
-        !/^[ \t]*\/\/[ \t]*$/m.test(String(data[key] ?? "")),
+        !/^[ \t]*\/\/[ \t]*$/m.test(String(value ?? "")),
         `page ${route}: "${key}" contains a literal // separator line (the template draws the divider)`,
       );
     }
   });
 
-  it("renders the team after both biographies, from the one team field", () => {
-    const blocks = bioBlocks();
+  it("renders each language's team from its own team list", () => {
     const body = text();
-    const english = blocks.findIndex((block) => block.startsWith(ABOUT.english));
     const team = readPage(route).querySelector("main .about-team");
     assert.ok(team, `page ${route}: no team section rendered`);
+    const teamText = normalize(team.textContent);
 
-    assert.notEqual(english, -1, `page ${route}: the English biography is its own text block`);
-    assert.ok(body.indexOf(ABOUT.team[0]) > body.indexOf(ABOUT.english), `page ${route}: the team comes after the biographies`);
     assert.ok(
-      normalize(team.textContent).includes(ABOUT.team.at(-1)),
-      `page ${route}: the team section carries the whole team copy`,
+      body.indexOf(ABOUT.team.spanish[0]) > body.indexOf(ABOUT.english),
+      `page ${route}: the team comes after the biographies`,
     );
+    for (const member of ABOUT.team.spanish) {
+      assert.ok(teamText.includes(member), `page ${route}: the team section carries the Spanish team copy "${member}"`);
+    }
+    for (const member of ABOUT.team.english) {
+      assert.ok(teamText.includes(member), `page ${route}: the team section carries the English team copy "${member}"`);
+    }
+  });
+
+  it("splits the team so no role mixes the two languages", () => {
+    // The one visible change of the content migration: the roles used to read
+    // "Fundadora y Curadora / Founder and Curator" in a single string.
+    const page = readPage(route);
+    const team = normalize(page.querySelector("main .about-team")?.textContent);
+    assert.ok(team.length > 0, `page ${route}: no team section rendered`);
+    for (const mixed of [
+      "Fundadora y Curadora / Founder and Curator",
+      "Curadora Asociada / Associate Curator",
+      "Asistencia Curatorial / Curatorial Assistant",
+      "Colaboradoras anteriores / Former collaborators:",
+    ]) {
+      assert.ok(!team.includes(mixed), `page ${route}: the team no longer reads "${mixed}" in one string`);
+    }
+
+    // The Spanish team comes first, then the template's divider, then the
+    // English team, the way the biographies are drawn.
+    const blocks = page
+      .querySelector("main .about-team")
+      .childNodes.filter((node) => node.nodeType === NodeType.ELEMENT_NODE)
+      .map((node) => normalize(node.textContent));
+    const divider = blocks.indexOf("//");
+    assert.notEqual(divider, -1, `page ${route}: the template draws one divider between the two team lists`);
+    assert.deepEqual(blocks.filter((block) => block === "//").length, 1, `page ${route}: exactly one team divider`);
+    for (const role of ABOUT.team.spanish.filter((entry) => entry !== ABOUT.team.spanish[0])) {
+      assert.ok(blocks.slice(0, divider).some((block) => block.includes(role)), `page ${route}: "${role}" stays with the Spanish team`);
+    }
+    for (const role of ABOUT.team.english.filter((entry) => entry !== ABOUT.team.english[0])) {
+      assert.ok(blocks.slice(divider + 1).some((block) => block.includes(role)), `page ${route}: "${role}" comes after the divider`);
+    }
   });
 });
 
