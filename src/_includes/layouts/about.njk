@@ -5,8 +5,8 @@ layout: base.njk
 	About page (GLOSSARY: the collective's identity page), one page per language
 	version (ADR-0002). `src/acerca-de.md` paginates over the site's languages,
 	so this layout renders once per language and draws that version's own
-	biography and team list — no divider, no stacked pair. `lang` is the
-	pagination alias; the language version is the content object under its code.
+	biography and team list. `lang` is the pagination alias; the language
+	version is the content object under its code.
 
 	The English object is optional at every level, and the CMS deletes a field
 	an editor clears, so each field is read through the `localizedText` filter:

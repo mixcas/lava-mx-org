@@ -1,9 +1,0 @@
-{#
-	The bilingual divider, drawn by the templates between the Spanish text and
-	the optional English text (bios, project text). It is never stored in
-	content: editors leave the English field empty instead. Import it as a
-	macro — `{% from "partials/divider.njk" import divider %}` — so the `//`
-	literal lives in one place. Kept inline (no trailing newline) so importing
-	templates control their own whitespace.
-#}
-{% macro divider() %}<p class="project-body__divider">//</p>{% endmacro %}

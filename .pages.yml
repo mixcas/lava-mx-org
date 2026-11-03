@@ -287,8 +287,8 @@ content:
 
   # Single-file entry: the About page lives in one Markdown file. `title` and
   # `layout` stay out of the editor so merge mode preserves them on save. The
-  # biography and the team list exist twice, once per language version, and the
-  # template draws the divider between the two versions (never store `//`).
+  # biography and the team list exist twice, once per language version: each
+  # language version is its own page and shows its own text only.
   - name: about
     label: Acerca de
     type: file
