@@ -467,8 +467,9 @@ content:
         type: object
         description: >-
           Textos que se muestran en la versión en español del sitio: la
-          descripción para buscadores, el encabezado de la portada, el pie de
-          página y las etiquetas de la navegación.
+          descripción para buscadores, los encabezados de la portada y de los
+          proyectos anteriores, el pie de página y las etiquetas de la
+          navegación.
         fields:
           - name: description
             label: Descripción del sitio
@@ -493,6 +494,15 @@ content:
               Título de la portada que solo leen los lectores de pantalla, por
               ejemplo «Lava — proyectos actuales». No se ve en la página;
               cambiarlo cambia ese texto en la portada en español.
+          - name: archiveHeading
+            label: Encabezado de «Proyectos anteriores»
+            type: string
+            description: >-
+              Título de la página de proyectos anteriores que solo leen los
+              lectores de pantalla, por ejemplo «Proyectos anteriores». No se ve
+              en la página; cambiarlo cambia ese texto y el título de la
+              pestaña del navegador en la página de proyectos anteriores en
+              español.
           - name: footer
             label: Pie de página
             type: object
@@ -558,9 +568,10 @@ content:
         type: object
         description: >-
           Textos que se muestran en la versión en inglés del sitio: la
-          descripción para buscadores, el encabezado de la portada, el pie de
-          página y las etiquetas de la navegación. Los campos son opcionales;
-          los que dejes vacíos se muestran en español.
+          descripción para buscadores, los encabezados de la portada y de los
+          proyectos anteriores, el pie de página y las etiquetas de la
+          navegación. Los campos son opcionales; los que dejes vacíos se
+          muestran en español.
         fields:
           - name: description
             label: Descripción del sitio en inglés
@@ -584,6 +595,15 @@ content:
               Título de la portada en inglés que solo leen los lectores de
               pantalla, por ejemplo «Lava — current projects». No se ve en la
               página; cambiarlo cambia ese texto en la portada en inglés.
+          - name: archiveHeading
+            label: Encabezado de «Proyectos anteriores» en inglés
+            type: string
+            description: >-
+              Título de la página de proyectos anteriores en inglés que solo
+              leen los lectores de pantalla, por ejemplo «Previous projects».
+              No se ve en la página; cambiarlo cambia ese texto y el título de
+              la pestaña del navegador en la página de proyectos anteriores en
+              inglés. Si lo dejas vacío, no se muestra ningún título.
           - name: footer
             label: Pie de página en inglés
             type: object

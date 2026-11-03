@@ -1,13 +1,30 @@
 ---
 layout: base.njk
-title: Proyectos
-permalink: /proyectos/
 hero: archive
+# One template, one archive per language version (ADR-0002): the pagination
+# yields `/proyectos/` for Spanish and `/en/proyectos/` for English, so the
+# Spanish archive keeps its URL. Every page of the pagination enters the
+# collections, so the `languageRoutes` registry sees both, and the header
+# language link, the hreflang set and the sitemap alternates appear for this
+# route without any further work (see layouts/base.njk).
+pagination:
+  data: languages
+  size: 1
+  alias: lang
+  resolve: values
+  addAllPagesToCollections: true
+permalink: "{{ lang.prefix }}/proyectos/"
+# The page's own heading and `<title>` are chrome, so they come from the site
+# settings in the page's language (GLOSSARY: Site settings) rather than a copy
+# written here: the Spanish archive keeps «Proyectos anteriores».
+eleventyComputed:
+  title: "{{ site[lang.code].archiveHeading }}"
 ---
-<h1 class="visually-hidden">Proyectos anteriores</h1>
-{#- Spanish-only page in this ticket (#23 gives it its English version), so
-    its listing reads the projects in Spanish. -#}
-{% set projects = collections.archiveProjects | projectViews %}
+<h1 class="visually-hidden">{{ site[lang.code].archiveHeading }}</h1>
+{#- The listing reads the projects in the page's language: the view model
+    resolves every field for it, and falls back to Spanish, silently, where a
+    project has no English (ADR-0002). -#}
+{% set projects = collections.archiveProjects | projectViews(lang.code) %}
 {% set heading = "h2" %}
 {% set linked = true %}
 {% set priority = true %}
