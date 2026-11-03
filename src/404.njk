@@ -1,8 +1,14 @@
 ---
 layout: base.njk
-title: Página no encontrada
 permalink: /404.html
 eleventyExcludeFromCollections: true
+# The page's `<title>` is chrome, so it comes from the site settings (GLOSSARY:
+# Site settings) rather than from a copy written here. This is the one page
+# that cannot know which language version was wanted, so its chrome is the
+# default language's — the language at the root of the site — and its title is
+# that language's 404 title.
+eleventyComputed:
+  title: "{{ site[defaultLanguage.code].notFound.title }}"
 ---
 {#
 	The 404 page (ADR-0002). It is the one page that cannot know which language
@@ -16,7 +22,8 @@ eleventyExcludeFromCollections: true
 	The lines are the Site settings' own copy, one short line and one back-link
 	label per language (`site[<language code>].notFound`), rendered by iterating
 	`src/_data/languages.json`, so the links follow the declared prefixes and the
-	deployment path prefix instead of naming a language tree here.
+	deployment path prefix instead of naming a language tree here. The link's
+	address is the homepage route (lib/routes.js) inside that language's tree.
 #}
 <article class="project">
 	<header class="project-header">
@@ -27,7 +34,7 @@ eleventyExcludeFromCollections: true
 	<div class="project-main">
 		<div class="project-body">
 			{%- for language in languages %}
-			<p lang="{{ language.code }}">{{ site[language.code].notFound.message }} <a href="{{ (language.prefix + '/') | url }}">{{ site[language.code].notFound.link }}</a></p>
+			<p lang="{{ language.code }}">{{ site[language.code].notFound.message }} <a href="{{ 'home' | languageRouteUrl(language) | url }}">{{ site[language.code].notFound.link }}</a></p>
 			{%- endfor %}
 		</div>
 	</div>

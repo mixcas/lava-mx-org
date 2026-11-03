@@ -9,7 +9,7 @@ import MarkdownIt from "markdown-it";
 import { buildProjectView } from "./lib/project-view.js";
 import { applyPathPrefix, withPathPrefix } from "./lib/path-prefix.js";
 import { assertProjectsValid, untranslatedFields, untranslatedReport } from "./lib/project-contract.js";
-import { DEFAULT_LANGUAGE, LANGUAGES, languageAlternates, languageRoutes, localizedText, sitemapEntries } from "./lib/languages.js";
+import { DEFAULT_LANGUAGE, languageAlternates, languageRoute, languageRoutes, localizedText, sitemapEntries } from "./lib/languages.js";
 import { ASSET_URL } from "./lib/media-assets.js";
 import { languageRouteUrl } from "./lib/routes.js";
 
@@ -77,6 +77,11 @@ export default function (eleventyConfig) {
 
   // Absolute site origin (for canonical/OG/sitemap URLs).
   eleventyConfig.addGlobalData("siteUrl", SITE_URL);
+
+  // The language at the root of the site (Spanish today), for the one page
+  // whose chrome cannot follow the route: the root 404, which is not a language
+  // version of anything (ADR-0002). Templates read it instead of naming a code.
+  eleventyConfig.addGlobalData("defaultLanguage", DEFAULT_LANGUAGE);
 
   // Canonical project view model (see lib/project-view.js): every project
   // surface renders this, so content shapes — and the language version being
@@ -209,24 +214,23 @@ export default function (eleventyConfig) {
   // complementary archive projects, each in its configured `order`.
   //
   // One content file yields one page per language version (the project
-  // directory data file paginates over `languages`), so the pages a listing
-  // shows are the ones in the listing's own language tree — a project appears
-  // once, never once per language it was built in, and a listing links to its
-  // own tree's pages.
+  // directory data file paginates over `languages`), so a listing takes the
+  // pages in its own language tree — the default language's, since neither
+  // collection is language-aware and the view model resolves the other
+  // language from the same data. A project therefore appears once, never once
+  // per language it was built in, and a listing links into its own tree.
   const byOrder = (a, b) => (a.data.order ?? 0) - (b.data.order ?? 0);
-  const projectPagesIn = (api) => {
-    const pages = api.getFilteredByGlob("src/proyectos/*.md");
-    return DEFAULT_LANGUAGE.prefix === ""
-      ? pages.filter((item) => !LANGUAGES.some((language) => language.prefix && item.url?.startsWith(`${language.prefix}/`)))
-      : pages.filter((item) => item.url === `${DEFAULT_LANGUAGE.prefix}/proyectos/${item.page.fileSlug}/`);
-  };
+  const defaultLanguageProjectPages = (api) =>
+    api
+      .getFilteredByGlob("src/proyectos/*.md")
+      .filter((item) => item.url && languageRoute(item.url).language.code === DEFAULT_LANGUAGE.code);
   eleventyConfig.addCollection("featuredProjects", (api) =>
-    projectPagesIn(api)
+    defaultLanguageProjectPages(api)
       .filter((item) => item.data.featured === true)
       .sort(byOrder),
   );
   eleventyConfig.addCollection("archiveProjects", (api) =>
-    projectPagesIn(api)
+    defaultLanguageProjectPages(api)
       .filter((item) => item.data.featured !== true)
       .sort(byOrder),
   );

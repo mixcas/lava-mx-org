@@ -6,8 +6,9 @@ import { before, describe, it } from "node:test";
 import yaml from "js-yaml";
 import { NodeType } from "node-html-parser";
 
-import { LEGACY_KEYS } from "../lib/project-contract.js";
+import { isWritten } from "../lib/languages.js";
 import { ASSET_FOLDER, ASSET_URL, FORMATS, GALLERY_TYPES } from "../lib/media-assets.js";
+import { LEGACY_KEYS } from "../lib/project-contract.js";
 import { projectData, projectFiles, projectRoute } from "./support/content.mjs";
 import { buildContentDir, projectFile, writeContentDir } from "./support/contract.mjs";
 import {
@@ -419,11 +420,11 @@ describe("project content model", () => {
       const spanish = data.es ?? {};
 
       assert.ok(
-        typeof spanish.title === "string" && spanish.title.trim().length > 0,
+        isWritten(spanish.title),
         `${file}: "es.title" is the Spanish title and is never empty`,
       );
       assert.ok(
-        typeof spanish.text === "string" && spanish.text.trim().length > 0,
+        isWritten(spanish.text),
         `${file}: "es.text" is the Spanish text and is never empty`,
       );
       assert.ok(!Object.hasOwn(data, "text"), `${file}: the legacy "text" field is gone`);
@@ -438,7 +439,7 @@ describe("project content model", () => {
       assert.ok(baseline, `${file}: no baseline project for this content file`);
       const english = data.en ?? {};
       assert.equal(
-        typeof english.text === "string" && english.text.trim().length > 0,
+        isWritten(english.text),
         Boolean(baseline.english),
         `${file}: only the bilingual projects carry an English text, in "en.text"`,
       );
@@ -1020,6 +1021,28 @@ describe("homepage in both languages", () => {
     assert.equal(normalize(doc.querySelector("title")?.textContent), SITE.title, "page /: the site's own page, not a chooser");
   });
 
+  /**
+   * The masthead lays the navigation out one column per item, so the page
+   * without a language link carries one column fewer (the 404). The markup must
+   * therefore be the page's own links and nothing else: a filler element for
+   * the missing column would put an empty, unlabelled item in the navigation.
+   */
+  it("builds the navigation out of the page's own links, with no placeholder column", () => {
+    const items = (route) => readPage(route).querySelectorAll("header nav > *");
+    const home = items("/");
+    const notFound = items("/404.html");
+
+    assert.equal(home.length, 5, "page /: About · contact · archive · language · e-mail");
+    assert.equal(notFound.length, 4, "page /404.html: the same, minus the language link, and no filler");
+
+    for (const route of ["/", "/404.html", ...LANGUAGES.map(aboutRoute), archiveRoute(SPANISH)]) {
+      for (const item of items(route)) {
+        const says = normalize(item.textContent);
+        assert.ok(says.length > 0 || item.getAttribute("href"), `page ${route}: a nav item is empty`);
+      }
+    }
+  });
+
   it("renders the chrome in the page's own language", () => {
     const settings = JSON.parse(readRepoFile("src/_data/site.json"));
     const expected = {
@@ -1269,6 +1292,22 @@ describe("one text per page", () => {
       for (const value of [spanish.footer.copyright, spanish.footer.city, spanish.footer.instagram]) {
         assert.ok(footer.includes(value), `${label}: footer shows "${value}"`);
       }
+    });
+
+    it("takes its title from the Spanish settings, not from the template", () => {
+      const page = readPage(NOT_FOUND);
+      const spanish = settings()[SPANISH.code];
+
+      assert.ok(spanish.notFound.title?.trim(), "site.json: the Spanish settings hold the 404 title");
+      assert.equal(
+        normalize(page.querySelector("title")?.textContent),
+        `${spanish.notFound.title} — ${settings().title}`,
+        `page ${NOT_FOUND}: <title>`,
+      );
+      assert.ok(
+        !readRepoFile("src/404.njk").includes(spanish.notFound.title),
+        "src/404.njk: the title is the settings' own, not a copy hardwired in the template",
+      );
     });
 
     it("says one short line in each language, each one marked and linking into its own tree", () => {
@@ -1871,10 +1910,27 @@ describe("about page in both languages", () => {
       const heading = normalize(doc.querySelector("main h1")?.textContent);
       assert.equal(heading, title, `${label}: the page heading is the page language's own`);
       assert.equal(normalize(doc.querySelector("title")?.textContent), `${title} — ${SITE.title}`, `${label}: <title>`);
+      // The description is the page's own text, the way a project page's is:
+      // the biography of the page's language version, never the site
+      // description and never the other language's biography.
+      const description = normalize(doc.querySelector('meta[name="description"]')?.getAttribute("content"));
+      assert.ok(description.startsWith(expected.bio), `${label}: the meta description starts the page's own biography`);
+      assert.ok(!description.startsWith(expected.other), `${label}: the meta description is not the other language's biography`);
+    });
+
+    it(`keeps the social descriptions of ${route} in step with its meta description`, () => {
+      const doc = readPage(route);
+      const description = normalize(doc.querySelector('meta[name="description"]')?.getAttribute("content"));
+
       assert.equal(
-        normalize(doc.querySelector('meta[name="description"]')?.getAttribute("content")),
-        language.code === SPANISH.code ? SITE.description : SITE.englishDescription,
-        `${label}: the meta description is the page language's own`,
+        normalize(doc.querySelector('meta[property="og:description"]')?.getAttribute("content")),
+        description,
+        `page ${route}: og:description is the page's own text`,
+      );
+      assert.equal(
+        normalize(doc.querySelector('meta[name="twitter:description"]')?.getAttribute("content")),
+        description,
+        `page ${route}: twitter:description is the page's own text`,
       );
     });
 
@@ -1909,6 +1965,27 @@ describe("about page in both languages", () => {
       assert.equal(doc.querySelector('link[rel="canonical"]')?.getAttribute("href"), `${SITE_URL}${localUrl(route)}`, `${label}: self canonical`);
     });
   }
+
+  it("describes the two About pages differently, each from its own biography", () => {
+    const described = Object.fromEntries(
+      LANGUAGES.map((language) => [
+        language.code,
+        normalize(readPage(aboutRoute(language)).querySelector('meta[name="description"]')?.getAttribute("content")),
+      ]),
+    );
+
+    assert.equal(
+      new Set(Object.values(described)).size,
+      LANGUAGES.length,
+      `each About page describes itself in its own language: ${JSON.stringify(described)}`,
+    );
+    for (const language of LANGUAGES) {
+      assert.ok(
+        described[language.code].startsWith(copy[language.code].bio),
+        `page ${aboutRoute(language)}: the description starts that language's biography`,
+      );
+    }
+  });
 
   it("stores each language version in its own object, without the separator", () => {
     const data = projectData("src/acerca-de.md");
@@ -1988,6 +2065,22 @@ describe("about page with no English version written (Untranslated field)", () =
     assert.equal(heading(`${ENGLISH.prefix}${UNTRANSLATED_ROUTE}`), ABOUT.title.spanish, "page /en/acerca-de/: the heading is the Spanish title");
     assert.equal(title(`${ENGLISH.prefix}${UNTRANSLATED_ROUTE}`), `${ABOUT.title.spanish} — ${SITE.title}`, "page /en/acerca-de/: <title>");
     assert.equal(heading(UNTRANSLATED_ROUTE), ABOUT.title.spanish, `page ${UNTRANSLATED_ROUTE}: the Spanish page keeps its own title`);
+  });
+
+  it("describes the English page with the Spanish biography until one is written", () => {
+    const description = (route) =>
+      normalize(readOutputPage(outputDir, route).querySelector('meta[name="description"]')?.getAttribute("content"));
+    const spanish = normalize(String(projectData("src/acerca-de.md").es?.bio ?? "").replace(/\s+/g, " "));
+
+    assert.ok(
+      spanish.startsWith(description(`${ENGLISH.prefix}${UNTRANSLATED_ROUTE}`).replace(/(\.{3}|…)$/, "")),
+      "page /en/acerca-de/: the description is the Spanish biography, since the English one is unwritten",
+    );
+    assert.equal(
+      description(`${ENGLISH.prefix}${BLANK_ROUTE}`),
+      description(`${ENGLISH.prefix}${UNTRANSLATED_ROUTE}`),
+      "a blank English biography describes the page the same way an absent one does",
+    );
   });
 
   it("resolves each field on its own, so a written English title stays English", () => {
@@ -2088,7 +2181,7 @@ describe("page metadata", () => {
   const pages = [
     ...LANGUAGES.map((language) => [homeRoute(language), language.code === SPANISH.code ? SITE.description : SITE.englishDescription]),
     ...LANGUAGES.flatMap((language) => PROJECTS.map((project) => [projectRouteIn(project.route, language), null])),
-    ...LANGUAGES.map((language) => [aboutRoute(language), language.code === SPANISH.code ? SITE.description : SITE.englishDescription]),
+    ...LANGUAGES.map((language) => [aboutRoute(language), null]),
   ];
 
   for (const [route, expectedDescription] of pages) {

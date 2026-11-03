@@ -512,6 +512,15 @@ content:
               una línea en cada idioma, cada una con su enlace a la portada de
               ese idioma.
             fields:
+              - name: title
+                label: Título de la pestaña
+                type: string
+                required: true
+                description: >-
+                  Texto que aparece en la pestaña del navegador, seguido del
+                  nombre del sitio, por ejemplo «Página no encontrada — Lava».
+                  Es el título de la página 404, que siempre se muestra con los
+                  textos en español.
               - name: message
                 label: Aviso en español
                 type: string
@@ -638,6 +647,14 @@ content:
               se muestra en los dos idiomas: esta línea va debajo de la española
               y enlaza a la portada en inglés.
             fields:
+              - name: title
+                label: Título de la pestaña en inglés
+                type: string
+                description: >-
+                  Título en inglés de la página 404, por ejemplo «Page not
+                  found». La página 404 se muestra siempre con los textos en
+                  español, así que hoy no se ve en ninguna página; queda escrito
+                  por si algún día la página se sirve también en inglés.
               - name: message
                 label: Aviso en inglés
                 type: string

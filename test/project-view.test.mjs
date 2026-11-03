@@ -28,21 +28,23 @@ describe("project view model", () => {
     ]);
   });
 
-  it("keeps an item's own language-neutral alt text", () => {
+  it("does not read a language-neutral alt text, which the content model retired", () => {
+    // The media shape is `alt_es` / (optional) `alt_en` only; the contract
+    // rejects a flat `alt`, so the view model never resolves one either.
     const view = buildProjectView({
       es: SPANISH,
       media: [{ type: "image", src: "/assets/images/uno.webp", alt: "Sala principal" }],
     });
 
-    assert.equal(view.gallery[0].alt, "Sala principal");
+    assert.equal(view.gallery[0].alt, "Corteza Líquida", "the project title stands in for the unwritten alt");
   });
 
   it("falls back to the project title when the alt text is only whitespace", () => {
     const view = buildProjectView({
       es: SPANISH,
       media: [
-        { type: "image", src: "/assets/images/uno.webp", alt: "   " },
-        { type: "image", src: "/assets/images/dos.webp", alt: "" },
+        { type: "image", src: "/assets/images/uno.webp", alt_es: "   " },
+        { type: "image", src: "/assets/images/dos.webp", alt_es: "" },
       ],
     });
 
@@ -250,11 +252,11 @@ describe("project view model with the two language objects", () => {
       assert.equal(alt(data), "Sala principal", "Spanish is the default version");
     });
 
-    it("serves the language-neutral alt text to both versions", () => {
+    it("serves neither version a language-neutral alt text", () => {
       const data = { es: { title: "Corteza Líquida", text: "Texto." }, media: [{ ...IMAGE, alt: "Sala principal" }] };
 
-      assert.equal(alt(data, "es"), "Sala principal");
-      assert.equal(alt(data, "en"), "Sala principal");
+      assert.equal(alt(data, "es"), "Corteza Líquida");
+      assert.equal(alt(data, "en"), "Corteza Líquida");
     });
   });
 });

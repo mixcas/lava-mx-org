@@ -282,8 +282,8 @@ One entry per project, every page built twice:
   once and described twice, with `alt_es` and `alt_en`; on an English page its
   alt text resolves the English alt, then the project's English title, then the
   Spanish title (the Spanish page uses `alt_es`, then the Spanish title). An
-  older language-neutral `alt` is still read if a file carries one, but the CMS
-  does not offer it.
+  older language-neutral `alt` is rejected as a legacy media key, with a
+  message pointing at `alt_es` and `alt_en`.
 - **The view model is the only reader of content.**
   `lib/project-view.js` resolves every field for the language a page was built
   in and records, per field, whether the value is a fallback; no template reads
@@ -425,7 +425,8 @@ the same fields:
   "es": {
     "description": "…", "navLabel": "Principal",
     "homeHeading": "Lava — proyectos actuales", "archiveHeading": "Proyectos anteriores",
-    "notFound": { "message": "La página que buscas no existe.", "link": "Volver al inicio" },
+    "notFound": { "title": "Página no encontrada",
+                  "message": "La página que buscas no existe.", "link": "Volver al inicio" },
     "footer": { "copyright": "©LAVA", "city": "Ciudad de México", "instagram": "@lava__mx" },
     "nav": { "about": { "label": "Lava es", "route": "about" },
              "projects": { "label": "Proyectos anteriores", "route": "projects" } }
@@ -433,7 +434,8 @@ the same fields:
   "en": {
     "description": "…", "navLabel": "Main",
     "homeHeading": "Lava — current projects", "archiveHeading": "Previous projects",
-    "notFound": { "message": "The page you are looking for does not exist.", "link": "Back to the start" },
+    "notFound": { "title": "Page not found",
+                  "message": "The page you are looking for does not exist.", "link": "Back to the start" },
     "footer": { "copyright": "©LAVA", "city": "Mexico City", "instagram": "@lava__mx" },
     "nav": { "about": { "label": "Lava is", "route": "about" },
              "projects": { "label": "Previous projects", "route": "projects" } }
@@ -445,12 +447,13 @@ the same fields:
   description; `homeHeading` and `archiveHeading` are the visually hidden page
   headings (the archive's is also its `<title>`); `navLabel` names the header
   navigation for screen readers; `footer` is the footer text; `notFound` is the
-  404 page's line and back-link label.
+  404 page's `<title>`, its line and its back-link label.
 - A navigation entry stores a **route key**, not a URL. `lib/routes.js` maps
-  `about` → `/acerca-de/` and `projects` → `/proyectos/`, and the template
-  prepends the language's prefix, so the Spanish header links to `/acerca-de/`
-  and the English one to `/en/acerca-de/`. The address is written in one place
-  and gains the deployment prefix like every other URL.
+  `home` → `/`, `about` → `/acerca-de/` and `projects` → `/proyectos/`, and the
+  template prepends the language's prefix, so the Spanish header links to
+  `/acerca-de/` and the English one to `/en/acerca-de/`, and the logo to `/` or
+  `/en/`. The address is written in one place and gains the deployment prefix
+  like every other URL.
 - Unlike project and About content, the chrome has **no silent fallback**: a
   page reads `site[<its language>]` directly, so a blank English value renders
   blank. The editor's descriptions say which fields must be filled in both
@@ -467,15 +470,19 @@ the same fields:
 - `sitemap.xml` lists one `<url>` per built language version with `xhtml:link`
   alternates; `robots.txt` still advertises that one sitemap.
 - `<title>` and the meta description come from the page's own language version:
-  a project page uses its own title and the start of its own body (the Spanish
-  body only when the English one is untranslated).
+  a project page uses its own title and the start of its own body, the About
+  page its own title and the start of its own biography (the Spanish ones only
+  when the English version is unwritten), and a page with neither text falls
+  back to the site description of its language.
 - Each page's header carries one plain anchor to the counterpart page, labelled
   in that language ("English" / "Español"); it is rendered only when that page
   was built. There is no auto-detection, cookie or script.
 - `404.html` is the one page that cannot know which language was wanted, so it
-  is the only one that speaks both: Spanish chrome, `<html lang="es">`, and one
-  short line per language — each marked with its own `lang` and linking to that
-  language's homepage.
+  is the only one that speaks both: Spanish chrome (its `<title>` included, from
+  `site.es.notFound.title`), `<html lang="es">`, and one short line per language
+  — each marked with its own `lang` and linking to that language's homepage.
+- The header navigation is a grid of one equal column per item, so the pages
+  without a Language link (the 404) get four columns rather than an empty fifth.
 
 ## Pages CMS
 

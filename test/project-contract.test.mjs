@@ -189,9 +189,14 @@ INVALID.push(
     message: 'media[1] ("/assets/videos/no-existe.mp4"): the master src/assets/videos/no-existe.mp4 does not exist',
   },
   {
-    name: "alt text that is not text",
-    content: media({ type: "image", src: IMAGE, alt: 42 }),
-    message: `media[1] ("${IMAGE}"): "alt" must be a string (found: 42)`,
+    name: "Spanish alt text that is not text",
+    content: media({ type: "image", src: IMAGE, alt_es: 42 }),
+    message: `media[1] ("${IMAGE}"): "alt_es" must be a string (found: 42)`,
+  },
+  {
+    name: "a legacy language-neutral alt text",
+    content: media({ type: "image", src: IMAGE, alt: "Sala principal" }),
+    message: `media[1] ("${IMAGE}"): the legacy "alt" key is gone; use "alt_es" (and optionally "alt_en")`,
   },
   {
     name: "a video poster outside the image folder",
@@ -331,7 +336,7 @@ describe("project content contract", () => {
   it("accepts typed image and video media items", () => {
     const inputDir = writeContentDir({
       "galeria.md": media(
-        { type: "image", src: IMAGE, alt: "Logo" },
+        { type: "image", src: IMAGE, alt_es: "Logo", alt_en: "Logo" },
         { type: "video", src: VIDEO, poster: IMAGE, autoplay: true, loop: true, mute: true },
       ),
     });
