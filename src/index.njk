@@ -17,7 +17,7 @@ pagination:
 permalink: "{{ lang.prefix }}/"
 ---
 <h1 class="visually-hidden">{{ site[lang.code].homeHeading }}</h1>
-{% set projects = collections.featuredProjects | projectViews %}
+{% set projects = collections.featuredProjects | projectViews(lang.code) %}
 {% set heading = "h2" %}
 {% set linked = false %}
 {% set priority = true %}

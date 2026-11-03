@@ -85,7 +85,7 @@ describe("project view model", () => {
     assert.equal(view.title, "");
     assert.equal(view.venue, null);
     assert.equal(view.dates, null);
-    assert.deepEqual(view.text, { spanish: "", english: null });
+    assert.deepEqual(view.text, { body: "", language: "es", fallback: false });
   });
 });
 
@@ -120,23 +120,56 @@ describe("project view model with the two language objects", () => {
     assert.equal(view.venue, "laNao Galería");
     assert.equal(view.dates, "1 febrero - 1 abril, 2025.");
     assert.equal(view.columns, 2, "the gallery columns are shared by both versions");
-    assert.deepEqual(view.text, { spanish: "Una exposición individual.", english: null });
+    assert.deepEqual(view.text, { body: "Una exposición individual.", language: "es", fallback: false });
   });
 
-  it("renders a project with no English object with no English body", () => {
-    assert.deepEqual(buildProjectView(OBJECTS).text, {
-      spanish: "Una exposición individual.",
-      english: null,
-    });
+  it("renders the Spanish body on the English version of a project with no English object", () => {
+    // The English page of an untranslated project shows the Spanish text, and
+    // says so in the model: the block renders as Spanish, with no notice
+    // (ADR-0002: an untranslated field falls back silently).
+    const view = buildProjectView(OBJECTS, "en");
+
+    assert.deepEqual(view.text, { body: "Una exposición individual.", language: "es", fallback: true });
+    assert.deepEqual(view.fallback, { title: true, venue: true, dates: true, text: true });
   });
 
   it("resolves the English body when the content writes one", () => {
-    const view = buildProjectView({
-      es: SPANISH,
-      en: { title: "Liquid Crust", text: "A solo exhibition." },
-    });
+    const view = buildProjectView(
+      {
+        es: SPANISH,
+        en: { title: "Liquid Crust", text: "A solo exhibition." },
+      },
+      "en",
+    );
 
-    assert.deepEqual(view.text, { spanish: "Una exposición individual.", english: "A solo exhibition." });
+    assert.deepEqual(view.text, { body: "A solo exhibition.", language: "en", fallback: false });
+    assert.equal(view.fallback.text, false);
+  });
+
+  it("never hands the other language's text to a page", () => {
+    const data = {
+      es: { title: "Corteza Líquida", venue: "laNao Galería", dates: "1 febrero, 2025.", text: "Texto en español." },
+      en: { title: "Liquid Crust", venue: "laNao Gallery", dates: "1 February, 2025.", text: "English text." },
+    };
+
+    const spanish = buildProjectView(data, "es");
+    assert.equal(spanish.language, "es");
+    assert.ok(!JSON.stringify(spanish).includes("English text."), "the Spanish version carries no English text");
+    assert.ok(!JSON.stringify(spanish).includes("Liquid Crust"), "the Spanish version carries no English title");
+
+    const english = buildProjectView(data, "en");
+    assert.equal(english.language, "en");
+    assert.ok(!JSON.stringify(english).includes("Texto en español."), "the English version carries no Spanish text");
+  });
+
+  it("addresses each language version of a project at its own URL", () => {
+    assert.equal(buildProjectView(OBJECTS).url, "/proyectos/corteza-liquida/");
+    assert.equal(buildProjectView(OBJECTS, "en").url, "/en/proyectos/corteza-liquida/");
+    assert.equal(
+      buildProjectView({ ...OBJECTS, url: "/en/proyectos/corteza-liquida/" }, "en").url,
+      "/en/proyectos/corteza-liquida/",
+      "a page that is already the English version keeps its own URL",
+    );
   });
 
   it("renders the English values on the English version", () => {
@@ -164,6 +197,9 @@ describe("project view model with the two language objects", () => {
     assert.equal(view.title, "Liquid Crust", "the written English value wins");
     assert.equal(view.venue, "laNao Galería", "an unwritten English value shows the Spanish one");
     assert.equal(view.dates, "1 febrero, 2025.");
+
+    assert.deepEqual(view.fallback, { title: false, venue: true, dates: true, text: true });
+    assert.deepEqual(view.text, { body: "Texto.", language: "es", fallback: true }, "an unwritten English body is the Spanish one");
   });
 
   /**

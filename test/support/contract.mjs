@@ -25,10 +25,14 @@ const dirs = [];
  * the real project directory defaults, and the repository's asset folders
  * (symlinked, so master files resolve without copying every image).
  *
+ * `data:` files are written at its `_data/` (the site settings a layout reads,
+ * for a fixture that renders).
+ *
  * @param {Record<string, string>} files project content files by name
+ * @param {{data?: Record<string, string>}} [extra]
  * @returns {string} the input directory (`…/src`), registered for cleanup
  */
-export function writeContentDir(files) {
+export function writeContentDir(files, { data = {} } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "lava-contract-"));
   dirs.push(root);
   const inputDir = path.join(root, "src");
@@ -40,10 +44,22 @@ export function writeContentDir(files) {
     fs.writeFileSync(path.join(projectDir, name), contents);
   }
 
+  for (const [name, contents] of Object.entries(data)) {
+    fs.mkdirSync(path.join(inputDir, "_data"), { recursive: true });
+    fs.writeFileSync(path.join(inputDir, "_data", name), contents);
+  }
+
   for (const folder of ["images", "videos"]) {
     fs.mkdirSync(path.join(inputDir, "assets"), { recursive: true });
     fs.symlinkSync(path.join(REPO_ROOT, "src/assets", folder), path.join(inputDir, "assets", folder));
   }
+
+  // A fixture that renders needs the real layouts and partials; the contract,
+  // which rejects content before anything renders, never reaches them.
+  // (By real path: the build runs from `<fixtureRoot>`, where those links
+  // would otherwise make Eleventy resolve the repository's own templates from
+  // its input directory too.)
+  fs.symlinkSync(fs.realpathSync(path.join(REPO_ROOT, "src/_includes")), path.join(inputDir, "_includes"));
 
   return inputDir;
 }
@@ -51,19 +67,28 @@ export function writeContentDir(files) {
 /**
  * Build the site from a throwaway input directory with the real configuration,
  * so the build itself is what accepts or rejects the content. Rendering never
- * starts: the contract runs before templates read the content.
+ * starts: the contract runs before templates read the content. Fixtures that do
+ * want output ask for `render: true` and supply the site's `_data/` files
+ * (the layouts read the settings and the language list).
  *
  * The fixture gets a two-line config that applies the real configuration and
  * points Eleventy's directories at the throwaway `src/` (the config file's
  * `dir` wins over the constructor arguments).
  *
+ * The input directory is written relative to the working directory on purpose:
+ * with an absolute `dir.input`, Eleventy 3.1.6 skips directory data files
+ * (`proyectos.11tydata.json`) and layouts, emitting empty pages.
+ *
+ * @param {string} inputDir the throwaway `src/` to build
+ * @param {{render?: boolean}} [options]
  * @returns {Promise<string>} the generated output directory
  */
-export async function buildContentDir(inputDir) {
+export async function buildContentDir(inputDir, { render = false } = {}) {
   const { default: Eleventy } = await import("@11ty/eleventy");
   const fixtureRoot = path.dirname(inputDir);
   const outputDir = path.join(fixtureRoot, "_site");
   const configPath = path.join(fixtureRoot, "eleventy.config.mjs");
+  const relativeInput = path.relative(process.cwd(), inputDir);
 
   fs.writeFileSync(
     configPath,
@@ -72,8 +97,10 @@ export async function buildContentDir(inputDir) {
       "export default function (eleventyConfig) {",
       "  configure(eleventyConfig);",
       "  return {",
-      `    dir: ${JSON.stringify({ input: inputDir, output: outputDir, includes: "_includes", layouts: "_includes/layouts", data: "_data" })},`,
+      `    dir: ${JSON.stringify({ input: relativeInput, output: outputDir, includes: "_includes", layouts: "_includes/layouts", data: "_data" })},`,
       '    pathPrefix: "/",',
+      // A contract fixture reads the content and stops there: nothing to build.
+      ...(render ? [] : ["    templateFormats: [],"]),
       "  };",
       "}",
       "",
