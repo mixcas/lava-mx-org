@@ -6,8 +6,9 @@ import { before, describe, it } from "node:test";
 import yaml from "js-yaml";
 import { NodeType } from "node-html-parser";
 
-import { LEGACY_KEYS } from "../lib/project-contract.js";
+import { isWritten } from "../lib/languages.js";
 import { ASSET_FOLDER, ASSET_URL, FORMATS, GALLERY_TYPES } from "../lib/media-assets.js";
+import { LEGACY_KEYS } from "../lib/project-contract.js";
 import { projectData, projectFiles, projectRoute } from "./support/content.mjs";
 import { buildContentDir, projectFile, writeContentDir } from "./support/contract.mjs";
 import {
@@ -419,11 +420,11 @@ describe("project content model", () => {
       const spanish = data.es ?? {};
 
       assert.ok(
-        typeof spanish.title === "string" && spanish.title.trim().length > 0,
+        isWritten(spanish.title),
         `${file}: "es.title" is the Spanish title and is never empty`,
       );
       assert.ok(
-        typeof spanish.text === "string" && spanish.text.trim().length > 0,
+        isWritten(spanish.text),
         `${file}: "es.text" is the Spanish text and is never empty`,
       );
       assert.ok(!Object.hasOwn(data, "text"), `${file}: the legacy "text" field is gone`);
@@ -438,7 +439,7 @@ describe("project content model", () => {
       assert.ok(baseline, `${file}: no baseline project for this content file`);
       const english = data.en ?? {};
       assert.equal(
-        typeof english.text === "string" && english.text.trim().length > 0,
+        isWritten(english.text),
         Boolean(baseline.english),
         `${file}: only the bilingual projects carry an English text, in "en.text"`,
       );

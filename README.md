@@ -282,8 +282,8 @@ One entry per project, every page built twice:
   once and described twice, with `alt_es` and `alt_en`; on an English page its
   alt text resolves the English alt, then the project's English title, then the
   Spanish title (the Spanish page uses `alt_es`, then the Spanish title). An
-  older language-neutral `alt` is still read if a file carries one, but the CMS
-  does not offer it.
+  older language-neutral `alt` is rejected as a legacy media key, with a
+  message pointing at `alt_es` and `alt_en`.
 - **The view model is the only reader of content.**
   `lib/project-view.js` resolves every field for the language a page was built
   in and records, per field, whether the value is a fallback; no template reads
