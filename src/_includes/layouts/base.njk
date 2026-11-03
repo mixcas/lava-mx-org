@@ -18,7 +18,10 @@
 {%- set languageVersions = page.url | languageAlternates(collections.languageRoutes) -%}
 {%- set language = languageVersions.language -%}
 {%- set pageTitle = title or projectView.title -%}
-{% if description %}{% set metaDescription = description %}{% elif projectView.text.spanish %}{% set metaDescription = projectView.text.spanish | md | striptags | replace('\n', ' ') | truncate(160) %}{% else %}{% set metaDescription = site[language.code].description %}{% endif %}
+{#- The description a project page draws from its own body: the body of the
+    page's language version, which is the Spanish one only when that version is
+    untranslated — never the other language's text (ADR-0002). -#}
+{% if description %}{% set metaDescription = description %}{% elif projectView.text.body %}{% set metaDescription = projectView.text.body | md | striptags | replace('\n', ' ') | truncate(160) %}{% else %}{% set metaDescription = site[language.code].description %}{% endif %}
 {% if pageTitle and pageTitle != site.title %}{% set metaTitle = pageTitle + ' — ' + site.title %}{% else %}{% set metaTitle = site.title %}{% endif %}
 <!doctype html>
 <html lang="{{ language.code }}">

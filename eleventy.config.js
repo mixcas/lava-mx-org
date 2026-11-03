@@ -9,7 +9,7 @@ import MarkdownIt from "markdown-it";
 import { buildProjectView } from "./lib/project-view.js";
 import { applyPathPrefix, withPathPrefix } from "./lib/path-prefix.js";
 import { assertProjectsValid, untranslatedFields, untranslatedReport } from "./lib/project-contract.js";
-import { languageAlternates, languageRoutes, sitemapEntries } from "./lib/languages.js";
+import { DEFAULT_LANGUAGE, LANGUAGES, languageAlternates, languageRoutes, sitemapEntries } from "./lib/languages.js";
 import { ASSET_URL } from "./lib/media-assets.js";
 import { languageRouteUrl } from "./lib/routes.js";
 
@@ -79,19 +79,27 @@ export default function (eleventyConfig) {
   eleventyConfig.addGlobalData("siteUrl", SITE_URL);
 
   // Canonical project view model (see lib/project-view.js): every project
-  // surface renders this, so content shapes are interpreted in one place.
-  // `projectView` computed data serves the page being built (the project layout);
-  // the `projectView` / `projectViews` filters serve collection items on the
-  // listing pages.
-  eleventyConfig.addFilter("projectView", (item) => buildProjectView(item?.data ?? item ?? {}));
-  eleventyConfig.addFilter("projectViews", (items = []) => items.map((item) => buildProjectView(item?.data ?? item ?? {})));
+  // surface renders this, so content shapes — and the language version being
+  // rendered — are interpreted in one place.
+  //
+  // `projectView` computed data serves the page being built (the project
+  // layout), in the language the page was routed to (`lang`, the pagination
+  // alias); the `projectView` / `projectViews` filters serve collection items,
+  // which the listing pages render in their own language. Spanish is the
+  // default, for the pages that exist in Spanish only.
+  const languageOf = (data) => (typeof data?.lang === "string" ? data.lang : (data?.lang?.code ?? DEFAULT_LANGUAGE.code));
+  eleventyConfig.addFilter("projectView", (item, language) => buildProjectView(item?.data ?? item ?? {}, language));
+  eleventyConfig.addFilter("projectViews", (items = [], language) =>
+    items.map((item) => buildProjectView(item?.data ?? item ?? {}, language)),
+  );
+
   eleventyConfig.addGlobalData("eleventyComputed", {
-    projectView: (data) => buildProjectView(data),
+    projectView: (data) => buildProjectView(data, languageOf(data)),
     // Hero image (LCP/OG) per page: the first image of the page's own gallery,
     // else the first image of the homepage/archive project collections (per the
     // `hero` front-matter flag).
     heroImage: (data) => {
-      const project = buildProjectView(data);
+      const project = buildProjectView(data, languageOf(data));
       if (project.gallery.length) return project.heroImage;
       const list =
         data.hero === "featured"
@@ -99,7 +107,7 @@ export default function (eleventyConfig) {
           : data.hero === "archive"
             ? data.collections?.archiveProjects
             : null;
-      return list?.length ? buildProjectView(list[0].data).heroImage : null;
+      return list?.length ? buildProjectView(list[0].data, languageOf(data)).heroImage : null;
     },
   });
 
@@ -192,16 +200,26 @@ export default function (eleventyConfig) {
 
   // Project collections: the editor-selected homepage projects and the
   // complementary archive projects, each in its configured `order`.
+  //
+  // One content file yields one page per language version (the project
+  // directory data file paginates over `languages`), so the pages a listing
+  // shows are the ones in the listing's own language tree — a project appears
+  // once, never once per language it was built in, and a listing links to its
+  // own tree's pages.
   const byOrder = (a, b) => (a.data.order ?? 0) - (b.data.order ?? 0);
+  const projectPagesIn = (api) => {
+    const pages = api.getFilteredByGlob("src/proyectos/*.md");
+    return DEFAULT_LANGUAGE.prefix === ""
+      ? pages.filter((item) => !LANGUAGES.some((language) => language.prefix && item.url?.startsWith(`${language.prefix}/`)))
+      : pages.filter((item) => item.url === `${DEFAULT_LANGUAGE.prefix}/proyectos/${item.page.fileSlug}/`);
+  };
   eleventyConfig.addCollection("featuredProjects", (api) =>
-    api
-      .getFilteredByGlob("src/proyectos/*.md")
+    projectPagesIn(api)
       .filter((item) => item.data.featured === true)
       .sort(byOrder),
   );
   eleventyConfig.addCollection("archiveProjects", (api) =>
-    api
-      .getFilteredByGlob("src/proyectos/*.md")
+    projectPagesIn(api)
       .filter((item) => item.data.featured !== true)
       .sort(byOrder),
   );

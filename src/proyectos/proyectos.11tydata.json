@@ -3,5 +3,13 @@
   "variant": "standard",
   "featured": false,
   "order": 0,
-  "gallery_columns": 1
+  "gallery_columns": 1,
+  "pagination": {
+    "data": "languages",
+    "size": 1,
+    "alias": "lang",
+    "resolve": "values",
+    "addAllPagesToCollections": true
+  },
+  "permalink": "{{ lang.prefix }}/proyectos/{{ page.fileSlug }}/"
 }
