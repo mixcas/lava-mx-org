@@ -44,22 +44,30 @@ media:
     rename: false
 
 content:
+  # One entry per project, carrying its two language versions as two labelled
+  # `object` groups: Spanish first (the required one), English second (always
+  # optional — an empty English field shows the Spanish text instead). The
+  # gallery, `featured`, `order` and the layout keys are shared by both
+  # versions, so an editor never uploads or orders the same image twice.
   - name: proyectos
     label: Proyectos
     type: collection
     path: src/proyectos
     # Pages CMS has no URL-change warning of its own, so the warning lives in
     # the only two places the app can render for this collection: this
-    # description and the `title` field description (the filename is seeded
-    # from the title). Verify that both are visible on create and edit before
+    # description and the `es.title` field description (the filename is seeded
+    # from that title). Verify that both are visible on create and edit before
     # handing the CMS to editors (see README → «Pages CMS»).
     description: >-
       El nombre del archivo (campo «Filename», al inicio del formulario) define
-      la dirección pública del proyecto: /proyectos/nombre-del-archivo/.
-      Cambiarlo cambia la URL pública y rompe los enlaces y marcadores
-      existentes; Git es la única forma de recuperarla después.
+      la dirección pública del proyecto: /proyectos/nombre-del-archivo/. Se
+      genera a partir del título en español. Cambiarlo cambia la URL pública y
+      rompe los enlaces y marcadores existentes; Git es la única forma de
+      recuperarla después.
     filename:
-      # Default filename from the title, without Eleventy's date prefix.
+      # Default filename from the primary field of the list view, which is the
+      # project's Spanish title (`es.title`); the token reads that nested field.
+      # Eleventy's date prefix is not part of it.
       template: "{primary}.md"
       # Visible when creating and when editing (the app locks it until the
       # editor unlocks it), so the URL is never a hidden setting.
@@ -73,65 +81,103 @@ content:
       rename: true
       delete: true
     view:
-      primary: title
-      fields: [title, featured, order, dates]
-      sort: [order, title]
+      # The Spanish title names the entry: it is the list's main label and what
+      # the filename (and therefore the public URL) is seeded from. Pages CMS
+      # renders one column per declared field and has no secondary line, so the
+      # list cannot also show whether the English version is written yet.
+      primary: es.title
+      fields: [es.title, featured, order, es.dates]
+      sort: [order, es.title]
       default:
         sort: order
         order: asc
     fields:
-      - name: title
-        label: Título
-        type: string
-        required: true
+      - name: es
+        label: Versión en español
+        type: object
         description: >-
-          Nombre público del proyecto. Al crear un proyecto, el nombre del
-          archivo (y por tanto la dirección pública) se genera a partir del
-          título; si lo cambias después, cambia la URL.
-      - name: venue
-        label: Sede
-        type: string
-        description: Espacio donde se presentó el proyecto (galería, museo, ciudad).
-      - name: dates
-        label: Fechas
-        type: string
+          Textos del proyecto en español. Es la versión que se muestra en la
+          dirección pública del proyecto y la única que hay que escribir para
+          publicar.
+        fields:
+          - name: title
+            label: Título en español
+            type: string
+            required: true
+            description: >-
+              Nombre público del proyecto en español. Al crear un proyecto, el
+              nombre del archivo (y por tanto la dirección pública) se genera a
+              partir de este título; si lo cambias después, cambia la URL.
+          - name: venue
+            label: Sede en español
+            type: string
+            description: Espacio donde se presentó el proyecto (galería, museo, ciudad).
+          - name: dates
+            label: Fechas en español
+            type: string
+            description: >-
+              Fechas de exhibición tal como se muestran en la página del
+              proyecto; admite Markdown.
+          # The rich-text fields insert from the documents library, so an editor
+          # can upload a PDF while writing and link to it (US 30): `categories`
+          # widens the picker's default image formats to the PDFs the source
+          # accepts. Both language versions keep the same options, so a dossier
+          # can be linked from either text.
+          - name: text
+            label: Texto en español
+            type: rich-text
+            required: true
+            options:
+              format: markdown
+              switcher: true
+              media: documents
+              categories: [document]
+            description: >-
+              Texto del proyecto en español; admite Markdown. Es el texto que se
+              muestra en la página del proyecto. Desde el botón de insertar
+              puedes subir un PDF a la biblioteca de Documentos y enlazarlo.
+      - name: en
+        label: Versión en inglés
+        type: object
         description: >-
-          Fechas de exhibición tal como se muestran en la página del proyecto;
-          admite Markdown.
-      # The project text is two fields, one per language: the template renders
-      # the Spanish text first, then a divider, then the English text when it
-      # exists. Both live in front matter (the Markdown body is empty). The
-      # rich-text fields insert from the documents library, so an editor can
-      # upload a PDF while writing and link to it (US 30): `categories` widens
-      # the picker's default image formats to the PDFs the source accepts.
-      - name: text_es
-        label: Texto en español
-        type: rich-text
-        required: true
-        options:
-          format: markdown
-          switcher: true
-          media: documents
-          categories: [document]
-        description: >-
-          Texto del proyecto en español; admite Markdown. Se muestra primero.
-          Los enlaces y descargas del proyecto van aquí, al final de este
-          texto, porque el texto en inglés es opcional. Desde el botón de
-          insertar puedes subir un PDF a la biblioteca de Documentos y
-          enlazarlo.
-      - name: text_en
-        label: Texto en inglés
-        type: rich-text
-        options:
-          format: markdown
-          switcher: true
-          media: documents
-          categories: [document]
-        description: >-
-          Texto del proyecto en inglés; admite Markdown. Aparece después del
-          texto en español, separado por «//». Si lo dejas vacío, el proyecto
-          se muestra solo en español. Los PDF se enlazan desde el texto en
-          español.
+          Textos del proyecto en inglés. Todos los campos son opcionales: los
+          que dejes vacíos se muestran en español en la versión en inglés. No
+          hace falta traducir para publicar. Si un nombre o una sede se escribe
+          igual en los dos idiomas, cópialo aquí.
+        fields:
+          - name: title
+            label: Título en inglés
+            type: string
+            description: >-
+              Nombre del proyecto en inglés. Si lo dejas vacío, la versión en
+              inglés muestra el título en español. No cambia el nombre del
+              archivo ni la dirección pública.
+          - name: venue
+            label: Sede en inglés
+            type: string
+            description: >-
+              Espacio donde se presentó el proyecto, en inglés. Si lo dejas
+              vacío, la versión en inglés muestra la sede en español.
+          - name: dates
+            label: Fechas en inglés
+            type: string
+            description: >-
+              Fechas de exhibición en inglés, tal como se muestran en la versión
+              en inglés; admite Markdown. Si las dejas vacías, se muestran en
+              español.
+          - name: text
+            label: Texto en inglés
+            type: rich-text
+            options:
+              format: markdown
+              switcher: true
+              media: documents
+              categories: [document]
+            description: >-
+              Texto del proyecto en inglés; admite Markdown. Si lo dejas vacío,
+              la versión en inglés muestra el texto en español. Desde el botón
+              de insertar puedes subir un PDF a la biblioteca de Documentos y
+              enlazarlo, igual que en el texto en español.
       - name: featured
         label: Proyecto en portada
         type: boolean
@@ -164,15 +210,16 @@ content:
         # Each item stores its media type under `type`, next to that type's
         # fields: the template reads the type, not a boolean video flag.
         #
-        # The gallery is one ordered list for every project. The three-column
-        # project keeps only a hidden `variant` key outside this schema; the
-        # template splits its gallery in half (first half rounded up goes to the
-        # first column), so editors reorder a single list.
+        # The gallery is one ordered list shared by both language versions, so
+        # an image is uploaded once and described in each language. The
+        # three-column project keeps only a hidden `variant` key outside this
+        # schema; the template splits its gallery in half (first half rounded up
+        # goes to the first column), so editors reorder a single list.
         blockKey: type
         description: >-
-          Los medios del proyecto, en el orden en que se muestran. Añade una
-          imagen o un video, elige uno existente o sube uno nuevo, y arrastra
-          los elementos para reordenarlos.
+          Los medios del proyecto, en el orden en que se muestran en las dos
+          versiones de idioma. Añade una imagen o un video, elige uno existente
+          o sube uno nuevo, y arrastra los elementos para reordenarlos.
         blocks:
           - name: image
             label: Imagen
@@ -186,12 +233,20 @@ content:
                 description: >-
                   Elige una imagen de la biblioteca o sube una nueva. Solo se
                   aceptan WebP, JPG, JPEG, PNG, AVIF y GIF.
-              - name: alt
-                label: Texto alternativo
+              - name: alt_es
+                label: Texto alternativo en español
                 type: string
                 description: >-
-                  Describe la imagen para quien usa lector de pantalla. Si lo
-                  dejas vacío, se usa el título del proyecto.
+                  Describe la imagen para quien usa lector de pantalla en la
+                  versión en español. Si lo dejas vacío, se usa el título del
+                  proyecto en español.
+              - name: alt_en
+                label: Texto alternativo en inglés
+                type: string
+                description: >-
+                  Describe la imagen para quien usa lector de pantalla en la
+                  versión en inglés. Si lo dejas vacío, se usa el título del
+                  proyecto en inglés y, si tampoco existe, el título en español.
           - name: video
             label: Video
             fields:
@@ -231,68 +286,120 @@ content:
                 description: Reproduce el video sin sonido.
 
   # Single-file entry: the About page lives in one Markdown file. `title` and
-  # `layout` stay out of the editor so merge mode preserves them on save; the
-  # template draws the divider between the two biographies (never store `//`).
+  # `layout` stay out of the editor so merge mode preserves them on save. The
+  # biography and the team list exist twice, once per language version: each
+  # language version is its own page and shows its own text only.
   - name: about
     label: Acerca de
     type: file
     path: src/acerca-de.md
     description: >-
-      Biografía y equipo de la página «Acerca de». El título y el diseño de la
-      página no se editan aquí: se conservan tal como están en el archivo.
+      Biografía y equipo de la página «Acerca de», en español y en inglés. El
+      título y el diseño de la página no se editan aquí: se conservan tal como
+      están en el archivo.
     fields:
-      - name: bio_es
-        label: Biografía en español
-        type: rich-text
-        required: true
-        options:
-          format: markdown
-          switcher: true
-          media: documents
-          categories: [document]
+      - name: es
+        label: Versión en español
+        type: object
         description: >-
-          Biografía del colectivo en español; admite Markdown. Se muestra
-          primero, seguida de la biografía en inglés cuando existe. Desde el
-          botón de insertar puedes subir un PDF a la biblioteca de Documentos y
-          enlazarlo.
-      - name: bio_en
-        label: Biografía en inglés
-        type: rich-text
-        options:
-          format: markdown
-          switcher: true
-          media: documents
-          categories: [document]
+          Título de la página, biografía y equipo que se muestran en la versión
+          en español; son los únicos que hay que escribir.
+        fields:
+          - name: title
+            label: Título de la página en español
+            type: string
+            required: true
+            description: >-
+              Cambia el título de la pestaña y el encabezado de la versión en
+              español de la página. Escribe un título propio, no la traducción
+              del inglés: la versión en inglés tiene el suyo.
+          - name: bio
+            label: Biografía en español
+            type: rich-text
+            required: true
+            options:
+              format: markdown
+              switcher: true
+              media: documents
+              categories: [document]
+            description: >-
+              Biografía del colectivo en español; admite Markdown. Desde el
+              botón de insertar puedes subir un PDF a la biblioteca de
+              Documentos y enlazarlo.
+          - name: team
+            label: Equipo en español
+            type: rich-text
+            required: true
+            options:
+              format: markdown
+              switcher: true
+              media: documents
+              categories: [document]
+            description: >-
+              Nombres, cargos y el encabezado de colaboradoras anteriores en
+              español, en un solo texto; admite Markdown (negritas y cursivas).
+              Escribe cada cargo en este idioma, sin la traducción al lado: la
+              versión en inglés tiene su propia lista.
+      - name: en
+        label: Versión en inglés
+        type: object
         description: >-
-          Biografía del colectivo en inglés; admite Markdown. Aparece después
-          de la biografía en español, separada por «//». No escribas «//»: si
-          dejas este campo vacío, la página se muestra solo en español.
-      - name: team
-        label: Equipo
-        type: rich-text
-        required: true
-        options:
-          format: markdown
-          switcher: true
-          media: documents
-          categories: [document]
-        description: >-
-          Nombres, cargos y el encabezado de colaboradoras anteriores en un solo
-          texto; admite Markdown (negritas y cursivas). Se muestra junto a la
-          biografía.
+          Título de la página, biografía y equipo que se muestran en la versión
+          en inglés. Son opcionales: si los dejas vacíos, la versión en inglés
+          usa los textos en español.
+        fields:
+          - name: title
+            label: Título de la página en inglés
+            type: string
+            description: >-
+              Cambia el título de la pestaña y el encabezado de la versión en
+              inglés de la página. Si lo dejas vacío, la versión en inglés usa
+              el título en español.
+          - name: bio
+            label: Biografía en inglés
+            type: rich-text
+            options:
+              format: markdown
+              switcher: true
+              media: documents
+              categories: [document]
+            description: >-
+              Biografía del colectivo en inglés; admite Markdown. Si la dejas
+              vacía, la versión en inglés muestra la biografía en español.
+          - name: team
+            label: Equipo en inglés
+            type: rich-text
+            options:
+              format: markdown
+              switcher: true
+              media: documents
+              categories: [document]
+            description: >-
+              Nombres, cargos y el encabezado de colaboradoras anteriores en
+              inglés, en un solo texto; admite Markdown. Escribe cada cargo en
+              este idioma, sin la versión en español al lado. Si lo dejas vacío,
+              la versión en inglés muestra la lista en español.
 
   # Site settings: one JSON data file shared by every page. Every key is
   # exposed — including the keys no template reads and the duplicates — so a
   # save from the CMS never drops a setting. Each description says whether the
   # value reaches the rendered site; the ones that do not say "no afecta".
+  # The language-neutral data (site name, contact details, social links) stays
+  # at the top; the description, the footer text and the navigation labels live
+  # in the `es` and `en` objects, which hold the same fields for each language
+  # version. Navigation entries store a route key, not a URL: the templates
+  # build the address from it.
   - name: site
     label: Ajustes del sitio
     type: file
     path: src/_data/site.json
     format: json
     description: >-
-      Textos y datos que se repiten en todas las páginas. Los campos que hoy no
-      cambian nada en el sitio lo dicen en su propia descripción.
+      Textos y datos que se repiten en todas las páginas. Los datos que no
+      dependen del idioma están al principio; debajo, la versión en español y
+      la versión en inglés, cada una con su descripción, su pie de página, sus
+      etiquetas de navegación y el aviso de página no encontrada. Los campos que
+      hoy no cambian nada en el sitio lo dicen en su propia descripción.
     fields:
       - name: title
         label: Nombre del sitio
@@ -301,14 +408,6 @@ content:
         description: >-
           Cambia el título de todas las páginas («… — Lava»), el nombre que se
           ve al compartir un enlace y el texto alternativo del logotipo.
-      - name: description
-        label: Descripción del sitio
-        type: text
-        required: true
-        description: >-
-          Se muestra como descripción para buscadores y redes sociales en la
-          portada. En los proyectos y en «Acerca de» se usa el texto de cada
-          página, no este.
       - name: url
         label: Dirección del sitio (referencia)
         type: string
@@ -342,14 +441,14 @@ content:
         description: >-
           Usuario de Instagram sin la dirección completa. No afecta al sitio:
           ninguna página lo lee. El usuario que se ve en el pie de página se
-          edita en «Pie de página → Usuario de Instagram».
+          edita en «Versión en español → Pie de página → Usuario de Instagram».
       - name: city
         label: Ciudad del colectivo (referencia)
         type: string
         description: >-
           Ciudad del colectivo, guardada como referencia. No afecta al sitio: la
-          ciudad que aparece en el pie de página se edita en «Pie de página →
-          Ciudad».
+          ciudad que aparece en el pie de página se edita en «Versión en español
+          → Pie de página → Ciudad».
       - name: social
         label: Redes sociales
         type: object
@@ -363,61 +462,273 @@ content:
             description: >-
               Dirección completa del perfil de Instagram. No afecta al sitio:
               hoy ningún enlace del sitio la usa.
-      - name: footer
-        label: Pie de página
+      - name: es
+        label: Versión en español
         type: object
-        description: Texto del pie de página que se muestra en todas las páginas.
+        description: >-
+          Textos que se muestran en la versión en español del sitio: la
+          descripción para buscadores, los encabezados de la portada y de los
+          proyectos anteriores, el pie de página, las etiquetas de la
+          navegación y el aviso de página no encontrada.
         fields:
-          - name: copyright
-            label: Copyright
-            type: string
-            description: Texto de copyright del pie de página; se ve tal cual, por ejemplo «©LAVA».
-          - name: city
-            label: Ciudad
+          - name: description
+            label: Descripción del sitio
+            type: text
+            required: true
+            description: >-
+              Se muestra como descripción para buscadores y redes sociales en la
+              portada. En los proyectos y en «Acerca de» se usa el texto de cada
+              página, no este.
+          - name: navLabel
+            label: Nombre de la navegación
             type: string
             description: >-
-              Ciudad que se ve en el pie de página. Es el valor que se muestra
-              (no el de «Ciudad del colectivo» en el nivel superior).
-          - name: instagram
-            label: Usuario de Instagram
+              Nombre con el que se anuncia la navegación del encabezado a los
+              lectores de pantalla, por ejemplo «Principal». No se ve en la
+              página; cambiarlo cambia esa etiqueta oculta en todas las páginas
+              de la versión en español.
+          - name: homeHeading
+            label: Encabezado de la portada
             type: string
             description: >-
-              Usuario de Instagram que se muestra en el pie de página, con o sin
-              @. Es texto, no un enlace.
-      - name: nav
-        label: Navegación del encabezado
+              Título de la portada que solo leen los lectores de pantalla, por
+              ejemplo «Lava — proyectos actuales». No se ve en la página;
+              cambiarlo cambia ese texto en la portada en español.
+          - name: archiveHeading
+            label: Encabezado de «Proyectos anteriores»
+            type: string
+            description: >-
+              Título de la página de proyectos anteriores que solo leen los
+              lectores de pantalla, por ejemplo «Proyectos anteriores». No se ve
+              en la página; cambiarlo cambia ese texto y el título de la
+              pestaña del navegador en la página de proyectos anteriores en
+              español.
+          - name: notFound
+            label: Página no encontrada (404)
+            type: object
+            description: >-
+              Lo que se muestra en la página que aparece cuando una dirección no
+              existe. Es la única página en español y en inglés a la vez: lleva
+              una línea en cada idioma, cada una con su enlace a la portada de
+              ese idioma.
+            fields:
+              - name: title
+                label: Título de la pestaña
+                type: string
+                required: true
+                description: >-
+                  Texto que aparece en la pestaña del navegador, seguido del
+                  nombre del sitio, por ejemplo «Página no encontrada — Lava».
+                  Es el título de la página 404, que siempre se muestra con los
+                  textos en español.
+              - name: message
+                label: Aviso en español
+                type: string
+                required: true
+                description: >-
+                  Frase que se muestra en la página 404 en español, por ejemplo
+                  «La página que buscas no existe.». Se ve tal cual; cambiarla
+                  cambia ese aviso.
+              - name: link
+                label: Texto del enlace de vuelta en español
+                type: string
+                required: true
+                description: >-
+                  Texto del enlace que lleva de la página 404 a la portada en
+                  español, por ejemplo «Volver al inicio». Se ve tal cual.
+          - name: footer
+            label: Pie de página
+            type: object
+            description: Texto del pie de página que se muestra en todas las páginas.
+            fields:
+              - name: copyright
+                label: Copyright
+                type: string
+                description: Texto de copyright del pie de página; se ve tal cual, por ejemplo «©LAVA».
+              - name: city
+                label: Ciudad
+                type: string
+                description: >-
+                  Ciudad que se ve en el pie de página. Es el valor que se
+                  muestra (no el de «Ciudad del colectivo» en el nivel
+                  superior).
+              - name: instagram
+                label: Usuario de Instagram
+                type: string
+                description: >-
+                  Usuario de Instagram que se muestra en el pie de página, con o
+                  sin @. Es texto, no un enlace.
+          - name: nav
+            label: Navegación del encabezado
+            type: object
+            description: Cambia las etiquetas de los dos enlaces del encabezado y la página a la que llevan.
+            fields:
+              - name: about
+                label: Enlace «Acerca de»
+                type: object
+                description: Cambia la etiqueta del enlace «Acerca de» y la página a la que lleva.
+                fields:
+                  - name: label
+                    label: Etiqueta
+                    type: string
+                    description: Texto del enlace que se ve en el encabezado.
+                  - name: route
+                    label: Página enlazada
+                    type: string
+                    description: >-
+                      Clave de la página a la que lleva el enlace («about»); el
+                      sitio la convierte en la dirección que se ve en todas las
+                      páginas. Cámbiala solo si la página cambia de dirección.
+              - name: projects
+                label: Enlace «Proyectos anteriores»
+                type: object
+                description: Cambia la etiqueta del enlace a los proyectos anteriores y la página a la que lleva.
+                fields:
+                  - name: label
+                    label: Etiqueta
+                    type: string
+                    description: Texto del enlace que se ve en el encabezado.
+                  - name: route
+                    label: Página enlazada
+                    type: string
+                    description: >-
+                      Clave de la página a la que lleva el enlace
+                      («projects»); el sitio la convierte en la dirección que se
+                      ve en todas las páginas. Cámbiala solo si la página cambia
+                      de dirección.
+      - name: en
+        label: Versión en inglés
         type: object
-        description: Cambia las etiquetas y las direcciones de los dos enlaces del encabezado.
+        description: >-
+          Textos que se muestran en la versión en inglés del sitio: la
+          descripción para buscadores, los encabezados de la portada y de los
+          proyectos anteriores, el pie de página, las etiquetas de la
+          navegación y el aviso de página no encontrada. Casi todos los campos
+          son opcionales y, si los dejas vacíos, se muestran en español; el
+          aviso de página no encontrada es la excepción, porque esa página se
+          muestra en los dos idiomas a la vez.
         fields:
-          - name: about
-            label: Enlace «Acerca de»
+          - name: description
+            label: Descripción del sitio en inglés
+            type: text
+            description: >-
+              Se muestra como descripción para buscadores y redes sociales en la
+              portada de la versión en inglés. Si la dejas vacía, se muestra la
+              descripción en español.
+          - name: navLabel
+            label: Nombre de la navegación en inglés
+            type: string
+            description: >-
+              Nombre con el que se anuncia la navegación del encabezado a los
+              lectores de pantalla en las páginas en inglés, por ejemplo «Main».
+              No se ve en la página; cambiarlo cambia esa etiqueta oculta en la
+              versión en inglés. Si lo dejas vacío, no se anuncia ningún nombre.
+          - name: homeHeading
+            label: Encabezado de la portada en inglés
+            type: string
+            description: >-
+              Título de la portada en inglés que solo leen los lectores de
+              pantalla, por ejemplo «Lava — current projects». No se ve en la
+              página; cambiarlo cambia ese texto en la portada en inglés.
+          - name: archiveHeading
+            label: Encabezado de «Proyectos anteriores» en inglés
+            type: string
+            description: >-
+              Título de la página de proyectos anteriores en inglés que solo
+              leen los lectores de pantalla, por ejemplo «Previous projects».
+              No se ve en la página; cambiarlo cambia ese texto y el título de
+              la pestaña del navegador en la página de proyectos anteriores en
+              inglés. Si lo dejas vacío, no se muestra ningún título.
+          - name: notFound
+            label: Página no encontrada (404) en inglés
             type: object
-            description: Cambia la etiqueta y la dirección del enlace «Acerca de».
+            description: >-
+              La línea en inglés de la página 404. La página 404 es la única que
+              se muestra en los dos idiomas: esta línea va debajo de la española
+              y enlaza a la portada en inglés.
             fields:
-              - name: label
-                label: Etiqueta
-                type: string
-                description: Texto del enlace que se ve en el encabezado.
-              - name: url
-                label: Dirección
+              - name: title
+                label: Título de la pestaña en inglés
                 type: string
                 description: >-
-                  Dirección a la que lleva el enlace; se usa en todas las
-                  páginas. Cámbiala solo si la página cambia de dirección: una
-                  dirección equivocada deja el enlace roto.
-          - name: projects
-            label: Enlace «Proyectos anteriores»
-            type: object
-            description: Cambia la etiqueta y la dirección del enlace a los proyectos anteriores.
-            fields:
-              - name: label
-                label: Etiqueta
+                  Título en inglés de la página 404, por ejemplo «Page not
+                  found». La página 404 se muestra siempre con los textos en
+                  español, así que hoy no se ve en ninguna página; queda escrito
+                  por si algún día la página se sirve también en inglés.
+              - name: message
+                label: Aviso en inglés
                 type: string
-                description: Texto del enlace que se ve en el encabezado.
-              - name: url
-                label: Dirección
+                required: true
+                description: >-
+                  Frase que se muestra en la página 404 en inglés, por ejemplo
+                  «The page you are looking for does not exist.». Se ve tal cual;
+                  cambiarla cambia ese aviso.
+              - name: link
+                label: Texto del enlace de vuelta en inglés
+                type: string
+                required: true
+                description: >-
+                  Texto del enlace que lleva de la página 404 a la portada en
+                  inglés, por ejemplo «Back to the start». Se ve tal cual.
+          - name: footer
+            label: Pie de página en inglés
+            type: object
+            description: Texto del pie de página que se muestra en las páginas en inglés.
+            fields:
+              - name: copyright
+                label: Copyright
                 type: string
                 description: >-
-                  Dirección a la que lleva el enlace; se usa en todas las
-                  páginas. Cámbiala solo si la página cambia de dirección: una
-                  dirección equivocada deja el enlace roto.
+                  Texto de copyright del pie de página en inglés; se ve tal
+                  cual, por ejemplo «©LAVA».
+              - name: city
+                label: Ciudad
+                type: string
+                description: >-
+                  Ciudad que se ve en el pie de página en inglés, por ejemplo
+                  «Mexico City».
+              - name: instagram
+                label: Usuario de Instagram
+                type: string
+                description: >-
+                  Usuario de Instagram que se muestra en el pie de página en
+                  inglés, con o sin @. Es texto, no un enlace.
+          - name: nav
+            label: Navegación del encabezado en inglés
+            type: object
+            description: Cambia las etiquetas de los dos enlaces del encabezado en las páginas en inglés.
+            fields:
+              - name: about
+                label: Enlace «Acerca de» en inglés
+                type: object
+                description: Cambia la etiqueta que se ve en el encabezado en inglés para la página «Acerca de».
+                fields:
+                  - name: label
+                    label: Etiqueta
+                    type: string
+                    description: Texto del enlace que se ve en el encabezado en inglés.
+                  - name: route
+                    label: Página enlazada
+                    type: string
+                    description: >-
+                      Clave de la página a la que lleva el enlace («about»); el
+                      sitio la convierte en la dirección que se ve en las
+                      páginas en inglés. Cámbiala solo si la página cambia de
+                      dirección.
+              - name: projects
+                label: Enlace «Proyectos anteriores» en inglés
+                type: object
+                description: Cambia la etiqueta que se ve en el encabezado en inglés para los proyectos anteriores.
+                fields:
+                  - name: label
+                    label: Etiqueta
+                    type: string
+                    description: Texto del enlace que se ve en el encabezado en inglés.
+                  - name: route
+                    label: Página enlazada
+                    type: string
+                    description: >-
+                      Clave de la página a la que lleva el enlace
+                      («projects»); el sitio la convierte en la dirección que se
+                      ve en las páginas en inglés. Cámbiala solo si la página
+                      cambia de dirección.

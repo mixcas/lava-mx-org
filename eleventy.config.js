@@ -8,8 +8,10 @@ import MarkdownIt from "markdown-it";
 
 import { buildProjectView } from "./lib/project-view.js";
 import { applyPathPrefix, withPathPrefix } from "./lib/path-prefix.js";
-import { assertProjectsValid } from "./lib/project-contract.js";
+import { assertProjectsValid, untranslatedFields, untranslatedReport } from "./lib/project-contract.js";
+import { DEFAULT_LANGUAGE, languageAlternates, languageRoute, languageRoutes, localizedText, sitemapEntries } from "./lib/languages.js";
 import { ASSET_URL } from "./lib/media-assets.js";
+import { languageRouteUrl } from "./lib/routes.js";
 
 const ROOT = import.meta.dirname;
 
@@ -45,8 +47,17 @@ export default function (eleventyConfig) {
   // Project content contract (lib/project-contract.js): reject invalid project
   // front matter before any page renders, with a message naming the project file
   // and field — a broken project must never reach the output.
+  //
+  // Then the editorial translation tracker (ADR-0002): the list of English
+  // values still absent, printed without failing the build, since an
+  // untranslated project must never block a deploy. `forceLog` is what makes it
+  // survive quiet mode (`setQuietMode(true)`, as the test suite builds).
   eleventyConfig.on("eleventy.before", ({ inputDir, dir }) => {
-    assertProjectsValid({ inputDir: path.resolve(ROOT, inputDir ?? dir.input) });
+    const contentDir = path.resolve(ROOT, inputDir ?? dir.input);
+    assertProjectsValid({ inputDir: contentDir });
+
+    const report = untranslatedReport(untranslatedFields({ inputDir: contentDir }));
+    if (report) eleventyConfig.logger.forceLog(report);
   });
 
   // Static assets copied verbatim. Image masters are NOT copied — they are
@@ -67,20 +78,33 @@ export default function (eleventyConfig) {
   // Absolute site origin (for canonical/OG/sitemap URLs).
   eleventyConfig.addGlobalData("siteUrl", SITE_URL);
 
+  // The language at the root of the site (Spanish today), for the one page
+  // whose chrome cannot follow the route: the root 404, which is not a language
+  // version of anything (ADR-0002). Templates read it instead of naming a code.
+  eleventyConfig.addGlobalData("defaultLanguage", DEFAULT_LANGUAGE);
+
   // Canonical project view model (see lib/project-view.js): every project
-  // surface renders this, so content shapes are interpreted in one place.
-  // `projectView` computed data serves the page being built (the project layout);
-  // the `projectView` / `projectViews` filters serve collection items on the
-  // listing pages.
-  eleventyConfig.addFilter("projectView", (item) => buildProjectView(item?.data ?? item ?? {}));
-  eleventyConfig.addFilter("projectViews", (items = []) => items.map((item) => buildProjectView(item?.data ?? item ?? {})));
+  // surface renders this, so content shapes — and the language version being
+  // rendered — are interpreted in one place.
+  //
+  // `projectView` computed data serves the page being built (the project
+  // layout), in the language the page was routed to (`lang`, the pagination
+  // alias); the `projectView` / `projectViews` filters serve collection items,
+  // which the listing pages render in their own language. Spanish is the
+  // default, for the pages that exist in Spanish only.
+  const languageOf = (data) => (typeof data?.lang === "string" ? data.lang : (data?.lang?.code ?? DEFAULT_LANGUAGE.code));
+  eleventyConfig.addFilter("projectView", (item, language) => buildProjectView(item?.data ?? item ?? {}, language));
+  eleventyConfig.addFilter("projectViews", (items = [], language) =>
+    items.map((item) => buildProjectView(item?.data ?? item ?? {}, language)),
+  );
+
   eleventyConfig.addGlobalData("eleventyComputed", {
-    projectView: (data) => buildProjectView(data),
+    projectView: (data) => buildProjectView(data, languageOf(data)),
     // Hero image (LCP/OG) per page: the first image of the page's own gallery,
     // else the first image of the homepage/archive project collections (per the
     // `hero` front-matter flag).
     heroImage: (data) => {
-      const project = buildProjectView(data);
+      const project = buildProjectView(data, languageOf(data));
       if (project.gallery.length) return project.heroImage;
       const list =
         data.hero === "featured"
@@ -88,7 +112,7 @@ export default function (eleventyConfig) {
           : data.hero === "archive"
             ? data.collections?.archiveProjects
             : null;
-      return list?.length ? buildProjectView(list[0].data).heroImage : null;
+      return list?.length ? buildProjectView(list[0].data, languageOf(data)).heroImage : null;
     },
   });
 
@@ -99,6 +123,26 @@ export default function (eleventyConfig) {
   const mdLib = new MarkdownIt({ html: true, breaks: true });
   eleventyConfig.addFilter("md", (value) => applyPathPrefix(mdLib.render(String(value ?? "")), PATH_PREFIX));
   eleventyConfig.addFilter("mdInline", (value) => applyPathPrefix(mdLib.renderInline(String(value ?? "")), PATH_PREFIX));
+
+  // The site settings store a route key for each header link, not a URL; the
+  // layout builds the address from it inside the page's language tree (see
+  // lib/routes.js): `/proyectos/` in Spanish, `/en/proyectos/` in English.
+  eleventyConfig.addFilter("languageRouteUrl", languageRouteUrl);
+
+  // The language registry and its two readers (see lib/languages.js): every
+  // route Eleventy built, mapped to the language versions that exist. The
+  // chrome's language link, the hreflang metadata and the sitemap all read it,
+  // so a page that gains a language version advertises it in the same build.
+  eleventyConfig.addCollection("languageRoutes", (api) => languageRoutes(api.getAll()));
+  eleventyConfig.addFilter("languageAlternates", languageAlternates);
+  eleventyConfig.addFilter("sitemapEntries", sitemapEntries);
+
+  // The Untranslated field rule (GLOSSARY, ADR-0002), for pages that carry their
+  // text per language rather than through the project view model: reads one
+  // field of a page's language objects and shows the Spanish value when that
+  // language has none, silently — clearing every English field in the CMS is a
+  // legal state (see lib/languages.js).
+  eleventyConfig.addFilter("localizedText", localizedText);
 
   // Responsive <picture> for a master filename in src/assets/images.
   // `priority` marks the LCP image (eager + high fetch priority).
@@ -168,16 +212,25 @@ export default function (eleventyConfig) {
 
   // Project collections: the editor-selected homepage projects and the
   // complementary archive projects, each in its configured `order`.
+  //
+  // One content file yields one page per language version (the project
+  // directory data file paginates over `languages`), so a listing takes the
+  // pages in its own language tree — the default language's, since neither
+  // collection is language-aware and the view model resolves the other
+  // language from the same data. A project therefore appears once, never once
+  // per language it was built in, and a listing links into its own tree.
   const byOrder = (a, b) => (a.data.order ?? 0) - (b.data.order ?? 0);
-  eleventyConfig.addCollection("featuredProjects", (api) =>
+  const defaultLanguageProjectPages = (api) =>
     api
       .getFilteredByGlob("src/proyectos/*.md")
+      .filter((item) => item.url && languageRoute(item.url).language.code === DEFAULT_LANGUAGE.code);
+  eleventyConfig.addCollection("featuredProjects", (api) =>
+    defaultLanguageProjectPages(api)
       .filter((item) => item.data.featured === true)
       .sort(byOrder),
   );
   eleventyConfig.addCollection("archiveProjects", (api) =>
-    api
-      .getFilteredByGlob("src/proyectos/*.md")
+    defaultLanguageProjectPages(api)
       .filter((item) => item.data.featured !== true)
       .sort(byOrder),
   );

@@ -2,19 +2,28 @@
 layout: base.njk
 ---
 {#
-	About page (GLOSSARY: the collective's identity page).
+	About page (GLOSSARY: the collective's identity page), one page per language
+	version (ADR-0002). `src/acerca-de.md` paginates over the site's languages,
+	so this layout renders once per language and draws that version's own
+	biography and team list. `lang` is the pagination alias; the language
+	version is the content object under its code.
 
-	The biography is two rich-text fields, one per language: the Spanish bio is
-	always present, the English bio is optional. The divider between them is
-	drawn here by the shared `divider` macro, never stored in the content.
-	`team` stays one rich-text field so editors keep free-form control over
-	names, roles and the former-collaborators heading.
+	The English object is optional at every level, and the CMS deletes a field
+	an editor clears, so each field is read through the `localizedText` filter:
+	the page's own value when it is written, otherwise the Spanish one,
+	silently (GLOSSARY: Untranslated field). A cleared English About page is
+	therefore complete and Spanish, never empty and never a broken build.
+
+	Each team list stays one rich-text field so editors keep free-form control
+	over names, roles and the former-collaborators heading, in that language
+	only. The heading is hidden, the way the homepage and the archive name their
+	page, since the About design has no visible title.
 #}
-{%- from "partials/divider.njk" import divider -%}
+{%- set versions = { es: es, en: en } -%}
 <article class="about">
+	<h1 class="visually-hidden">{{ versions | localizedText(lang.code, "title") }}</h1>
 	<div class="about-main">
-		<div class="about-bio">{{ bio_es | md | safe }}{% if bio_en and bio_en | trim %}{{ divider() }}
-{{ bio_en | md | safe }}{% endif %}</div>
-		<div class="about-team">{{ team | md | safe }}</div>
+		<div class="about-bio">{{ versions | localizedText(lang.code, "bio") | md | safe }}</div>
+		<div class="about-team">{{ versions | localizedText(lang.code, "team") | md | safe }}</div>
 	</div>
 </article>

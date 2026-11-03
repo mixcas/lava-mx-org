@@ -197,17 +197,44 @@ export const SITE = {
   title: "Lava",
   description:
     "Lava es una plataforma de encuentros transversales entre investigación, gestión y curaduría de prácticas artísticas ubicada en la Ciudad de México.",
+  // The English homepage's own description (the `en` language version of the
+  // site settings).
+  englishDescription:
+    "Lava is a platform for transversal encounters between research, management and curation of artistic practices, based in Mexico City.",
 };
 
 /** About page copy the migration must keep rendering. */
 export const ABOUT = {
+  // The page's own heading and `<title>`, one per language version (ADR-0002:
+  // each language version carries its own text, not a translation of the other).
+  title: {
+    spanish: "Acerca de",
+    english: "About",
+  },
   spanish:
     "Lava es materia incandescente que fluye entre las faldas de un volcán que marca nuevas cartografías en su recorrido.",
   english: "Lava is incandescent matter that flows down the slopes of a volcano, marking new cartographies in its path.",
-  team: [
-    "Adriana Flores Suárez",
-    "Fernanda Ramos Mena",
-    "Fátima Payró Arandia",
-    "Colaboradoras anteriores / Former collaborators:",
-  ],
+  // The team list exists in each language version. The names are the same in
+  // both; the roles and the former-collaborators heading are not, and no role
+  // reads "Spanish / English" in one string.
+  team: {
+    spanish: [
+      "Adriana Flores Suárez",
+      "Fundadora y Curadora",
+      "Colaboradoras anteriores:",
+      "Fernanda Ramos Mena",
+      "Curadora Asociada",
+      "Fátima Payró Arandia",
+      "Asistencia Curatorial",
+    ],
+    english: [
+      "Adriana Flores Suárez",
+      "Founder and Curator",
+      "Former collaborators:",
+      "Fernanda Ramos Mena",
+      "Associate Curator",
+      "Fátima Payró Arandia",
+      "Curatorial Assistant",
+    ],
+  },
 };
