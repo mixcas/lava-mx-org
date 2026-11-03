@@ -4,17 +4,22 @@ layout: base.njk
 {#
 	About page (GLOSSARY: the collective's identity page).
 
-	The biography is two rich-text fields, one per language: the Spanish bio is
-	always present, the English bio is optional. The divider between them is
-	drawn here by the shared `divider` macro, never stored in the content.
-	`team` stays one rich-text field so editors keep free-form control over
-	names, roles and the former-collaborators heading.
+	The page carries its biography and its team list as two language versions:
+	`es` is always present, `en` is optional. The divider between them is drawn
+	here by the shared `divider` macro, never stored in the content — the
+	biographies first, then the team lists, each Spanish version before its
+	English one.
+
+	Each team list stays one rich-text field so editors keep free-form control
+	over names, roles and the former-collaborators heading, in that language
+	only.
 #}
 {%- from "partials/divider.njk" import divider -%}
 <article class="about">
 	<div class="about-main">
-		<div class="about-bio">{{ bio_es | md | safe }}{% if bio_en and bio_en | trim %}{{ divider() }}
-{{ bio_en | md | safe }}{% endif %}</div>
-		<div class="about-team">{{ team | md | safe }}</div>
+		<div class="about-bio">{{ es.bio | md | safe }}{% if en and en.bio and en.bio | trim %}{{ divider() }}
+{{ en.bio | md | safe }}{% endif %}</div>
+		<div class="about-team">{{ es.team | md | safe }}{% if en and en.team and en.team | trim %}{{ divider() }}
+{{ en.team | md | safe }}{% endif %}</div>
 	</div>
 </article>

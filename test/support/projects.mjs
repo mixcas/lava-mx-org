@@ -204,10 +204,27 @@ export const ABOUT = {
   spanish:
     "Lava es materia incandescente que fluye entre las faldas de un volcán que marca nuevas cartografías en su recorrido.",
   english: "Lava is incandescent matter that flows down the slopes of a volcano, marking new cartographies in its path.",
-  team: [
-    "Adriana Flores Suárez",
-    "Fernanda Ramos Mena",
-    "Fátima Payró Arandia",
-    "Colaboradoras anteriores / Former collaborators:",
-  ],
+  // The team list exists in each language version. The names are the same in
+  // both; the roles and the former-collaborators heading are not, and no role
+  // reads "Spanish / English" in one string.
+  team: {
+    spanish: [
+      "Adriana Flores Suárez",
+      "Fundadora y Curadora",
+      "Colaboradoras anteriores:",
+      "Fernanda Ramos Mena",
+      "Curadora Asociada",
+      "Fátima Payró Arandia",
+      "Asistencia Curatorial",
+    ],
+    english: [
+      "Adriana Flores Suárez",
+      "Founder and Curator",
+      "Former collaborators:",
+      "Fernanda Ramos Mena",
+      "Associate Curator",
+      "Fátima Payró Arandia",
+      "Curatorial Assistant",
+    ],
+  },
 };
