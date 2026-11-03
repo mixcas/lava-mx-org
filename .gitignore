@@ -1,5 +1,7 @@
 # Dependencies
-node_modules/
+# No trailing slash: a worktree may link node_modules in as a symlink, which
+# `node_modules/` does not match.
+node_modules
 
 # Build output
 _site/
