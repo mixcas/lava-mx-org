@@ -8,7 +8,7 @@ import MarkdownIt from "markdown-it";
 
 import { buildProjectView } from "./lib/project-view.js";
 import { applyPathPrefix, withPathPrefix } from "./lib/path-prefix.js";
-import { assertProjectsValid } from "./lib/project-contract.js";
+import { assertProjectsValid, untranslatedFields, untranslatedReport } from "./lib/project-contract.js";
 import { ASSET_URL } from "./lib/media-assets.js";
 import { routeUrl } from "./lib/routes.js";
 
@@ -46,8 +46,17 @@ export default function (eleventyConfig) {
   // Project content contract (lib/project-contract.js): reject invalid project
   // front matter before any page renders, with a message naming the project file
   // and field — a broken project must never reach the output.
+  //
+  // Then the editorial translation tracker (ADR-0002): the list of English
+  // values still absent, printed without failing the build, since an
+  // untranslated project must never block a deploy. `forceLog` is what makes it
+  // survive quiet mode (`setQuietMode(true)`, as the test suite builds).
   eleventyConfig.on("eleventy.before", ({ inputDir, dir }) => {
-    assertProjectsValid({ inputDir: path.resolve(ROOT, inputDir ?? dir.input) });
+    const contentDir = path.resolve(ROOT, inputDir ?? dir.input);
+    assertProjectsValid({ inputDir: contentDir });
+
+    const report = untranslatedReport(untranslatedFields({ inputDir: contentDir }));
+    if (report) eleventyConfig.logger.forceLog(report);
   });
 
   // Static assets copied verbatim. Image masters are NOT copied — they are
