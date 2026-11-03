@@ -11,6 +11,8 @@
   },
   "es": {
     "description": "Lava es una plataforma de encuentros transversales entre investigación, gestión y curaduría de prácticas artísticas ubicada en la Ciudad de México.",
+    "navLabel": "Principal",
+    "homeHeading": "Lava — proyectos actuales",
     "footer": {
       "copyright": "©LAVA",
       "city": "Ciudad de México",
@@ -29,6 +31,8 @@
   },
   "en": {
     "description": "Lava is a platform for transversal encounters between research, management and curation of artistic practices, based in Mexico City.",
+    "navLabel": "Main",
+    "homeHeading": "Lava — current projects",
     "footer": {
       "copyright": "©LAVA",
       "city": "Mexico City",

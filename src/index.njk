@@ -16,7 +16,7 @@ pagination:
   addAllPagesToCollections: true
 permalink: "{{ lang.prefix }}/"
 ---
-<h1 class="visually-hidden">{{ lang.homeHeading }}</h1>
+<h1 class="visually-hidden">{{ site[lang.code].homeHeading }}</h1>
 {% set projects = collections.featuredProjects | projectViews %}
 {% set heading = "h2" %}
 {% set linked = false %}

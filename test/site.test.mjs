@@ -774,6 +774,36 @@ describe("Pages CMS site settings (.pages.yml)", () => {
     }
   });
 
+  it("edits the navigation aria-label and the hidden homepage heading, per language", () => {
+    const fields = entry?.fields ?? [];
+
+    for (const language of LANGUAGES) {
+      for (const name of ["navLabel", "homeHeading"]) {
+        const field = settingsField(fields, `${language.code}.${name}`);
+        assert.ok(field, `.pages.yml: settings field "${language.code}.${name}" is editable`);
+        assert.ok(field.label, `.pages.yml: settings field "${language.code}.${name}" has a label`);
+        assert.ok(field.description, `.pages.yml: settings field "${language.code}.${name}" has a description`);
+      }
+    }
+
+    // The chrome strings are the settings' own, not a copy hardwired in a
+    // template: each language version renders its own.
+    const settingsFile = JSON.parse(readRepoFile("src/_data/site.json"));
+    for (const language of LANGUAGES) {
+      const doc = readPage(homeRoute(language));
+      assert.equal(
+        normalize(doc.querySelector(".site-nav")?.getAttribute("aria-label")),
+        settingsFile[language.code].navLabel,
+        `page ${homeRoute(language)}: nav aria-label comes from the settings`,
+      );
+      assert.equal(
+        normalize(doc.querySelector("main h1")?.textContent),
+        settingsFile[language.code].homeHeading,
+        `page ${homeRoute(language)}: hidden heading comes from the settings`,
+      );
+    }
+  });
+
   it("round-trips a settings save and keeps keys the schema does not know", () => {
     const settingsFile = JSON.parse(readRepoFile("src/_data/site.json"));
 
@@ -924,7 +954,8 @@ describe("homepage in both languages", () => {
       const label = `page ${route}`;
       const chrome = settings[language.code];
 
-      assert.equal(normalize(doc.querySelector(".site-nav")?.getAttribute("aria-label")), expected[language.code].navLabel, `${label}: nav aria-label`);
+      assert.equal(chrome.navLabel, expected[language.code].navLabel, `site.json: the ${language.code} nav label`);
+      assert.equal(normalize(doc.querySelector(".site-nav")?.getAttribute("aria-label")), chrome.navLabel, `${label}: nav aria-label`);
       assert.equal(
         normalize(doc.querySelector(`header a[href="${localUrl(`${language.prefix}/acerca-de/`)}"]`)?.textContent),
         chrome.nav.about.label,
@@ -941,7 +972,9 @@ describe("homepage in both languages", () => {
         assert.ok(footer.includes(value), `${label}: footer shows "${value}"`);
       }
 
-      assert.match(normalize(doc.querySelector("main h1")?.textContent), expected[language.code].heading, `${label}: hidden heading`);
+      const heading = normalize(doc.querySelector("main h1")?.textContent);
+      assert.equal(heading, chrome.homeHeading, `${label}: the hidden heading is the page language's own`);
+      assert.match(heading, expected[language.code].heading, `${label}: hidden heading`);
     }
   });
 

@@ -56,7 +56,7 @@
 	</head>
 	<body>
 		<header class="site-header">
-			<nav class="site-nav" aria-label="{{ language.navLabel }}">
+			<nav class="site-nav" aria-label="{{ site[language.code].navLabel }}">
 				<a class="site-nav__item" href="{{ site[language.code].nav.about.route | languageRouteUrl(language) | url }}">{{ site[language.code].nav.about.label }}</a>
 				<a class="site-nav__item" href="mailto:{{ site.contactEmail }}">{{ site.contactName }}</a>
 				<a class="site-nav__item" href="{{ site[language.code].nav.projects.route | languageRouteUrl(language) | url }}"><svg class="site-nav__icon" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="square"><path d="M2 4.5h12M2 8h12M2 11.5h12"/></svg>{{ site[language.code].nav.projects.label }}</a>
