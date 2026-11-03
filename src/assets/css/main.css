@@ -120,8 +120,12 @@ h6 {
 
 .site-nav {
 	display: grid;
-	/* About · contact · archive · language · e-mail */
-	grid-template-columns: repeat(5, 1fr);
+	/* One equal column per item — About · contact · archive · language ·
+	   e-mail — so the navigation grows and shrinks with the page that carries
+	   it: the 404 has no language link, and gets four columns rather than a
+	   trailing empty fifth. */
+	grid-auto-flow: column;
+	grid-auto-columns: 1fr;
 	gap: var(--gutter);
 	padding: var(--pad);
 }
@@ -283,6 +287,7 @@ h6 {
 	}
 
 	.site-nav {
+		grid-auto-flow: row;
 		grid-template-columns: 1fr;
 		gap: 0.4rem;
 	}

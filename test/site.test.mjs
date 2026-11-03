@@ -1021,6 +1021,28 @@ describe("homepage in both languages", () => {
     assert.equal(normalize(doc.querySelector("title")?.textContent), SITE.title, "page /: the site's own page, not a chooser");
   });
 
+  /**
+   * The masthead lays the navigation out one column per item, so the page
+   * without a language link carries one column fewer (the 404). The markup must
+   * therefore be the page's own links and nothing else: a filler element for
+   * the missing column would put an empty, unlabelled item in the navigation.
+   */
+  it("builds the navigation out of the page's own links, with no placeholder column", () => {
+    const items = (route) => readPage(route).querySelectorAll("header nav > *");
+    const home = items("/");
+    const notFound = items("/404.html");
+
+    assert.equal(home.length, 5, "page /: About · contact · archive · language · e-mail");
+    assert.equal(notFound.length, 4, "page /404.html: the same, minus the language link, and no filler");
+
+    for (const route of ["/", "/404.html", ...LANGUAGES.map(aboutRoute), archiveRoute(SPANISH)]) {
+      for (const item of items(route)) {
+        const says = normalize(item.textContent);
+        assert.ok(says.length > 0 || item.getAttribute("href"), `page ${route}: a nav item is empty`);
+      }
+    }
+  });
+
   it("renders the chrome in the page's own language", () => {
     const settings = JSON.parse(readRepoFile("src/_data/site.json"));
     const expected = {
