@@ -4,6 +4,20 @@ title: Página no encontrada
 permalink: /404.html
 eleventyExcludeFromCollections: true
 ---
+{#
+	The 404 page (ADR-0002). It is the one page that cannot know which language
+	version was wanted — the requested URL names none — so it is the only page
+	that speaks both: the page's language is Spanish (the root of the site, hence
+	the Spanish chrome), and its text carries one short line per language, each
+	marked with its own `lang` so a screen reader pronounces it correctly, and
+	each linking to the homepage of that language's tree. Every other page
+	carries one language's text only.
+
+	The lines are the Site settings' own copy, one short line and one back-link
+	label per language (`site[<language code>].notFound`), rendered by iterating
+	`src/_data/languages.json`, so the links follow the declared prefixes and the
+	deployment path prefix instead of naming a language tree here.
+#}
 <article class="project">
 	<header class="project-header">
 		<div class="project-header__title">404</div>
@@ -12,8 +26,9 @@ eleventyExcludeFromCollections: true
 	</header>
 	<div class="project-main">
 		<div class="project-body">
-			<p>La página que buscas no existe.</p>
-			<p><a href="{{ '/' | url }}">Volver al inicio</a></p>
+			{%- for language in languages %}
+			<p lang="{{ language.code }}">{{ site[language.code].notFound.message }} <a href="{{ (language.prefix + '/') | url }}">{{ site[language.code].notFound.link }}</a></p>
+			{%- endfor %}
 		</div>
 	</div>
 </article>

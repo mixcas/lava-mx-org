@@ -287,8 +287,8 @@ content:
 
   # Single-file entry: the About page lives in one Markdown file. `title` and
   # `layout` stay out of the editor so merge mode preserves them on save. The
-  # biography and the team list exist twice, once per language version, and the
-  # template draws the divider between the two versions (never store `//`).
+  # biography and the team list exist twice, once per language version: each
+  # language version is its own page and shows its own text only.
   - name: about
     label: Acerca de
     type: file
@@ -397,9 +397,9 @@ content:
     description: >-
       Textos y datos que se repiten en todas las páginas. Los datos que no
       dependen del idioma están al principio; debajo, la versión en español y
-      la versión en inglés, cada una con su descripción, su pie de página y sus
-      etiquetas de navegación. Los campos que hoy no cambian nada en el sitio lo
-      dicen en su propia descripción.
+      la versión en inglés, cada una con su descripción, su pie de página, sus
+      etiquetas de navegación y el aviso de página no encontrada. Los campos que
+      hoy no cambian nada en el sitio lo dicen en su propia descripción.
     fields:
       - name: title
         label: Nombre del sitio
@@ -468,8 +468,8 @@ content:
         description: >-
           Textos que se muestran en la versión en español del sitio: la
           descripción para buscadores, los encabezados de la portada y de los
-          proyectos anteriores, el pie de página y las etiquetas de la
-          navegación.
+          proyectos anteriores, el pie de página, las etiquetas de la
+          navegación y el aviso de página no encontrada.
         fields:
           - name: description
             label: Descripción del sitio
@@ -503,6 +503,30 @@ content:
               en la página; cambiarlo cambia ese texto y el título de la
               pestaña del navegador en la página de proyectos anteriores en
               español.
+          - name: notFound
+            label: Página no encontrada (404)
+            type: object
+            description: >-
+              Lo que se muestra en la página que aparece cuando una dirección no
+              existe. Es la única página en español y en inglés a la vez: lleva
+              una línea en cada idioma, cada una con su enlace a la portada de
+              ese idioma.
+            fields:
+              - name: message
+                label: Aviso en español
+                type: string
+                required: true
+                description: >-
+                  Frase que se muestra en la página 404 en español, por ejemplo
+                  «La página que buscas no existe.». Se ve tal cual; cambiarla
+                  cambia ese aviso.
+              - name: link
+                label: Texto del enlace de vuelta en español
+                type: string
+                required: true
+                description: >-
+                  Texto del enlace que lleva de la página 404 a la portada en
+                  español, por ejemplo «Volver al inicio». Se ve tal cual.
           - name: footer
             label: Pie de página
             type: object
@@ -569,9 +593,11 @@ content:
         description: >-
           Textos que se muestran en la versión en inglés del sitio: la
           descripción para buscadores, los encabezados de la portada y de los
-          proyectos anteriores, el pie de página y las etiquetas de la
-          navegación. Los campos son opcionales; los que dejes vacíos se
-          muestran en español.
+          proyectos anteriores, el pie de página, las etiquetas de la
+          navegación y el aviso de página no encontrada. Casi todos los campos
+          son opcionales y, si los dejas vacíos, se muestran en español; el
+          aviso de página no encontrada es la excepción, porque esa página se
+          muestra en los dos idiomas a la vez.
         fields:
           - name: description
             label: Descripción del sitio en inglés
@@ -604,6 +630,29 @@ content:
               No se ve en la página; cambiarlo cambia ese texto y el título de
               la pestaña del navegador en la página de proyectos anteriores en
               inglés. Si lo dejas vacío, no se muestra ningún título.
+          - name: notFound
+            label: Página no encontrada (404) en inglés
+            type: object
+            description: >-
+              La línea en inglés de la página 404. La página 404 es la única que
+              se muestra en los dos idiomas: esta línea va debajo de la española
+              y enlaza a la portada en inglés.
+            fields:
+              - name: message
+                label: Aviso en inglés
+                type: string
+                required: true
+                description: >-
+                  Frase que se muestra en la página 404 en inglés, por ejemplo
+                  «The page you are looking for does not exist.». Se ve tal cual;
+                  cambiarla cambia ese aviso.
+              - name: link
+                label: Texto del enlace de vuelta en inglés
+                type: string
+                required: true
+                description: >-
+                  Texto del enlace que lleva de la página 404 a la portada en
+                  inglés, por ejemplo «Back to the start». Se ve tal cual.
           - name: footer
             label: Pie de página en inglés
             type: object

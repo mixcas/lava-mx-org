@@ -116,6 +116,15 @@ function projectArticle(route) {
   return article;
 }
 
+/** Every HTML page a build produced, as routes (`/`, `/404.html`, `/en/acerca-de/`). */
+function builtPages(outputDir = OUTPUT_DIR) {
+  return fs
+    .readdirSync(outputDir, { recursive: true })
+    .filter((entry) => entry.endsWith(".html"))
+    .map((entry) => path.posix.join("/", ...entry.split(path.sep)))
+    .sort();
+}
+
 /** The blocks of a project page's text column, in document order. */
 function projectBodyBlocks(route) {
   const body = projectArticle(route).querySelector(".project-body");
@@ -433,20 +442,6 @@ describe("project content model", () => {
         Boolean(baseline.english),
         `${file}: only the bilingual projects carry an English text, in "en.text"`,
       );
-    }
-  });
-
-  it("keeps no literal // separator in project text", () => {
-    for (const file of projectFiles()) {
-      const data = projectData(file);
-      for (const key of ["es.text", "en.text"]) {
-        const value = key.split(".").reduce((value, step) => value?.[step], data);
-        if (typeof value !== "string") continue;
-        assert.ok(
-          !/^[ \t]*\/\/[ \t]*$/m.test(value),
-          `${file}: "${key}" contains a literal // separator line (the template draws the divider)`,
-        );
-      }
     }
   });
 
@@ -1221,6 +1216,107 @@ describe("language alternates follow the routes that were built", () => {
   });
 });
 
+describe("one text per page", () => {
+  // Every page carries one language's text only (ADR-0002). The root 404 is
+  // the exception and the only one: it cannot know which language version was
+  // wanted, so it says the same short thing in each language, each line marked
+  // with its own language so it is read in the right voice.
+  const NOT_FOUND = "/404.html";
+
+  /** The blocks of a page's text area that declare a language of their own, in document order. */
+  const declaredBlocks = (doc) => doc.querySelectorAll("main [lang]");
+
+  /** The languages a page's text area speaks, as a set of codes. */
+  const spokenLanguages = (doc) => new Set(declaredBlocks(doc).map((block) => block.getAttribute("lang")));
+
+  it("leaves no mark of its own between two texts on any page", () => {
+    for (const route of builtPages()) {
+      const marks = readPage(route)
+        .querySelectorAll("*")
+        .filter((element) => normalize(element.textContent) === "//");
+      assert.deepEqual(
+        marks.map((element) => element.tagName),
+        [],
+        `page ${route}: no element renders a separator between two texts`,
+      );
+    }
+  });
+
+  it("carries one language's text on every page but the 404", () => {
+    const bilingual = builtPages().filter((route) => spokenLanguages(readPage(route)).size > 1);
+    assert.deepEqual(bilingual, [NOT_FOUND], "the 404 page is the only page that speaks both languages");
+  });
+
+  describe("not found page (/404.html)", () => {
+    const settings = () => JSON.parse(readRepoFile("src/_data/site.json"));
+
+    it("stays the Spanish page the chrome is written in", () => {
+      const page = readPage(NOT_FOUND);
+      const spanish = settings()[SPANISH.code];
+      const text = (selector) => normalize(page.querySelector(selector)?.textContent);
+      const label = `page ${NOT_FOUND}`;
+
+      assert.equal(page.querySelector("html")?.getAttribute("lang"), SPANISH.code, `${label}: <html lang>`);
+      assert.equal(page.querySelector(".site-nav")?.getAttribute("aria-label"), spanish.navLabel, `${label}: the navigation label`);
+      assert.equal(text(`header a[href="${localUrl(aboutRoute(SPANISH))}"]`), spanish.nav.about.label, `${label}: the About link`);
+      assert.equal(
+        text(`header a[href="${localUrl(`${SPANISH.prefix}/proyectos/`)}"]`),
+        spanish.nav.projects.label,
+        `${label}: the archive link`,
+      );
+
+      const footer = normalize(page.querySelector(".site-footer")?.textContent);
+      for (const value of [spanish.footer.copyright, spanish.footer.city, spanish.footer.instagram]) {
+        assert.ok(footer.includes(value), `${label}: footer shows "${value}"`);
+      }
+    });
+
+    it("says one short line in each language, each one marked and linking into its own tree", () => {
+      const blocks = declaredBlocks(readPage(NOT_FOUND));
+      const label = `page ${NOT_FOUND}`;
+
+      assert.deepEqual(
+        blocks.map((block) => block.getAttribute("lang")),
+        LANGUAGES.map((language) => language.code),
+        `${label}: one line per declared language, Spanish first`,
+      );
+
+      const sayings = [];
+      for (const block of blocks) {
+        const language = declaredLanguage(block.getAttribute("lang"));
+        const at = `${label}: the ${language.code} line`;
+        const saying = normalize(block.textContent);
+        assert.ok(saying.length > 0, `${at} says something`);
+
+        const links = block.querySelectorAll("a");
+        assert.equal(links.length, 1, `${at} carries one link`);
+        assert.equal(links[0].getAttribute("href"), localUrl(homeRoute(language)), `${at} links to the ${language.code} homepage`);
+
+        // The sentence, with the link's own words taken out, so the two lines
+        // are proven to say it in their own language rather than repeat one.
+        sayings.push(normalize(saying.replace(normalize(links[0].textContent), "")));
+      }
+      assert.equal(new Set(sayings).size, sayings.length, `${label}: each line says it in its own language`);
+    });
+
+    it("takes each line from that language's site settings", () => {
+      const blocks = declaredBlocks(readPage(NOT_FOUND));
+      const written = settings();
+
+      for (const block of blocks) {
+        const code = block.getAttribute("lang");
+        const copy = written[code].notFound;
+        assert.ok(copy, `site.json: the ${code} settings hold the 404 copy`);
+        assert.equal(
+          normalize(block.textContent),
+          normalize(`${copy.message} ${copy.link}`),
+          `page ${NOT_FOUND}: the ${code} line is the settings' own text, not a copy in the template`,
+        );
+      }
+    });
+  });
+});
+
 describe("sitemap (/sitemap.xml)", () => {
   const route = "/sitemap.xml";
   const xml = () => readText(route);
@@ -1566,12 +1662,9 @@ describe("project pages in both languages", () => {
         assert.ok(!text().includes("undefined"), `${label}: page text contains "undefined"`);
       });
 
-      it(`${route} renders one body in the page's language, with no divider`, () => {
+      it(`${route} renders one body in the page's language`, () => {
         const element = body();
         const rendered = normalize(element.textContent);
-
-        assert.equal(element.querySelectorAll(".project-body__divider").length, 0, `${label}: a project page draws no divider`);
-        assert.ok(!/\s\/\/\s/.test(rendered), `${label}: the project text carries no "//" mark`);
 
         if (language.code === SPANISH.code || !version().ownText) {
           // The Spanish page, and the English page of an untranslated project,
@@ -2553,6 +2646,20 @@ describe(`subpath deployment (${SUBPATH_PREFIX})`, () => {
     for (const href of alternates) {
       assert.ok(href.startsWith(`${SITE_URL}${PREFIX}/`), `page /sitemap.xml: alternate ${href} carries the path prefix`);
     }
+  });
+
+  it("serves the 404 lines under the prefix, each linking into its own prefixed tree", () => {
+    const blocks = page("/404.html").querySelectorAll("main [lang]");
+    assert.deepEqual(
+      blocks.map((block) => block.getAttribute("lang")),
+      LANGUAGES.map((language) => language.code),
+      "page /404.html: one line per language under the subpath",
+    );
+    assert.deepEqual(
+      blocks.map((block) => block.querySelector("a")?.getAttribute("href")),
+      LANGUAGES.map((language) => `${PREFIX}${homeRoute(language)}`),
+      "page /404.html: each line links to the prefixed homepage of its language",
+    );
   });
 
   it("keeps canonical URLs and the sitemap on the prefixed routes", () => {
