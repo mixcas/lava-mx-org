@@ -376,26 +376,33 @@ describe("Pages CMS project collection (.pages.yml)", () => {
     }
   });
 
-  it("shows the filename on create and edit, seeded from the title", () => {
+  it("shows the filename on create and edit, seeded from the Spanish title", () => {
     assert.deepEqual(
       collection.filename,
       { template: "{primary}.md", field: true },
       ".pages.yml: filename template and visibility",
     );
+    // `{primary}` is the list view's primary field, so the filename is seeded
+    // from the nested Spanish title — the title that names the public URL.
+    assert.equal(
+      collection.view?.primary,
+      "es.title",
+      ".pages.yml: the filename is seeded from the nested Spanish title",
+    );
   });
 
-  it("lists title, homepage status, order and dates, sorted by order", () => {
-    assert.equal(collection.view?.primary, "title", ".pages.yml: primary field");
-    assert.deepEqual(collection.view?.fields, ["title", "featured", "order", "dates"], ".pages.yml: list columns");
-    assert.deepEqual(collection.view?.sort, ["order", "title"], ".pages.yml: sortable columns");
+  it("lists the Spanish title, homepage status, order and dates, sorted by order", () => {
+    assert.equal(collection.view?.primary, "es.title", ".pages.yml: primary field");
+    assert.deepEqual(collection.view?.fields, ["es.title", "featured", "order", "es.dates"], ".pages.yml: list columns");
+    assert.deepEqual(collection.view?.sort, ["order", "es.title"], ".pages.yml: sortable columns");
     assert.deepEqual(collection.view?.default, { sort: "order", order: "asc" }, ".pages.yml: default order");
   });
 
-  it("exposes title, venue, dates, both texts, homepage status and order with Spanish help text", () => {
+  it("exposes both language versions, homepage status and order with Spanish help text", () => {
     const fields = collection.fields ?? [];
     assert.deepEqual(
       fields.map((field) => field.name),
-      ["title", "venue", "dates", "text_es", "text_en", "featured", "order", "gallery_columns", "media"],
+      ["es", "en", "featured", "order", "gallery_columns", "media"],
       ".pages.yml: project fields",
     );
 
@@ -405,36 +412,55 @@ describe("Pages CMS project collection (.pages.yml)", () => {
     }
 
     const byName = (name) => fields.find((field) => field.name === name);
-    assert.equal(byName("title").required, true, ".pages.yml: title is required");
+    assert.equal(byName("es").type, "object", ".pages.yml: the Spanish version is one labelled group");
+    assert.equal(byName("en").type, "object", ".pages.yml: the English version is one labelled group");
+    assert.equal(
+      byName("es").fields.find((field) => field.name === "title").required,
+      true,
+      ".pages.yml: every project has a Spanish title",
+    );
+    assert.match(byName("es").label, /español/i, ".pages.yml: the Spanish group is labelled in Spanish");
+    assert.match(byName("en").label, /inglés/i, ".pages.yml: the English group is labelled in Spanish");
+    assert.notEqual(byName("en").required, true, ".pages.yml: the English version is never required");
     assert.equal(byName("featured").type, "boolean", ".pages.yml: featured is a boolean");
     assert.equal(byName("featured").default, false, ".pages.yml: projects start off the homepage");
     assert.equal(byName("order").type, "number", ".pages.yml: order is a number");
     assert.equal(byName("order").default, 0, ".pages.yml: order defaults to zero");
   });
 
+  it("never requires an English value", () => {
+    const english = collection.fields.find((field) => field.name === "en");
+    assert.deepEqual(
+      english.fields.map((field) => field.name),
+      ["title", "venue", "dates", "text"],
+      ".pages.yml: the English group mirrors the Spanish fields",
+    );
+    assert.deepEqual(
+      english.fields.filter((field) => field.required === true),
+      [],
+      ".pages.yml: an editor can publish with only the Spanish version written",
+    );
+  });
+
   it("edits the Spanish and English project text as Markdown rich text", () => {
-    const byName = (name) => collection.fields.find((field) => field.name === name);
+    const group = (name) => collection.fields.find((field) => field.name === name);
+    const text = (name) => group(name).fields.find((field) => field.name === "text");
 
-    const spanish = byName("text_es");
-    assert.equal(spanish?.type, "rich-text", ".pages.yml: text_es is rich text");
-    assert.equal(spanish?.required, true, ".pages.yml: every project has Spanish text");
-    assert.deepEqual(
-      spanish?.options,
-      RICH_TEXT_OPTIONS,
-      ".pages.yml: text_es is Markdown with a source switch and the documents library (an editor uploads a PDF here and links it)",
-    );
+    for (const language of ["es", "en"]) {
+      assert.equal(text(language)?.type, "rich-text", `.pages.yml: ${language}.text is rich text`);
+      assert.deepEqual(
+        text(language)?.options,
+        RICH_TEXT_OPTIONS,
+        `.pages.yml: ${language}.text is Markdown with a source switch and the documents library (an editor uploads a PDF here and links it)`,
+      );
+    }
 
-    const english = byName("text_en");
-    assert.equal(english?.type, "rich-text", ".pages.yml: text_en is rich text");
-    assert.notEqual(english?.required, true, ".pages.yml: English text is optional");
-    assert.deepEqual(
-      english?.options,
-      RICH_TEXT_OPTIONS,
-      ".pages.yml: text_en is Markdown with a source switch and the documents library",
-    );
-
-    assert.match(spanish.label, /español/i, ".pages.yml: the Spanish text field is labelled in Spanish");
-    assert.match(english.label, /inglés/i, ".pages.yml: the English text field is labelled in Spanish");
+    assert.equal(text("es").required, true, ".pages.yml: every project has Spanish text");
+    assert.notEqual(text("en").required, true, ".pages.yml: English text is optional");
+    assert.match(group("es").label, /español/i, ".pages.yml: the Spanish group is labelled in Spanish");
+    assert.match(group("en").label, /inglés/i, ".pages.yml: the English group is labelled in Spanish");
+    assert.match(text("es").label, /español/i, ".pages.yml: the Spanish text field is labelled in Spanish");
+    assert.match(text("en").label, /inglés/i, ".pages.yml: the English text field is labelled in Spanish");
   });
 
   it("stores gallery columns as a number of one or two", () => {
@@ -480,27 +506,43 @@ describe("Pages CMS about page (.pages.yml)", () => {
     assert.doesNotThrow(() => readRepoFile(entry.path), ".pages.yml: the About entry path is the About page file");
   });
 
-  it("exposes both biographies and the team as Markdown rich text with Spanish labels", () => {
+  it("exposes both language versions as Markdown rich text with Spanish labels", () => {
     const fields = entry?.fields ?? [];
-    assert.deepEqual(fields.map((field) => field.name), ["bio_es", "bio_en", "team"], ".pages.yml: About fields");
+    assert.deepEqual(fields.map((field) => field.name), ["es", "en"], ".pages.yml: About fields");
 
     for (const field of fields) {
       assert.ok(field.label, `.pages.yml: About field "${field.name}" has no label`);
       assert.ok(field.description, `.pages.yml: About field "${field.name}" has no description`);
-      assert.equal(field.type, "rich-text", `.pages.yml: About field "${field.name}" is rich text`);
+      assert.equal(field.type, "object", `.pages.yml: the About "${field.name}" version is one labelled group`);
       assert.deepEqual(
-        field.options,
-        RICH_TEXT_OPTIONS,
-        `.pages.yml: About field "${field.name}" is Markdown with a source switch and the documents library`,
+        field.fields.map((nested) => nested.name),
+        ["bio", "team"],
+        `.pages.yml: the About "${field.name}" version holds the biography and the team`,
       );
+
+      for (const nested of field.fields) {
+        const label = `.pages.yml: About field "${field.name}.${nested.name}"`;
+        assert.ok(nested.label, `${label} has no label`);
+        assert.ok(nested.description, `${label} has no description`);
+        assert.equal(nested.type, "rich-text", `${label} is rich text`);
+        assert.deepEqual(nested.options, RICH_TEXT_OPTIONS, `${label} is Markdown with a source switch and the documents library`);
+      }
     }
 
-    const byName = (name) => fields.find((field) => field.name === name);
-    assert.equal(byName("bio_es").required, true, ".pages.yml: the About page always has a Spanish biography");
-    assert.notEqual(byName("bio_en").required, true, ".pages.yml: the English biography is optional");
-    assert.match(byName("bio_es").label, /español/i, ".pages.yml: the Spanish biography field is labelled in Spanish");
-    assert.match(byName("bio_en").label, /inglés/i, ".pages.yml: the English biography field is labelled in Spanish");
-    assert.match(byName("team").label, /equipo/i, ".pages.yml: the team field is labelled in Spanish");
+    const group = (name) => fields.find((field) => field.name === name);
+    const inGroup = (name, nested) => group(name).fields.find((field) => field.name === nested);
+    assert.equal(inGroup("es", "bio").required, true, ".pages.yml: the About page always has a Spanish biography");
+    assert.equal(inGroup("es", "team").required, true, ".pages.yml: the About page always has a Spanish team list");
+    assert.deepEqual(
+      group("en").fields.filter((nested) => nested.required === true),
+      [],
+      ".pages.yml: the English biography and team are never required",
+    );
+    assert.match(group("es").label, /español/i, ".pages.yml: the Spanish group is labelled in Spanish");
+    assert.match(group("en").label, /inglés/i, ".pages.yml: the English group is labelled in Spanish");
+    assert.match(inGroup("es", "bio").label, /español/i, ".pages.yml: the Spanish biography field is labelled in Spanish");
+    assert.match(inGroup("en", "bio").label, /inglés/i, ".pages.yml: the English biography field is labelled in Spanish");
+    assert.match(inGroup("es", "team").label, /equipo/i, ".pages.yml: the team field is labelled in Spanish");
   });
 
   it("keeps the page layout out of the editor so a save preserves it", () => {
@@ -511,7 +553,7 @@ describe("Pages CMS about page (.pages.yml)", () => {
       typeof field === "string" ? field : field.name,
     );
 
-    for (const name of ["title", "layout", "bio"]) {
+    for (const name of ["title", "layout", "bio", "bio_es", "bio_en", "team"]) {
       assert.ok(!exposed.includes(name), `.pages.yml: the About "${name}" key is not editable in the CMS`);
     }
     assert.equal(config.settings?.content?.merge, true, ".pages.yml: merge mode keeps the page layout on save");
@@ -550,10 +592,14 @@ describe("Pages CMS media sources (.pages.yml)", () => {
   });
 
   it("is reachable from every rich-text field, so an editor can upload a document there", () => {
-    const richText = (config.content ?? []).flatMap((entry) => (entry.fields ?? []).filter(({ type }) => type === "rich-text"));
-    assert.ok(richText.length > 0, ".pages.yml: expected the rich-text fields of the editor");
+    // The language versions group their fields in `object` fields, so the
+    // editor's rich text lives one level below the entry's own fields.
+    const richText = (fields = []) =>
+      fields.flatMap((field) => [...(field.type === "rich-text" ? [field] : []), ...richText(field.fields)]);
+    const fields = (config.content ?? []).flatMap((entry) => richText(entry.fields));
+    assert.ok(fields.length > 0, ".pages.yml: expected the rich-text fields of the editor");
 
-    for (const field of richText) {
+    for (const field of fields) {
       const media = field.options?.media;
       assert.ok(media !== false && sources[media], `.pages.yml: the "${field.name}" field inserts from the "${media}" media source`);
     }
@@ -593,11 +639,23 @@ describe("Pages CMS gallery editor (.pages.yml)", () => {
     );
   });
 
-  it("lets editors write alt text, a poster and the playback flags", () => {
+  it("lets editors write alt text in each language, a poster and the playback flags", () => {
     const [image, video] = field.blocks;
-    const alt = image.fields.find(({ name }) => name === "alt");
-    assert.equal(alt?.type, "string", ".pages.yml: image alt text field");
-    assert.notEqual(alt?.required, true, ".pages.yml: alt text is optional (it falls back to the title)");
+
+    for (const [name, language] of [
+      ["alt_es", /español/i],
+      ["alt_en", /inglés/i],
+    ]) {
+      const alt = image.fields.find((entry) => entry.name === name);
+      assert.equal(alt?.type, "string", `.pages.yml: image "${name}" text field`);
+      assert.notEqual(alt?.required, true, `.pages.yml: "${name}" is optional (it falls back to the project title)`);
+      assert.match(alt.label, language, `.pages.yml: "${name}" is labelled in Spanish as the ${name.slice(-2)} alt text`);
+    }
+    assert.deepEqual(
+      image.fields.map((entry) => entry.name),
+      ["src", "alt_es", "alt_en"],
+      ".pages.yml: an image carries one alt text per language, not one for both",
+    );
 
     for (const name of ["autoplay", "loop", "mute"]) {
       const flag = video.fields.find((entry) => entry.name === name);
@@ -642,8 +700,20 @@ describe("Pages CMS site settings (.pages.yml)", () => {
   it("labels every field and says whether it changes what visitors see", () => {
     const settingsFile = JSON.parse(readRepoFile("src/_data/site.json"));
     const fields = entry?.fields ?? [];
-    const read = templateSettingsPaths();
-    const readsPath = (fieldPath) => read.some((path) => path === fieldPath || path.startsWith(`${fieldPath}.`));
+    // The `es` and `en` objects hold the same slots for the two language
+    // versions of a page (description, footer, navigation), so the language
+    // object itself is not what decides whether a setting reaches the output: a
+    // template reading `site.es.footer.city` speaks for `en.footer.city` too.
+    const slot = (path) => path.replace(/^(es|en)(\.|$)/, "");
+    const read = templateSettingsPaths().map(slot).filter(Boolean);
+    // A path is read when a template reads it, or something below it. The `es`
+    // and `en` objects are read whenever anything inside either one is.
+    const readsPath = (fieldPath) => {
+      const own = slot(fieldPath);
+      return own === ""
+        ? read.length > 0
+        : read.some((path) => path === own || path.startsWith(`${own}.`));
+    };
 
     for (const fieldPath of settingsPathsOfData(settingsFile)) {
       const field = settingsField(fields, fieldPath);
@@ -1127,18 +1197,33 @@ describe("about page (/acerca-de/)", () => {
 describe("site settings in the generated pages", () => {
   const settings = JSON.parse(readRepoFile("src/_data/site.json"));
 
-  it("renders the header and footer copy from the settings file", () => {
+  it("keeps the header and footer copy on the pages as the settings write it", () => {
     const homepage = readPage("/");
     const text = (selector) => normalize(homepage.querySelector(selector)?.textContent);
+    // Every page renders the Spanish language version of the chrome.
+    const chrome = settings.es;
 
-    assert.equal(text(`header a[href="${localUrl(ABOUT_ROUTE)}"]`), settings.nav.about.label, "header: About label and target");
-    assert.equal(text(`header a[href="${localUrl("/proyectos/")}"]`), settings.nav.projects.label, "header: archive label and target");
+    assert.equal(text(`header a[href="${localUrl(ABOUT_ROUTE)}"]`), chrome.nav.about.label, "header: About label and target");
+    assert.equal(text(`header a[href="${localUrl("/proyectos/")}"]`), chrome.nav.projects.label, "header: archive label and target");
     assert.equal(text(`header a[href="mailto:${settings.contactEmail}"]`), settings.contactName, "header: contact link");
     assert.equal(text("header .site-nav__email"), settings.email, "header: the e-mail shown as text");
 
     const footer = normalize(homepage.querySelector(".site-footer")?.textContent);
-    for (const value of [settings.footer.copyright, settings.footer.city, settings.footer.instagram]) {
+    for (const value of [chrome.footer.copyright, chrome.footer.city, chrome.footer.instagram]) {
       assert.ok(footer.includes(value), `footer: shows "${value}"`);
+    }
+  });
+
+  it("stores a route key for each header link, not a literal URL", () => {
+    for (const language of ["es", "en"]) {
+      const nav = settings[language]?.nav ?? {};
+      assert.deepEqual(Object.keys(nav).sort(), ["about", "projects"], `settings.${language}.nav: linked pages`);
+
+      for (const [name, link] of Object.entries(nav)) {
+        assert.equal(link.route, name, `settings.${language}.nav.${name}: the route key names the page the layout builds the URL from`);
+        assert.ok(!Object.hasOwn(link, "url"), `settings.${language}.nav.${name}: stores no literal URL`);
+        assert.ok(typeof link.label === "string" && link.label.trim(), `settings.${language}.nav.${name}: has a label`);
+      }
     }
   });
 
@@ -1153,8 +1238,8 @@ describe("site settings in the generated pages", () => {
     );
     assert.equal(
       normalize(homepage.querySelector('meta[name="description"]')?.getAttribute("content")),
-      settings.description,
-      "page /: meta description is the site description",
+      settings.es.description,
+      "page /: meta description is the Spanish site description",
     );
   });
 

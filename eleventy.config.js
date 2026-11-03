@@ -10,6 +10,7 @@ import { buildProjectView } from "./lib/project-view.js";
 import { applyPathPrefix, withPathPrefix } from "./lib/path-prefix.js";
 import { assertProjectsValid } from "./lib/project-contract.js";
 import { ASSET_URL } from "./lib/media-assets.js";
+import { routeUrl } from "./lib/routes.js";
 
 const ROOT = import.meta.dirname;
 
@@ -99,6 +100,10 @@ export default function (eleventyConfig) {
   const mdLib = new MarkdownIt({ html: true, breaks: true });
   eleventyConfig.addFilter("md", (value) => applyPathPrefix(mdLib.render(String(value ?? "")), PATH_PREFIX));
   eleventyConfig.addFilter("mdInline", (value) => applyPathPrefix(mdLib.renderInline(String(value ?? "")), PATH_PREFIX));
+
+  // The site settings store a route key for each header link, not a URL; the
+  // layout builds the address from it (see lib/routes.js).
+  eleventyConfig.addFilter("routeUrl", routeUrl);
 
   // Responsive <picture> for a master filename in src/assets/images.
   // `priority` marks the LCP image (eager + high fetch priority).
