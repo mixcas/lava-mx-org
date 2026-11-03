@@ -8,9 +8,20 @@ Static bilingual site for Lava, a curatorial collective in Mexico City.
 The Spanish or English rendering of a page. Every page has both; Spanish is the default.
 _Avoid_: Translation, locale, copy
 
+**Language link**:
+The single link in the header to the same route in the other language. It names
+that language in that language — «English», «Español» — and only appears when the
+counterpart page was built. It is a plain anchor: no script, no cookie, no
+automatic detection.
+_Avoid_: Language switcher, locale selector, language menu
+
 **Untranslated field**:
 A field with no English value written, so the English language version shows the Spanish value instead, without a notice.
 _Avoid_: Missing translation, empty field
+
+**Translation tracker**:
+The list the build prints of the projects and English fields still untranslated. It reports and never fails the build; it is the only translation-status view, since Pages CMS cannot show one.
+_Avoid_: Translation status, progress report, missing-string list
 
 **Neutral value**:
 An English value written to be identical to its Spanish value because the text is not Spanish-specific — a project name, a venue.

@@ -30,30 +30,101 @@ un cambio desde el historial de Git.
 El menú lateral tiene tres secciones: **Proyectos**, **Acerca de** y
 **Ajustes del sitio**.
 
+## Dos versiones del sitio: español e inglés
+
+El sitio se publica en dos versiones. El español está en las direcciones de
+siempre (`/`, `/proyectos/`, cada proyecto y `/acerca-de/`); el inglés está en
+las mismas direcciones con `/en/` adelante (`/en/`, `/en/proyectos/`, el mismo
+proyecto y `/en/acerca-de/`). No hay que elegir idioma ni cambiar de dirección:
+cada página lleva arriba un enlace al idioma contrario — «English» en las
+páginas en español y «Español» en las de inglés — que lleva a *esa misma*
+página en el otro idioma.
+
+Cada proyecto y la página «Acerca de» tienen dos bloques, uno por idioma:
+
+- **Versión en español:** es la única obligatoria: el título y el texto son
+  necesarios para publicar; la sede y las fechas, no.
+- **Versión en inglés:** todo es opcional. **No hace falta traducir para
+  publicar**: un campo en inglés que dejes vacío se muestra en español en la
+  versión en inglés, sin aviso en la página. Puedes traducir un proyecto a la
+  vez, cuando tengas el texto.
+
+Cómo se leen los dos casos:
+
+- **Campo en inglés vacío:** la versión en inglés muestra ese dato en español.
+  La página nunca se ve incompleta ni rota.
+- **Mismo valor en los dos idiomas** (el nombre de un proyecto, una sede):
+  cópialo también al campo en inglés. Copiarlo **no repite nada** en la
+  página: es la forma de decir «lo revisé, se escribe igual en los dos idiomas»
+  y deja de aparecer en la lista de pendientes (ver
+  [La lista de pendientes de traducción](#la-lista-de-pendientes-de-traducción)).
+  Un campo en inglés vacío y un campo copiado idéntico no se ven distintos en
+  el sitio; sí en esa lista.
+
+## La lista de pendientes de traducción
+
+Cada vez que el sitio se reconstruye, revisa en el registro de la publicación
+—la pestaña **Actions** de GitHub, o la salida de `npm run build` en una
+computadora— una lista como esta:
+
+```text
+Untranslated English values (3 projects):
+  - src/proyectos/corteza-liquida.md: en.venue, en.dates
+  - src/proyectos/penumbra.md: en.title, en.dates, en.text
+  - src/proyectos/piel-de-proxy.md: en.title, en.venue, en.dates, en.text
+```
+
+- Es la **única lista de qué falta traducir**. Pidesela al mantenedor o
+  mírala con quien tenga acceso al registro.
+- Cada línea nombra el archivo de un proyecto (el nombre del archivo es el de
+  su dirección pública) y los campos del **bloque en inglés** que están vacíos
+  y que en español sí tienen texto: `en.title` es «Título en inglés`,
+  `en.venue` «Sede en inglés», `en.dates` «Fechas en inglés» y `en.text` «Texto
+  en inglés».
+- Cuando escribes ese campo —traducido o copiado porque es igual en los dos
+  idiomas— desaparece de la lista.
+- **La lista nunca impide publicar.** Un proyecto con todo el inglés vacío se
+  publica igual; la lista es la tarea pendiente, no un error.
+
 ## Encontrar un proyecto
 
-Abre **Proyectos**. La lista muestra, para cada proyecto, el título, si está en
-portada, su orden y sus fechas, ordenados por orden. Haz clic en un proyecto
-para abrir su formulario.
+Abre **Proyectos**. La lista muestra, para cada proyecto, su título en español,
+si está en portada, su orden y sus fechas en español, ordenados por orden. Haz
+clic en un proyecto para abrir su formulario.
 
 ## Editar los datos de un proyecto
 
+El formulario empieza con los dos bloques de idioma, **Versión en español** y
+**Versión en inglés**. Los datos son los mismos en los dos:
+
 | Campo | Qué hace |
 |---|---|
-| **Título** | Nombre público del proyecto. Aparece en la portada, en «Proyectos anteriores» y en su página. |
-| **Sede** | Espacio donde se presentó (galería, museo, ciudad). Admite negritas y cursivas con Markdown. |
+| **Título** | Nombre público del proyecto. Aparece en la portada, en «Proyectos anteriores» y en su página. En español es obligatorio y, además, es el que genera el nombre del archivo y la dirección pública. |
+| **Sede** | Espacio donde se presentó (galería, museo, ciudad). |
 | **Fechas** | Fechas de exhibición tal como se muestran en la página; admite Markdown. |
-| **Proyecto en portada** | Actívalo para que el proyecto aparezca en la portada. Desactivado, aparece en «Proyectos anteriores». Es una decisión editorial: **no** depende de las fechas. |
+| **Texto** | El texto del proyecto; admite Markdown (ver [Escribir el texto en español y en inglés](#escribir-el-texto-en-español-y-en-inglés)). |
+
+En el bloque en inglés todos los campos son opcionales; si lo dejas vacío, la
+versión en inglés usa el valor en español.
+
+Después vienen los datos compartidos, que son **uno solo para las dos
+versiones**:
+
+| Campo | Qué hace |
+|---|---|
+| **Proyecto en portada** | Actívalo para que el proyecto aparezca en la portada. Desactivado, aparece en «Proyectos anteriores» (en las dos versiones). Es una decisión editorial: **no** depende de las fechas. |
 | **Orden** | Posición dentro de su grupo (portada o proyectos anteriores). El número menor aparece primero. |
 | **Columnas de la galería** | `1` para una columna de imágenes, `2` para pares de obras. Solo se admiten 1 y 2. |
 
 La portada y la página «Proyectos anteriores» se llenan con esa casilla y ese
-número: no hay que tocar nada más para mover un proyecto de un grupo a otro.
+número: no hay que tocar nada más para mover un proyecto de un grupo a otro, y
+un proyecto aparece en el mismo lugar en español y en inglés.
 
 ## Editar la galería
 
-La **Galería** es una lista ordenada de imágenes y videos. El orden de la lista
-es el orden en que se muestran.
+La **Galería** es una lista ordenada de imágenes y videos, compartida por las
+dos versiones del idioma: el orden de la lista es el orden en que se muestran,
+en español y en inglés. No hay que subir ni ordenar las imágenes dos veces.
 
 - **Añadir un elemento:** usa el botón para añadir un elemento a la lista y
   elige **Imagen** o **Video**.
@@ -61,8 +132,10 @@ es el orden en que se muestran.
   un archivo de la biblioteca. Reutilizar una imagen ya subida no la duplica.
 - **Subir uno nuevo:** desde el mismo selector puedes subir un archivo. Se
   guarda con el nombre original en el repositorio.
-- **Texto alternativo (imágenes):** describe la imagen para quien usa lector de
-  pantalla. Si lo dejas vacío, se usa el título del proyecto.
+- **Texto alternativo en español / en inglés (imágenes):** describe la imagen
+  para quien usa lector de pantalla, en cada idioma. Si dejas vacío el de un
+  idioma, se usa el título del proyecto en ese idioma y, si tampoco existe, el
+  título en español.
 - **Imagen de portada (videos):** la imagen fija que se ve antes de reproducir
   y que se usa al compartir el proyecto.
 - **Reproducción automática, Repetir y Silenciar (videos):** eligen cómo se
@@ -93,21 +166,28 @@ diseño en un proyecto nuevo, pídelo al mantenedor.
 
 ## Escribir el texto en español y en inglés
 
-Cada proyecto tiene dos textos, uno por idioma:
+Cada proyecto tiene dos textos, uno en cada bloque de idioma:
 
-- **Texto en español** (obligatorio): se muestra primero.
-- **Texto en inglés** (opcional): se muestra después del texto en español,
-  separado automáticamente por una línea con `//`. **No escribas `//`**: el
-  separador lo pone el sitio. Si dejas el campo vacío, el proyecto se muestra
-  solo en español.
+- **Texto en español** (obligatorio): es el que se ve en la página en español.
+  No se muestra en la página en inglés.
+- **Texto en inglés** (opcional): es el que se ve en la página en inglés. Si lo
+  dejas vacío, la página en inglés muestra el texto en español —sin aviso y
+  marcado como español para quien usa lector de pantalla—, así que el proyecto
+  nunca se ve vacío.
+
+Los dos bloques se ven **en páginas distintas**, no uno debajo del otro: no hay
+separadores que escribir, y ninguna página muestra las dos versiones juntas. La
+única excepción es la página «no encontrada» (404), que lleva una línea en cada
+idioma (su texto se edita en los ajustes del sitio).
 
 Los textos aceptan Markdown: párrafos, **negritas**, *cursivas*, enlaces y
 listas. Cada campo tiene un interruptor **Editor / Source**: usa *Source* si el
 editor visual se atora y necesitas corregir el formato a mano.
 
-- **Enlaces y descargas van al final del texto en español**, porque el texto en
-  inglés es opcional y no queremos que los enlaces desaparezcan cuando no hay
-  traducción.
+- **Enlaces y descargas:** cada bloque tiene su propio botón de insertar y la
+  misma biblioteca de **Documentos**, así que puedes enlazar un PDF desde el
+  texto en español y, si quieres, también desde el texto en inglés. Un enlace
+  escrito solo en el texto en español no aparece en la página en inglés.
 - **Subir y enlazar un PDF:** usa el botón de insertar del editor y elige la
   biblioteca de **Documentos**: puedes subir el PDF ahí mismo y enlazarlo en el
   texto. Si lo prefieres, escribe el enlace a mano: la dirección del archivo es
@@ -120,51 +200,77 @@ editor visual se atora y necesitas corregir el formato a mano.
 
 ## Editar «Acerca de»
 
-Abre **Acerca de**. La página tiene tres campos, todos con Markdown:
+Abre **Acerca de**. La página tiene los dos bloques de idioma, con los mismos
+tres campos, todos con Markdown:
 
-- **Biografía en español** (obligatoria): se muestra primero.
-- **Biografía en inglés** (opcional): se muestra después, separada
-  automáticamente por `//`. No escribas `//`.
-- **Equipo**: nombres, cargos y el encabezado de colaboradoras anteriores en un
-  solo texto.
+En **Versión en español** (la única obligatoria):
 
-El título y el diseño de la página no están en el CMS: se conservan tal como
-están en el archivo al guardar.
+- **Título de la página en español:** se ve como título de la pestaña y como
+  encabezado de la versión en español.
+- **Biografía en español:** el texto sobre el colectivo.
+- **Equipo en español:** nombres, cargos y el encabezado de colaboradoras
+  anteriores en un solo texto.
+
+En **Versión en inglés** los tres son opcionales: los que dejes vacíos se
+muestran en español en la versión en inglés. Escribe cada cargo en su idioma,
+sin la traducción al lado: `/en/acerca-de/` tiene su propia lista.
+
+El diseño de la página no está en el CMS: se conserva tal como está en el
+archivo al guardar.
 
 ## Editar los ajustes del sitio
 
 Abre **Ajustes del sitio**. Son textos y datos que se repiten en todas las
-páginas: nombre y descripción del sitio, correos del encabezado, pie de página
-(copyright, ciudad, Instagram) y las etiquetas y direcciones de los dos enlaces
-del encabezado.
+páginas. Primero están los datos que no dependen del idioma: nombre del sitio,
+correos del encabezado, ciudad y redes de referencia. Debajo vienen **Versión en
+español** y **Versión en inglés**, cada una con lo mismo:
 
+- la **descripción** del sitio para buscadores y redes sociales;
+- el **nombre de la navegación** y los **encabezados** de la portada y de
+  «Proyectos anteriores» (textos que solo leen los lectores de pantalla);
+- el **pie de página** (copyright, ciudad, Instagram);
+- las **etiquetas y la página enlazada** de los dos enlaces del encabezado;
+- el aviso de **página no encontrada** (404): es la única página que se muestra
+  en los dos idiomas a la vez, así que lleva una línea en español y otra en
+  inglés, cada una con su enlace a la portada de ese idioma. Por eso **sus dos
+  versiones son obligatorias**.
+
+Ten en cuenta:
+
+- Aquí **no hay respaldo automático al español**: si dejas vacía la versión en
+  inglés de un ajuste, en las páginas en inglés se ve vacío, no en español.
+  Escribe los dos idiomas (o copia el valor cuando sea igual en los dos).
 - Algunos campos **no cambian nada en el sitio**; su propia descripción lo dice
   («No afecta al sitio»). Son valores guardados como referencia: puedes
   dejarlos como están.
-- Las **direcciones** de los enlaces del encabezado solo deben cambiar si la
-  página cambia de dirección. Una dirección equivocada deja el enlace roto.
+- La **página enlazada** de cada enlace del encabezado es una clave
+  (`about`, `projects`), no una dirección: el sitio construye la dirección de
+  cada idioma a partir de ella. Cámbiala solo si el mantenedor te lo pide.
 
 ## Crear, renombrar y borrar un proyecto
 
 - **Crear:** en **Proyectos**, usa el botón de crear. El nombre del archivo se
-  propone a partir del título y puedes cambiarlo antes de guardar.
+  propone a partir del **título en español** y puedes cambiarlo antes de
+  guardar. Escribe el título en español primero: de él sale la dirección.
 - **Renombrar o borrar:** desde la lista o desde el formulario del proyecto.
   Puedes hacerlo sin el mantenedor; el historial de Git es la forma de
   recuperar lo que se pierda.
 
 ### Aviso: el nombre del archivo define la dirección pública
 
-La dirección de un proyecto es su nombre de archivo:
+El nombre del archivo viene del título en español y define las **dos**
+direcciones del proyecto, la española y la inglesa con `/en/` adelante:
 
 ```
 src/proyectos/penumbra.md  →  /proyectos/penumbra/
+                              /en/proyectos/penumbra/
 ```
 
 El campo **Filename** está al inicio del formulario. En un proyecto existente
-aparece bloqueado; si lo desbloqueas y lo cambias, **cambia la dirección
-pública y se rompen los enlaces y marcadores que apuntan al proyecto**. No hay
-redirecciones automáticas. Cambia el nombre solo si es necesario y avisa al
-mantenedor.
+aparece bloqueado; si lo desbloqueas y lo cambias, **cambian las dos direcciones
+públicas y se rompen los enlaces y marcadores que apuntan al proyecto**. No hay
+redirecciones automáticas. El título en inglés no cambia ninguna dirección.
+Cambia el nombre solo si es necesario y avisa al mantenedor.
 
 ## Publicar y revisar
 
@@ -176,9 +282,10 @@ mantenedor.
    automática (**GitHub Actions**). Tarda **aproximadamente 4 minutos**.
 3. Cuando termine, abre el sitio publicado en la dirección de producción (por
    ejemplo <https://lava-mx.org>) y revisa la página: el proyecto, su galería,
-   el texto y la portada o «Proyectos anteriores» si moviste la casilla.
-   Recarga la página (o ábrela en una ventana nueva) para no ver la versión
-   guardada en el navegador.
+   el texto y la portada o «Proyectos anteriores» si moviste la casilla. Revisa
+   también la versión en inglés: el enlace «English» del encabezado lleva a la
+   misma página en `/en/`. Recarga la página (o ábrela en una ventana nueva) para
+   no ver la versión guardada en el navegador.
 4. Si guardaste en otra rama, **nada se publica** hasta que el mantenedor la
    una a `main`.
 
@@ -188,14 +295,26 @@ mantenedor.
   revisa que guardaste en la rama correcta.
 - **El sitio no muestra tu último cambio:** la publicación pudo fallar; avisa
   al mantenedor con el nombre del proyecto y la hora del guardado.
+- **La publicación falló después de tu cambio:** el sitio no se publica cuando
+  un proyecto quedó sin título o sin texto en español, cuando un campo en
+  inglés se guardó solo con espacios o cuando un enlace apunta a un archivo que
+  ya no existe. El registro nombra el archivo y el campo: corrige ese campo,
+  vuelve a guardar y, si no sabes cuál es, avisa al mantenedor con el mensaje.
 - **Moviste o borraste algo por error:** no lo vuelvas a escribir a mano. Avisa
   al mantenedor: puede recuperar la versión anterior desde el historial de Git.
 
 ## Lo que el CMS no hace
 
 - **No hay vista previa** de la página: revisa el sitio publicado.
+- **No muestra qué está traducido:** la lista de pendientes la imprime la
+  publicación (ver arriba); el CMS no tiene una columna de estado.
+- **No valida el inglés de un proyecto:** el CMS te deja guardar un campo en
+  inglés solo con espacios, y el sitio rechaza esa publicación del proyecto. En
+  «Acerca de» un campo en inglés vacío se guarda sin problema y la versión en
+  inglés muestra el español. Deja vacío el campo si no hay traducción.
 - **No hay aviso automático de cambio de dirección** al renombrar: el aviso es
-  el texto de ayuda del campo **Filename** y del **Título** (ver arriba).
+  el texto de ayuda del campo **Filename** y del **Título en español** (ver
+  arriba).
 - **No corrige formatos de imagen:** convierte el archivo antes de subirlo.
 - **No renombra tus archivos:** las subidas conservan el nombre original, que
   es el que el sitio espera encontrar.
