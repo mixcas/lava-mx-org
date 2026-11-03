@@ -80,6 +80,9 @@ const homeRoute = (language) => `${language.prefix}/`;
 /** The About route in one language tree: its prefix plus the Spanish route. */
 const aboutRoute = (language) => `${language.prefix}${ABOUT_ROUTE}`;
 
+/** The project archive route in one language tree: its prefix plus the Spanish route. */
+const archiveRoute = (language) => `${language.prefix}/proyectos/`;
+
 /** Whether an absolute (or root-relative) site URL resolves to a built page. */
 function isGeneratedUrl(url) {
   const absolute = url?.startsWith("/") ? `${SITE_URL}${url}` : String(url ?? "");
@@ -256,9 +259,9 @@ describe("project URLs", () => {
     }
 
     assert.deepEqual(
-      fs.readdirSync(path.join(OUTPUT_DIR, "en", "proyectos")).sort(),
+      fs.readdirSync(path.join(OUTPUT_DIR, "en", "proyectos")).filter((entry) => entry !== "index.html").sort(),
       PROJECTS.map(({ route }) => route.split("/")[2]).sort(),
-      "page /en/proyectos/: the English tree mirrors the twelve project slugs",
+      "page /en/proyectos/: the English tree mirrors the twelve project slugs (index.html is the English archive itself)",
     );
   });
 });
@@ -855,11 +858,11 @@ describe("Pages CMS site settings (.pages.yml)", () => {
     }
   });
 
-  it("edits the navigation aria-label and the hidden homepage heading, per language", () => {
+  it("edits the navigation aria-label and the hidden page headings, per language", () => {
     const fields = entry?.fields ?? [];
 
     for (const language of LANGUAGES) {
-      for (const name of ["navLabel", "homeHeading"]) {
+      for (const name of ["navLabel", "homeHeading", "archiveHeading"]) {
         const field = settingsField(fields, `${language.code}.${name}`);
         assert.ok(field, `.pages.yml: settings field "${language.code}.${name}" is editable`);
         assert.ok(field.label, `.pages.yml: settings field "${language.code}.${name}" has a label`);
@@ -1146,11 +1149,12 @@ describe("homepage in both languages", () => {
 
 describe("language alternates follow the routes that were built", () => {
   /** The pages this phase still builds in Spanish only. */
-  const SPANISH_ONLY = ["/proyectos/", "/404.html"];
-  /** The pages built in both languages: each home, each About page, and both versions of each project. */
+  const SPANISH_ONLY = ["/404.html"];
+  /** The pages built in both languages: each home, each About page, each archive and both versions of each project. */
   const PAIRED = [
     ...LANGUAGES.map(homeRoute),
     ...LANGUAGES.map(aboutRoute),
+    ...LANGUAGES.map(archiveRoute),
     ...LANGUAGES.flatMap((language) => PROJECTS.map((project) => projectRouteIn(project.route, language))),
   ];
 
@@ -1226,7 +1230,7 @@ describe("sitemap (/sitemap.xml)", () => {
     const routes = [
       ...LANGUAGES.map(homeRoute),
       ...LANGUAGES.map(aboutRoute),
-      "/proyectos/",
+      ...LANGUAGES.map(archiveRoute),
       ...LANGUAGES.flatMap((language) => PROJECTS.map((project) => projectRouteIn(project.route, language))),
     ];
 
@@ -1249,12 +1253,14 @@ describe("sitemap (/sitemap.xml)", () => {
     }));
     assert.ok(entries.length > 0, `page ${route}: no <url> entries`);
 
-    // Every route built in both languages — the homepages, the About pages and
-    // all twelve projects — carries the same three alternates, keyed by that
-    // route's own pair of URLs; a single-language page carries none (ADR-0002).
+    // Every route built in both languages — the homepages, the About pages, the
+    // archives and all twelve projects — carries the same three alternates,
+    // keyed by that route's own pair of URLs; a single-language page carries
+    // none (ADR-0002).
     const pairedRoutes = [
       homeRoute,
       aboutRoute,
+      archiveRoute,
       ...PROJECTS.map((project) => (language) => projectRouteIn(project.route, language)),
     ];
 
@@ -1346,48 +1352,182 @@ describe("homepage (/)", () => {
   });
 });
 
-describe("archive page (/proyectos/)", () => {
-  const route = "/proyectos/";
+describe("archive page in both languages", () => {
+  const settings = JSON.parse(readRepoFile("src/_data/site.json"));
+  /** Venue and dates may carry Markdown (bold, a line break): compare as text. */
+  const plain = (value) => normalize(String(value ?? "").replace(/\*/g, ""));
 
-  it("stays the Spanish page it is, rendering the projects' Spanish text", () => {
-    // Ticket #23 gives the archive its English version; until then it is one
-    // Spanish page and its listing reads in Spanish.
-    assert.equal(readPage(route).querySelector("html")?.getAttribute("lang"), SPANISH.code, `page ${route}: <html lang>`);
+  it("keeps the Spanish archive at its URL and serves the English one at its mirror", () => {
+    for (const language of LANGUAGES) {
+      const route = archiveRoute(language);
+      assert.equal(readPage(route).querySelector("html")?.getAttribute("lang"), language.code, `page ${route}: <html lang>`);
+    }
+    assert.equal(archiveRoute(SPANISH), "/proyectos/", "the Spanish archive keeps its public URL");
+    assert.equal(archiveRoute(ENGLISH), "/en/proyectos/", "the English archive mirrors the Spanish path segment");
+  });
 
-    for (const project of ARCHIVE_PROJECTS) {
-      const article = listedArticle(readPage(route), route, project.title);
-      const body = article.querySelector(".project-body");
-      assert.ok(!body?.hasAttribute("lang"), `page ${route}: ${project.title}'s Spanish text is the page's own language`);
-      assert.ok(normalize(body?.textContent).includes(project.spanish), `page ${route}: ${project.title} reads in Spanish`);
+  it("heads each archive in the page's own language", () => {
+    // The Spanish heading is the glossary's public label for the archive; the
+    // English one is English, and neither is hardcoded in the template.
+    assert.equal(settings[SPANISH.code].archiveHeading, "Proyectos anteriores", "site.json: the Spanish archive heading");
+    assert.notEqual(settings[ENGLISH.code].archiveHeading, settings[SPANISH.code].archiveHeading, "site.json: the English archive heading is English");
+    assert.doesNotMatch(settings[ENGLISH.code].archiveHeading, /proyectos anteriores/i, "site.json: the English archive heading is not the Spanish one");
+
+    for (const language of LANGUAGES) {
+      const route = archiveRoute(language);
+      const doc = readPage(route);
+      assert.equal(
+        normalize(doc.querySelector("main h1")?.textContent),
+        settings[language.code].archiveHeading,
+        `page ${route}: the hidden heading is the page language's own`,
+      );
+      assert.equal(
+        normalize(doc.querySelector("title")?.textContent),
+        `${settings[language.code].archiveHeading} — ${SITE.title}`,
+        `page ${route}: <title> is the page language's own`,
+      );
     }
   });
 
-  it("lists every archive project, in order", () => {
-    assert.deepEqual(
-      listedTitles(readPage(route), route),
-      ARCHIVE_PROJECTS.map((project) => project.title),
-      `page ${route}: archive project titles and order`,
-    );
+  it("lists the same projects in the same order on both archives", () => {
+    // Membership and order are language-independent: the archive lists the
+    // same archive projects, in their `order`, whatever the page language.
+    const listed = LANGUAGES.map((language) => {
+      const route = archiveRoute(language);
+      return readPage(route)
+        .querySelectorAll("main article")
+        .map((article) => article.querySelector("a")?.getAttribute("href"));
+    });
+
+    for (const [index, language] of LANGUAGES.entries()) {
+      assert.deepEqual(
+        listed[index],
+        ARCHIVE_PROJECTS.map((project) => localUrl(projectRouteIn(project.route, language))),
+        `page ${archiveRoute(language)}: archive project links and order`,
+      );
+    }
+
+    const routes = listed.map((hrefs) => hrefs.map((href) => routeWithoutLanguage(href.slice(PATH_PREFIX.length))));
+    for (const [index, language] of LANGUAGES.entries()) {
+      assert.deepEqual(routes[index], routes[0], `page ${archiveRoute(language)}: the same projects in the same order as the Spanish archive`);
+    }
   });
 
-  for (const project of ARCHIVE_PROJECTS) {
-    it(`links ${project.title} to its project page`, () => {
+  it("renders each listed project's title, venue and dates in the page's language", () => {
+    for (const language of LANGUAGES) {
+      const route = archiveRoute(language);
       const doc = readPage(route);
-      const article = listedArticle(doc, route, project.title);
-      assert.equal(
-        article.querySelector("a")?.getAttribute("href"),
-        localUrl(project.route),
-        `page ${route}: link to ${project.title}`,
+
+      for (const project of ARCHIVE_PROJECTS) {
+        // The version's own value where it has one, the Spanish value otherwise
+        // (ADR-0002: an untranslated field falls back silently), read from the
+        // content rather than from the template.
+        const version = projectVersion(project.route, language);
+        const article = listedArticle(doc, route, version.title);
+        const text = normalize(article.textContent);
+
+        const venue = article.querySelectorAll("header > div")[0];
+        const dates = article.querySelectorAll("header > div")[1];
+        if (version.venue) assert.ok(text.includes(plain(version.venue)), `page ${route}: ${version.title}'s venue "${version.venue}" in ${language.code}`);
+        assert.ok(text.includes(plain(version.dates)), `page ${route}: ${version.title}'s dates "${version.dates}" in ${language.code}`);
+        assert.ok(!text.includes("undefined"), `page ${route}: ${version.title} contains "undefined"`);
+        // The standard layout puts venue and dates in their own header cells.
+        if (venue) assert.equal(normalize(venue.textContent), plain(version.venue), `page ${route}: ${version.title}'s venue cell`);
+        if (dates) assert.equal(normalize(dates.textContent), plain(version.dates), `page ${route}: ${version.title}'s dates cell`);
+
+        const body = article.querySelector(".project-body");
+        assert.ok(body, `page ${route}: no project text for ${version.title}`);
+        if (language.code === SPANISH.code || version.ownText) {
+          assert.ok(!body.hasAttribute("lang"), `page ${route}: ${version.title}'s text is the page's own language`);
+          assert.ok(
+            normalize(body.textContent).includes(language.code === SPANISH.code ? project.spanish : version.ownText),
+            `page ${route}: ${version.title} reads in ${language.code}`,
+          );
+        } else {
+          assert.ok(normalize(body.textContent).includes(project.spanish), `page ${route}: ${version.title} falls back to its Spanish text`);
+          assert.equal(body.getAttribute("lang"), SPANISH.code, `page ${route}: ${version.title}'s fallback text declares Spanish`);
+        }
+      }
+    }
+  });
+
+  it("links to the counterpart archive, with a plain anchor", () => {
+    for (const language of LANGUAGES) {
+      const route = archiveRoute(language);
+      const doc = readPage(route);
+      const other = LANGUAGES.find((candidate) => candidate.code !== language.code);
+
+      const links = doc.querySelectorAll("header a[hreflang]");
+      assert.equal(links.length, 1, `page ${route}: one language link in the header`);
+      assert.equal(links[0].getAttribute("href"), localUrl(archiveRoute(other)), `page ${route}: the language link reaches the counterpart archive`);
+      assert.equal(links[0].getAttribute("hreflang"), other.code, `page ${route}: the link declares the language it leads to`);
+      assert.equal(normalize(links[0].textContent), other.label, `page ${route}: the link names that language in its own language`);
+      assert.equal(doc.querySelectorAll("script").length, 0, `page ${route}: the language link needs no script`);
+    }
+  });
+
+  it("advertises both language versions and a self canonical", () => {
+    for (const language of LANGUAGES) {
+      const route = archiveRoute(language);
+      const doc = readPage(route);
+      const other = LANGUAGES.find((candidate) => candidate.code !== language.code);
+
+      assert.deepEqual(
+        doc.querySelectorAll('link[rel="alternate"]').map((link) => [link.getAttribute("hreflang"), link.getAttribute("href")]),
+        [
+          [SPANISH.code, `${SITE_URL}${localUrl(archiveRoute(SPANISH))}`],
+          [ENGLISH.code, `${SITE_URL}${localUrl(archiveRoute(ENGLISH))}`],
+          ["x-default", `${SITE_URL}${localUrl(archiveRoute(SPANISH))}`],
+        ],
+        `page ${route}: hreflang for both archives, x-default on the Spanish one`,
       );
-    });
+      assert.equal(doc.querySelector('meta[property="og:locale"]')?.getAttribute("content"), language.locale, `page ${route}: og:locale`);
+      assert.equal(
+        doc.querySelector('meta[property="og:locale:alternate"]')?.getAttribute("content"),
+        other.locale,
+        `page ${route}: the alternate locale`,
+      );
+      assert.equal(doc.querySelector('link[rel="canonical"]')?.getAttribute("href"), `${SITE_URL}${localUrl(route)}`, `page ${route}: self canonical`);
+      assert.equal(
+        normalize(doc.querySelector('meta[name="description"]')?.getAttribute("content")),
+        settings[language.code].description,
+        `page ${route}: the meta description is the page language's own`,
+      );
+    }
+  });
+
+  it("reaches the archive from the header, in the page's own language", () => {
+    for (const language of LANGUAGES) {
+      const route = homeRoute(language);
+      const link = readPage(route).querySelector(`header a[href="${localUrl(archiveRoute(language))}"]`);
+      assert.ok(link, `page ${route}: the header links to the archive of the page's language (${archiveRoute(language)})`);
+      assert.equal(normalize(link.textContent), settings[language.code].nav.projects.label, `page ${route}: the archive link is labelled in the page's language`);
+    }
+  });
+
+  for (const language of LANGUAGES) {
+    for (const project of ARCHIVE_PROJECTS) {
+      it(`links ${project.title} to its ${language.code} project page on ${archiveRoute(language)}`, () => {
+        const route = archiveRoute(language);
+        const article = listedArticle(readPage(route), route, projectVersion(project.route, language).title);
+        assert.equal(
+          article.querySelector("a")?.getAttribute("href"),
+          localUrl(projectRouteIn(project.route, language)),
+          `page ${route}: link to ${project.title}`,
+        );
+      });
+    }
   }
 
   // No archive project carries a video today, so this is a no-op until one
   // does; it keeps the archive surface covered the moment that changes.
   it("renders every listed gallery video with the control bar its flags call for", () => {
-    const doc = readPage(route);
-    for (const project of ARCHIVE_PROJECTS.filter(({ videos }) => videos.length)) {
-      assertGalleryVideos(listedArticle(doc, route, project.title), project, route);
+    for (const language of LANGUAGES) {
+      const route = archiveRoute(language);
+      const doc = readPage(route);
+      for (const project of ARCHIVE_PROJECTS.filter(({ videos }) => videos.length)) {
+        assertGalleryVideos(listedArticle(doc, route, projectVersion(project.route, language).title), project, route);
+      }
     }
   });
 });
@@ -1921,9 +2061,8 @@ describe("page metadata", () => {
  * heading level, linked titles, gallery columns, and first-image priority.
  */
 describe("project rendering contract", () => {
-  // Both homepages and the archive render the same listings; the archive stays
-  // Spanish-only in this ticket (#23 paginates it).
-  const LISTING_ROUTES = [...LANGUAGES.map(homeRoute), "/proyectos/"];
+  // Both homepages and both archives render the same listings.
+  const LISTING_ROUTES = [...LANGUAGES.map(homeRoute), ...LANGUAGES.map(archiveRoute)];
 
   it("gives project pages an h1 title and listing pages an h2 title", () => {
     for (const { route } of PROJECTS) {
@@ -2044,13 +2183,12 @@ describe("project rendering contract", () => {
 
 /**
  * Every page that renders project text, and so can carry its links: both
- * homepages and both language versions of every project. The archive is
- * Spanish-only in this ticket (#23 paginates it), so only its own URL is here.
+ * homepages, both archives and both language versions of every project.
  */
 const PAGES_WITH_PROJECT_TEXT = [
   ...LANGUAGES.map((language) => `${language.prefix}/`),
   ...LANGUAGES.flatMap((language) => PROJECTS.map((project) => projectRouteIn(project.route, language))),
-  "/proyectos/",
+  ...LANGUAGES.map(archiveRoute),
 ];
 
 /** Links rendered inside the project text of a page, in document order. */
@@ -2250,7 +2388,7 @@ describe(`subpath deployment (${SUBPATH_PREFIX})`, () => {
     for (const route of [
       ...LANGUAGES.map(homeRoute),
       ...LANGUAGES.map(aboutRoute),
-      "/proyectos/",
+      ...LANGUAGES.map(archiveRoute),
       ...LANGUAGES.map((language) => projectRouteIn(PROJECTS[0].route, language)),
       THREE_COLUMN_ROUTE,
     ]) {
@@ -2316,6 +2454,51 @@ describe(`subpath deployment (${SUBPATH_PREFIX})`, () => {
           `${SITE_URL}${PREFIX}${homeRoute(SPANISH)}`,
         ],
         `page ${homeRoute(language)}: hreflang links carry the path prefix`,
+      );
+    }
+  });
+
+  it("serves both language versions of the archive under the prefix", () => {
+    const english = page(archiveRoute(ENGLISH));
+    const settings = JSON.parse(readRepoFile("src/_data/site.json"));
+
+    assert.equal(english.querySelector("html")?.getAttribute("lang"), ENGLISH.code, `page ${archiveRoute(ENGLISH)}: page language under the subpath`);
+    assert.equal(
+      normalize(english.querySelector("main h1")?.textContent),
+      settings[ENGLISH.code].archiveHeading,
+      `page ${archiveRoute(ENGLISH)}: the English heading under the subpath`,
+    );
+    assert.equal(
+      english.querySelector('link[rel="canonical"]')?.getAttribute("href"),
+      `${SITE_URL}${PREFIX}${archiveRoute(ENGLISH)}`,
+      `page ${archiveRoute(ENGLISH)}: canonical under the prefixed route`,
+    );
+
+    for (const language of LANGUAGES) {
+      const doc = page(archiveRoute(language));
+      const counterpart = language.code === SPANISH.code ? ENGLISH : SPANISH;
+
+      assert.equal(
+        doc.querySelector("header a[hreflang]")?.getAttribute("href"),
+        `${PREFIX}${archiveRoute(counterpart)}`,
+        `page ${archiveRoute(language)}: the language link points at the prefixed counterpart archive`,
+      );
+      assert.deepEqual(
+        doc.querySelectorAll('link[rel="alternate"]').map((node) => node.getAttribute("href")),
+        [
+          `${SITE_URL}${PREFIX}${archiveRoute(SPANISH)}`,
+          `${SITE_URL}${PREFIX}${archiveRoute(ENGLISH)}`,
+          `${SITE_URL}${PREFIX}${archiveRoute(SPANISH)}`,
+        ],
+        `page ${archiveRoute(language)}: hreflang links carry the path prefix`,
+      );
+    }
+
+    const listed = [...readOutputText(output, "/sitemap.xml").matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
+    for (const language of LANGUAGES) {
+      assert.ok(
+        listed.includes(`${SITE_URL}${PREFIX}${archiveRoute(language)}`),
+        `page /sitemap.xml: ${archiveRoute(language)} is listed under the prefix`,
       );
     }
   });
