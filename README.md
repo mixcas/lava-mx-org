@@ -425,7 +425,8 @@ the same fields:
   "es": {
     "description": "…", "navLabel": "Principal",
     "homeHeading": "Lava — proyectos actuales", "archiveHeading": "Proyectos anteriores",
-    "notFound": { "message": "La página que buscas no existe.", "link": "Volver al inicio" },
+    "notFound": { "title": "Página no encontrada",
+                  "message": "La página que buscas no existe.", "link": "Volver al inicio" },
     "footer": { "copyright": "©LAVA", "city": "Ciudad de México", "instagram": "@lava__mx" },
     "nav": { "about": { "label": "Lava es", "route": "about" },
              "projects": { "label": "Proyectos anteriores", "route": "projects" } }
@@ -433,7 +434,8 @@ the same fields:
   "en": {
     "description": "…", "navLabel": "Main",
     "homeHeading": "Lava — current projects", "archiveHeading": "Previous projects",
-    "notFound": { "message": "The page you are looking for does not exist.", "link": "Back to the start" },
+    "notFound": { "title": "Page not found",
+                  "message": "The page you are looking for does not exist.", "link": "Back to the start" },
     "footer": { "copyright": "©LAVA", "city": "Mexico City", "instagram": "@lava__mx" },
     "nav": { "about": { "label": "Lava is", "route": "about" },
              "projects": { "label": "Previous projects", "route": "projects" } }
@@ -445,12 +447,13 @@ the same fields:
   description; `homeHeading` and `archiveHeading` are the visually hidden page
   headings (the archive's is also its `<title>`); `navLabel` names the header
   navigation for screen readers; `footer` is the footer text; `notFound` is the
-  404 page's line and back-link label.
+  404 page's `<title>`, its line and its back-link label.
 - A navigation entry stores a **route key**, not a URL. `lib/routes.js` maps
-  `about` → `/acerca-de/` and `projects` → `/proyectos/`, and the template
-  prepends the language's prefix, so the Spanish header links to `/acerca-de/`
-  and the English one to `/en/acerca-de/`. The address is written in one place
-  and gains the deployment prefix like every other URL.
+  `home` → `/`, `about` → `/acerca-de/` and `projects` → `/proyectos/`, and the
+  template prepends the language's prefix, so the Spanish header links to
+  `/acerca-de/` and the English one to `/en/acerca-de/`, and the logo to `/` or
+  `/en/`. The address is written in one place and gains the deployment prefix
+  like every other URL.
 - Unlike project and About content, the chrome has **no silent fallback**: a
   page reads `site[<its language>]` directly, so a blank English value renders
   blank. The editor's descriptions say which fields must be filled in both

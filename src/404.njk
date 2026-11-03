@@ -1,8 +1,14 @@
 ---
 layout: base.njk
-title: Página no encontrada
 permalink: /404.html
 eleventyExcludeFromCollections: true
+# The page's `<title>` is chrome, so it comes from the site settings (GLOSSARY:
+# Site settings) rather than from a copy written here. This is the one page
+# that cannot know which language version was wanted, so its chrome is the
+# default language's — the language at the root of the site — and its title is
+# that language's 404 title.
+eleventyComputed:
+  title: "{{ site[defaultLanguage.code].notFound.title }}"
 ---
 {#
 	The 404 page (ADR-0002). It is the one page that cannot know which language

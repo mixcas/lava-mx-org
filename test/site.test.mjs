@@ -1272,6 +1272,22 @@ describe("one text per page", () => {
       }
     });
 
+    it("takes its title from the Spanish settings, not from the template", () => {
+      const page = readPage(NOT_FOUND);
+      const spanish = settings()[SPANISH.code];
+
+      assert.ok(spanish.notFound.title?.trim(), "site.json: the Spanish settings hold the 404 title");
+      assert.equal(
+        normalize(page.querySelector("title")?.textContent),
+        `${spanish.notFound.title} — ${settings().title}`,
+        `page ${NOT_FOUND}: <title>`,
+      );
+      assert.ok(
+        !readRepoFile("src/404.njk").includes(spanish.notFound.title),
+        "src/404.njk: the title is the settings' own, not a copy hardwired in the template",
+      );
+    });
+
     it("says one short line in each language, each one marked and linking into its own tree", () => {
       const blocks = declaredBlocks(readPage(NOT_FOUND));
       const label = `page ${NOT_FOUND}`;

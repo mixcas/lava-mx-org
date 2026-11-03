@@ -230,10 +230,11 @@ español** y **Versión en inglés**, cada una con lo mismo:
   «Proyectos anteriores» (textos que solo leen los lectores de pantalla);
 - el **pie de página** (copyright, ciudad, Instagram);
 - las **etiquetas y la página enlazada** de los dos enlaces del encabezado;
-- el aviso de **página no encontrada** (404): es la única página que se muestra
-  en los dos idiomas a la vez, así que lleva una línea en español y otra en
-  inglés, cada una con su enlace a la portada de ese idioma. Por eso **sus dos
-  versiones son obligatorias**.
+- el aviso de **página no encontrada** (404): su título de pestaña, el aviso y
+  el texto del enlace de vuelta. Es la única página que se muestra en los dos
+  idiomas a la vez, así que lleva una línea en español y otra en inglés, cada
+  una con su enlace a la portada de ese idioma. Por eso **sus dos versiones son
+  obligatorias**; el título de la pestaña sale siempre de la versión en español.
 
 Ten en cuenta:
 

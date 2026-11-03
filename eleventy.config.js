@@ -78,6 +78,11 @@ export default function (eleventyConfig) {
   // Absolute site origin (for canonical/OG/sitemap URLs).
   eleventyConfig.addGlobalData("siteUrl", SITE_URL);
 
+  // The language at the root of the site (Spanish today), for the one page
+  // whose chrome cannot follow the route: the root 404, which is not a language
+  // version of anything (ADR-0002). Templates read it instead of naming a code.
+  eleventyConfig.addGlobalData("defaultLanguage", DEFAULT_LANGUAGE);
+
   // Canonical project view model (see lib/project-view.js): every project
   // surface renders this, so content shapes — and the language version being
   // rendered — are interpreted in one place.
