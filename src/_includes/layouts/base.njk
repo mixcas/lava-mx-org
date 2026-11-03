@@ -1,5 +1,6 @@
-{% if description %}{% set metaDescription = description %}{% elif text_es %}{% set metaDescription = text_es | md | striptags | replace('\n', ' ') | truncate(160) %}{% else %}{% set metaDescription = site.description %}{% endif %}
-{% if title and title != site.title %}{% set metaTitle = title + ' — ' + site.title %}{% else %}{% set metaTitle = site.title %}{% endif %}
+{%- set pageTitle = title or projectView.title -%}
+{% if description %}{% set metaDescription = description %}{% elif projectView.text.spanish %}{% set metaDescription = projectView.text.spanish | md | striptags | replace('\n', ' ') | truncate(160) %}{% else %}{% set metaDescription = site.description %}{% endif %}
+{% if pageTitle and pageTitle != site.title %}{% set metaTitle = pageTitle + ' — ' + site.title %}{% else %}{% set metaTitle = site.title %}{% endif %}
 <!doctype html>
 <html lang="es">
 	<head>

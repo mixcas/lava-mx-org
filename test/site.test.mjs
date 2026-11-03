@@ -86,13 +86,13 @@ function projectBodyBlocks(route) {
 
 /**
  * The alt text each gallery image must render, read from the content: the
- * item's own alt text when it has one, otherwise the project title.
+ * Spanish version's own alt text when it has one, otherwise the Spanish title.
  */
 function expectedImageAlt(route) {
   const data = projectData(sourceOf(route));
   return (Array.isArray(data.media) ? data.media : [])
     .filter((item) => item.type !== "video")
-    .map((item) => (typeof item.alt === "string" ? item.alt.trim() : "") || data.title);
+    .map((item) => (typeof item.alt_es === "string" ? item.alt_es.trim() : "") || data.es?.title);
 }
 
 /**
@@ -209,7 +209,10 @@ describe("project content model", () => {
   });
 
   /** The keys a typed gallery item may carry (see GLOSSARY: Media item). */
-  const ITEM_KEYS = { image: ["type", "src", "alt"], video: ["type", "src", "poster", "autoplay", "loop", "mute"] };
+  const ITEM_KEYS = {
+    image: ["type", "src", "alt_es", "alt_en"],
+    video: ["type", "src", "poster", "autoplay", "loop", "mute"],
+  };
   /** Media sources are canonical asset paths; the basename names the master. */
   const CANONICAL = Object.fromEntries(
     Object.entries(GALLERY_TYPES).map(([type, { path: prefix }]) => [type, new RegExp(`^${prefix}/[^/]+$`)]),
@@ -291,29 +294,43 @@ describe("project content model", () => {
     );
   });
 
-  it("stores each language in its own text field", () => {
+  it("stores each language version in its own object", () => {
     for (const file of projectFiles()) {
       const data = projectData(file);
-      const spanish = typeof data.text_es === "string" ? data.text_es.trim() : "";
-      assert.ok(spanish.length > 0, `${file}: "text_es" is the Spanish text and is never empty`);
+      const spanish = data.es ?? {};
+
+      assert.ok(
+        typeof spanish.title === "string" && spanish.title.trim().length > 0,
+        `${file}: "es.title" is the Spanish title and is never empty`,
+      );
+      assert.ok(
+        typeof spanish.text === "string" && spanish.text.trim().length > 0,
+        `${file}: "es.text" is the Spanish text and is never empty`,
+      );
       assert.ok(!Object.hasOwn(data, "text"), `${file}: the legacy "text" field is gone`);
+      for (const flat of ["title", "venue", "dates", "text_es", "text_en"]) {
+        assert.ok(
+          !Object.hasOwn(data, flat),
+          `${file}: the flat "${flat}" key is gone; each value lives in its language object`,
+        );
+      }
 
       const baseline = PROJECTS.find((project) => project.route === projectRoute(file));
       assert.ok(baseline, `${file}: no baseline project for this content file`);
-      if (baseline.english) {
-        assert.ok(
-          typeof data.text_en === "string" && data.text_en.trim().length > 0,
-          `${file}: bilingual projects carry the English text in "text_en"`,
-        );
-      }
+      const english = data.en ?? {};
+      assert.equal(
+        typeof english.text === "string" && english.text.trim().length > 0,
+        Boolean(baseline.english),
+        `${file}: only the bilingual projects carry an English text, in "en.text"`,
+      );
     }
   });
 
   it("keeps no literal // separator in project text", () => {
     for (const file of projectFiles()) {
       const data = projectData(file);
-      for (const key of ["text", "text_es", "text_en"]) {
-        const value = data[key];
+      for (const key of ["es.text", "en.text"]) {
+        const value = key.split(".").reduce((value, step) => value?.[step], data);
         if (typeof value !== "string") continue;
         assert.ok(
           !/^[ \t]*\/\/[ \t]*$/m.test(value),
@@ -1143,7 +1160,7 @@ describe("page metadata", () => {
       // The description is the rendered Spanish text with its tags stripped and
       // truncated, so comparing against the raw field only needs the emphasis
       // markers removed and the truncation mark ignored.
-      const plain = normalize(String(projectData(file).text_es ?? "").replace(/\*/g, ""));
+      const plain = normalize(String(projectData(file).es?.text ?? "").replace(/\*/g, ""));
       assert.ok(
         plain.startsWith(description.replace(/(\.{3}|…)$/, "")),
         `page ${route}: meta description "${description}" starts the Spanish text`,
