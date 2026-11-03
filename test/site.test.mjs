@@ -9,6 +9,7 @@ import { NodeType } from "node-html-parser";
 import { LEGACY_KEYS } from "../lib/project-contract.js";
 import { ASSET_FOLDER, ASSET_URL, FORMATS, GALLERY_TYPES } from "../lib/media-assets.js";
 import { projectData, projectFiles, projectRoute } from "./support/content.mjs";
+import { buildContentDir, projectFile, writeContentDir } from "./support/contract.mjs";
 import {
   ABOUT,
   ARCHIVE_PROJECTS,
@@ -117,16 +118,63 @@ function projectBodyBlocks(route) {
     .map((node) => ({ element: node, text: normalize(node.textContent) }));
 }
 
+/** The route without its language prefix: `/en/proyectos/x/` → `/proyectos/x/`. */
+const routeWithoutLanguage = (route) =>
+  LANGUAGES.reduce(
+    (value, language) => (language.prefix && value.startsWith(`${language.prefix}/`) ? value.slice(language.prefix.length) : value),
+    route,
+  );
+
+/** The project content file behind a project route, in either language tree. */
+const sourceOf = (route) => projectFiles().find((file) => projectRoute(file) === routeWithoutLanguage(route));
+
+/** The URL of a project page inside one language tree (`/en` + the Spanish route). */
+const projectRouteIn = (route, language) => `${language.prefix}${route}`;
+
+/** A written front-matter value, trimmed; a blank one is no value. */
+const written = (value) => (typeof value === "string" && value.trim() ? value.trim() : null);
+
 /**
- * The alt text each gallery image must render, read from the content: the
- * Spanish version's own alt text when it has one, otherwise the Spanish title.
+ * What one language version of a project says, read from the content: its own
+ * value where it has one, the Spanish value otherwise (ADR-0002: an
+ * untranslated field falls back silently). `ownText` is the body that version
+ * writes itself, and `null` when its body is the Spanish one.
  */
-function expectedImageAlt(route) {
+function projectVersion(route, language) {
   const data = projectData(sourceOf(route));
+  const spanish = data.es ?? {};
+  const english = language.code === ENGLISH.code ? (data.en ?? {}) : {};
+  const own = (field) => written(english[field]) ?? written(spanish[field]);
+  return {
+    title: own("title") ?? "",
+    venue: own("venue"),
+    dates: own("dates"),
+    ownText: written(english.text),
+    text: own("text") ?? "",
+  };
+}
+
+/**
+ * The alt text each gallery image must render in one language version, read
+ * from the content: that version's own alt text, then the language-neutral one,
+ * then that version's project title, then the Spanish title (ADR-0002).
+ */
+function expectedImageAlt(route, language) {
+  const data = projectData(sourceOf(route));
+  const version = projectVersion(route, language);
+  const title = language.code === ENGLISH.code ? written(data.en?.title) ?? written(data.es?.title) : written(data.es?.title);
   return (Array.isArray(data.media) ? data.media : [])
     .filter((item) => item.type !== "video")
-    .map((item) => (typeof item.alt_es === "string" ? item.alt_es.trim() : "") || data.es?.title);
+    .map((item) => written(language.code === ENGLISH.code ? item.alt_en : item.alt_es) ?? written(item.alt) ?? title ?? version.title);
 }
+
+/**
+ * A translation notice: any wording a page would use to announce that its text
+ * is not in the page's language. An untranslated English page shows the Spanish
+ * text silently (ADR-0002), so none of these may appear.
+ */
+const TRANSLATION_NOTICE =
+  /sin traducci|no traducid|no hay traducci|no disponible en|solo (en )?espa|not (yet )?translated|no translation|untranslated|translation (is )?(not )?available|available (only )?in spanish/i;
 
 /**
  * Whether a video keeps the browser's control bar. Only a self-sustaining video
@@ -197,6 +245,18 @@ describe("project URLs", () => {
       "page /proyectos/: generated project directories (a stray page or content file such as the directory defaults file would show up here)",
     );
   });
+
+  it("builds every project at its mirrored English URL, with the same slug", () => {
+    for (const { route } of PROJECTS) {
+      assert.doesNotThrow(() => readPage(projectRouteIn(route, ENGLISH)), `page ${projectRouteIn(route, ENGLISH)}: project URL no longer exists`);
+    }
+
+    assert.deepEqual(
+      fs.readdirSync(path.join(OUTPUT_DIR, "en", "proyectos")).sort(),
+      PROJECTS.map(({ route }) => route.split("/")[2]).sort(),
+      "page /en/proyectos/: the English tree mirrors the twelve project slugs",
+    );
+  });
 });
 
 describe("project content model", () => {
@@ -208,7 +268,17 @@ describe("project content model", () => {
 
     assert.deepEqual(
       defaults,
-      { layout: "project", variant: "standard", featured: false, order: 0, gallery_columns: 1 },
+      {
+        layout: "project",
+        variant: "standard",
+        featured: false,
+        order: 0,
+        gallery_columns: 1,
+        // One source file, one page per language version: the pagination builds
+        // the Spanish URL and its English mirror from the same slug (ADR-0002).
+        pagination: { data: "languages", size: 1, alias: "lang", resolve: "values", addAllPagesToCollections: true },
+        permalink: "{{ lang.prefix }}/proyectos/{{ page.fileSlug }}/",
+      },
       `${DEFAULTS_FILE}: project defaults`,
     );
   });
@@ -1065,7 +1135,9 @@ describe("homepage in both languages", () => {
 
 describe("language alternates follow the routes that were built", () => {
   /** The pages this phase still builds in Spanish only. */
-  const SPANISH_ONLY = [ABOUT_ROUTE, "/proyectos/", ...PROJECTS.map((project) => project.route), "/404.html"];
+  const SPANISH_ONLY = [ABOUT_ROUTE, "/proyectos/", "/404.html"];
+  /** The pages built in both languages: each home, and both versions of each project. */
+  const PAIRED = [...LANGUAGES.map(homeRoute), ...LANGUAGES.flatMap((language) => PROJECTS.map((project) => projectRouteIn(project.route, language)))];
 
   it("advertises no English version of a page that exists in Spanish only", () => {
     for (const route of SPANISH_ONLY) {
@@ -1083,8 +1155,39 @@ describe("language alternates follow the routes that were built", () => {
     }
   });
 
+  it("advertises both language versions of every project page, and links to the counterpart", () => {
+    for (const project of PROJECTS) {
+      for (const language of LANGUAGES) {
+        const counterpart = LANGUAGES.find((candidate) => candidate.code !== language.code);
+        const route = projectRouteIn(project.route, language);
+        const doc = readPage(route);
+        const label = `page ${route}`;
+
+        assert.equal(doc.querySelector("html")?.getAttribute("lang"), language.code, `${label}: page language`);
+        assert.deepEqual(
+          doc.querySelectorAll('link[rel="alternate"]').map((link) => link.getAttribute("href")),
+          [
+            `${SITE_URL}${localUrl(projectRouteIn(project.route, SPANISH))}`,
+            `${SITE_URL}${localUrl(projectRouteIn(project.route, ENGLISH))}`,
+            `${SITE_URL}${localUrl(projectRouteIn(project.route, SPANISH))}`,
+          ],
+          `${label}: hreflang for both versions and x-default on the Spanish one`,
+        );
+        assert.equal(
+          doc.querySelector('meta[property="og:locale:alternate"]')?.getAttribute("content"),
+          counterpart.locale,
+          `${label}: the alternate locale`,
+        );
+
+        const link = doc.querySelector("header a[hreflang]");
+        assert.equal(link?.getAttribute("href"), localUrl(projectRouteIn(project.route, counterpart)), `${label}: the language link reaches the counterpart project page`);
+        assert.equal(normalize(link?.textContent), counterpart.label, `${label}: the language link names the other language in its own language`);
+      }
+    }
+  });
+
   it("never points a language link or an hreflang at a page the build does not produce", () => {
-    const pages = [...LANGUAGES.map(homeRoute), ...SPANISH_ONLY];
+    const pages = [...PAIRED, ...SPANISH_ONLY];
 
     for (const route of pages) {
       const doc = readPage(route);
@@ -1109,7 +1212,7 @@ describe("sitemap (/sitemap.xml)", () => {
       ...LANGUAGES.map(homeRoute),
       ABOUT_ROUTE,
       "/proyectos/",
-      ...PROJECTS.map((project) => project.route),
+      ...LANGUAGES.flatMap((language) => PROJECTS.map((project) => projectRouteIn(project.route, language))),
     ];
 
     assert.deepEqual(
@@ -1119,7 +1222,7 @@ describe("sitemap (/sitemap.xml)", () => {
     );
   });
 
-  it("carries xhtml alternates between the two homepages, and none for a single-language page", () => {
+  it("carries xhtml alternates between the language versions of every paired page", () => {
     assert.ok(xml().includes('xmlns:xhtml="http://www.w3.org/1999/xhtml"'), `page ${route}: declares the xhtml namespace`);
 
     const entries = [...xml().matchAll(/<url>[\s\S]*?<\/url>/g)].map(([block]) => ({
@@ -1131,21 +1234,30 @@ describe("sitemap (/sitemap.xml)", () => {
     }));
     assert.ok(entries.length > 0, `page ${route}: no <url> entries`);
 
-    const expected = [
-      [SPANISH.code, `${SITE_URL}${localUrl(homeRoute(SPANISH))}`],
-      [ENGLISH.code, `${SITE_URL}${localUrl(homeRoute(ENGLISH))}`],
-      ["x-default", `${SITE_URL}${localUrl(homeRoute(SPANISH))}`],
-    ];
-    const homeLocs = new Set(LANGUAGES.map((language) => `${SITE_URL}${localUrl(homeRoute(language))}`));
+    // The routes built in both languages: the two homepages and all twelve
+    // projects. Each of their language versions carries the same hreflang set,
+    // with x-default on the Spanish URL (ADR-0002).
+    const paired = [homeRoute(SPANISH), ...PROJECTS.map((project) => project.route)];
+    const pairedLocs = new Set(
+      paired.flatMap((pairedRoute) => LANGUAGES.map((language) => `${SITE_URL}${localUrl(projectRouteIn(pairedRoute, language))}`)),
+    );
 
-    for (const language of LANGUAGES) {
-      const loc = `${SITE_URL}${localUrl(homeRoute(language))}`;
-      const entry = entries.find((candidate) => candidate.loc === loc);
-      assert.ok(entry, `page ${route}: ${loc} is listed`);
-      assert.deepEqual(entry.alternates, expected, `page ${route}: ${loc} carries the alternates between both homepages`);
+    for (const pairedRoute of paired) {
+      const expected = [
+        [SPANISH.code, `${SITE_URL}${localUrl(projectRouteIn(pairedRoute, SPANISH))}`],
+        [ENGLISH.code, `${SITE_URL}${localUrl(projectRouteIn(pairedRoute, ENGLISH))}`],
+        ["x-default", `${SITE_URL}${localUrl(projectRouteIn(pairedRoute, SPANISH))}`],
+      ];
+
+      for (const language of LANGUAGES) {
+        const loc = `${SITE_URL}${localUrl(projectRouteIn(pairedRoute, language))}`;
+        const entry = entries.find((candidate) => candidate.loc === loc);
+        assert.ok(entry, `page ${route}: ${loc} is listed`);
+        assert.deepEqual(entry.alternates, expected, `page ${route}: ${loc} carries the alternates between its language versions`);
+      }
     }
 
-    for (const entry of entries.filter((candidate) => !homeLocs.has(candidate.loc))) {
+    for (const entry of entries.filter((candidate) => !pairedLocs.has(candidate.loc))) {
       assert.deepEqual(entry.alternates, [], `page ${route}: ${entry.loc} was built in one language, so it carries no alternate`);
     }
   });
@@ -1168,6 +1280,44 @@ describe("homepage (/)", () => {
     );
   });
 
+  it("lists each homepage project in the page's language, on both homepages", () => {
+    for (const language of LANGUAGES) {
+      const pageRoute = homeRoute(language);
+      assert.deepEqual(
+        listedTitles(readPage(pageRoute), pageRoute),
+        HOMEPAGE_PROJECTS.map((project) => projectVersion(project.route, language).title),
+        `page ${pageRoute}: homepage project titles in ${language.code}, in order`,
+      );
+    }
+  });
+
+  // Every homepage project is translated today, so the fallback branch is a
+  // guard for when an editor selects an untranslated one: it must read in
+  // Spanish and say so, on the English homepage too.
+  it("renders each listed project's text in the page's language, marking the Spanish fallback", () => {
+    for (const language of LANGUAGES) {
+      const pageRoute = homeRoute(language);
+
+      for (const project of HOMEPAGE_PROJECTS) {
+        const title = projectVersion(project.route, language).title;
+        const article = listedArticle(readPage(pageRoute), pageRoute, title);
+        const body = article.querySelector(".project-body");
+        assert.ok(body, `page ${pageRoute}: no project text for ${title}`);
+        const bodyText = normalize(body.textContent);
+
+        if (language.code === SPANISH.code || project.english) {
+          assert.ok(
+            bodyText.includes(language.code === SPANISH.code ? project.spanish : project.english),
+            `page ${pageRoute}: ${title} reads in ${language.code}`,
+          );
+        } else {
+          assert.ok(bodyText.includes(project.spanish), `page ${pageRoute}: ${title} falls back to its Spanish text`);
+          assert.equal(body.getAttribute("lang"), SPANISH.code, `page ${pageRoute}: ${title}'s fallback body declares Spanish`);
+        }
+      }
+    }
+  });
+
   // The homepage renders the same gallery as the project page, so a listed
   // video must keep its control bar here too.
   it("renders every listed gallery video with the control bar its flags call for", () => {
@@ -1180,6 +1330,19 @@ describe("homepage (/)", () => {
 
 describe("archive page (/proyectos/)", () => {
   const route = "/proyectos/";
+
+  it("stays the Spanish page it is, rendering the projects' Spanish text", () => {
+    // Ticket #23 gives the archive its English version; until then it is one
+    // Spanish page and its listing reads in Spanish.
+    assert.equal(readPage(route).querySelector("html")?.getAttribute("lang"), SPANISH.code, `page ${route}: <html lang>`);
+
+    for (const project of ARCHIVE_PROJECTS) {
+      const article = listedArticle(readPage(route), route, project.title);
+      const body = article.querySelector(".project-body");
+      assert.ok(!body?.hasAttribute("lang"), `page ${route}: ${project.title}'s Spanish text is the page's own language`);
+      assert.ok(normalize(body?.textContent).includes(project.spanish), `page ${route}: ${project.title} reads in Spanish`);
+    }
+  });
 
   it("lists every archive project, in order", () => {
     assert.deepEqual(
@@ -1211,140 +1374,144 @@ describe("archive page (/proyectos/)", () => {
   });
 });
 
-describe("project pages", () => {
-  for (const project of PROJECTS) {
-    const { route, title } = project;
-    const label = `page ${route}`;
-    const text = () => normalize(projectArticle(route).textContent);
+describe("project pages in both languages", () => {
+  for (const language of LANGUAGES) {
+    for (const project of PROJECTS) {
+      const route = projectRouteIn(project.route, language);
+      const label = `page ${route}`;
+      const version = () => projectVersion(project.route, language);
+      const article = () => projectArticle(route);
+      const text = () => normalize(article().textContent);
+      const body = () => {
+        const blocks = article().querySelectorAll(".project-body");
+        assert.equal(blocks.length, 1, `${label}: one project body per page`);
+        return blocks[0];
+      };
 
-    it(`${route} renders its title`, () => {
-      const heading = projectArticle(route).querySelector("h1, h2");
-      assert.equal(normalize(heading?.textContent), title, `${label}: project title heading`);
-      assert.equal(normalize(readPage(route).querySelector("title")?.textContent), `${title} — ${SITE.title}`, `${label}: <title>`);
-    });
+      it(`${route} declares its own language`, () => {
+        assert.equal(readPage(route).querySelector("html")?.getAttribute("lang"), language.code, `${label}: <html lang>`);
+      });
 
-    it(`${route} renders its venue and dates`, () => {
-      if (project.venue) {
-        assert.ok(text().includes(project.venue), `${label}: venue "${project.venue}"`);
-      }
-      assert.ok(text().includes(project.dates), `${label}: dates "${project.dates}"`);
-      assert.ok(!text().includes("undefined"), `${label}: page text contains "undefined"`);
-    });
+      it(`${route} renders its title, venue and dates in the page's language`, () => {
+        const { title, venue, dates } = version();
+        assert.equal(normalize(article().querySelector("h1, h2")?.textContent), title, `${label}: project title heading`);
+        assert.equal(
+          normalize(readPage(route).querySelector("title")?.textContent),
+          `${title} — ${SITE.title}`,
+          `${label}: <title>`,
+        );
+        // Venue and dates may be written in Markdown (one carries bold, one a
+        // line break), so compare the rendered text with its markup removed.
+        const plain = (value) => normalize(String(value ?? "").replace(/\*/g, ""));
+        if (venue) assert.ok(text().includes(plain(venue)), `${label}: venue "${venue}"`);
+        assert.ok(text().includes(plain(dates)), `${label}: dates "${dates}"`);
+        assert.ok(!text().includes("undefined"), `${label}: page text contains "undefined"`);
+      });
 
-    it(`${route} renders its Spanish text`, () => {
-      assert.ok(text().includes(project.spanish), `${label}: Spanish text "${project.spanish}"`);
-    });
+      it(`${route} renders one body in the page's language, with no divider`, () => {
+        const element = body();
+        const rendered = normalize(element.textContent);
 
-    if (project.english) {
-      it(`${route} renders its English text`, () => {
-        assert.ok(text().includes(project.english), `${label}: English text "${project.english}"`);
+        assert.equal(element.querySelectorAll(".project-body__divider").length, 0, `${label}: a project page draws no divider`);
+        assert.ok(!/\s\/\/\s/.test(rendered), `${label}: the project text carries no "//" mark`);
+
+        if (language.code === SPANISH.code || !version().ownText) {
+          // The Spanish page, and the English page of an untranslated project,
+          // render the Spanish text.
+          assert.ok(rendered.includes(project.spanish), `${label}: the Spanish text "${project.spanish}"`);
+        } else {
+          assert.ok(rendered.includes(project.english), `${label}: the English text "${project.english}"`);
+        }
+      });
+
+      it(`${route} renders its gallery in the page's language`, () => {
+        const alts = expectedImageAlt(project.route, language);
+
+        const pictures = article().querySelectorAll("picture");
+        assert.equal(pictures.length, project.images, `${label}: gallery images rendered`);
+        pictures.forEach((picture, index) => {
+          const position = `gallery image ${index + 1}`;
+          const img = picture.querySelector("img");
+          assert.ok(img, `${label}: ${position} has no <img>`);
+          assert.equal(img.getAttribute("alt"), alts[index], `${label}: ${position} alt text`);
+          assert.ok(
+            (img.getAttribute("src") ?? "").startsWith(`${PATH_PREFIX}/img/`),
+            `${label}: ${position} src "${img.getAttribute("src")}" uses the responsive image pipeline`,
+          );
+          assert.ok(
+            (img.getAttribute("srcset") ?? "").includes(`${PATH_PREFIX}/img/`),
+            `${label}: ${position} srcset uses the responsive image pipeline`,
+          );
+        });
+
+        // Source, poster, flags and control bar, the same way on every surface.
+        assertGalleryVideos(article(), project, route);
       });
     }
+  }
+});
 
-    it(`${route} renders its gallery`, () => {
-      const article = projectArticle(route);
-      const alts = expectedImageAlt(route);
+describe("a language version never carries the other one's text", () => {
+  for (const language of LANGUAGES) {
+    const other = LANGUAGES.find((candidate) => candidate.code !== language.code);
+    // The text the page must not carry: the other language's own. A Spanish
+    // page never shows the English text, and an English page of a translated
+    // project never shows the Spanish one (an untranslated project's English
+    // page shows the Spanish body, which the fallback tests cover).
+    const otherMarker = (project) => (language.code === ENGLISH.code ? null : project.english);
+    const ownMarker = (project) => (language.code === ENGLISH.code ? project.english : null);
+    const spanishText = (project) =>
+      normalize(String(projectData(sourceOf(project.route)).es?.text ?? "").replace(/\*/g, ""));
 
-      const pictures = article.querySelectorAll("picture");
-      assert.equal(pictures.length, project.images, `${label}: gallery images rendered`);
-      pictures.forEach((picture, index) => {
-        const position = `gallery image ${index + 1}`;
-        const img = picture.querySelector("img");
-        assert.ok(img, `${label}: ${position} has no <img>`);
-        assert.equal(img.getAttribute("alt"), alts[index], `${label}: ${position} alt text`);
-        assert.ok(
-          (img.getAttribute("src") ?? "").startsWith(`${PATH_PREFIX}/img/`),
-          `${label}: ${position} src "${img.getAttribute("src")}" uses the responsive image pipeline`,
-        );
-        assert.ok(
-          (img.getAttribute("srcset") ?? "").includes(`${PATH_PREFIX}/img/`),
-          `${label}: ${position} srcset uses the responsive image pipeline`,
-        );
-      });
+    it(`keeps the other language's project text out of every ${language.code} project page`, () => {
+      for (const project of PROJECTS) {
+        const route = projectRouteIn(project.route, language);
+        const html = normalize(readText(path.posix.join(route, "index.html")));
 
-      // Source, poster, flags and control bar, the same way on every surface.
-      assertGalleryVideos(article, project, route);
+        const forbidden = otherMarker(project) ?? (ownMarker(project) ? spanishText(project) : null);
+        if (!forbidden) continue;
+        assert.ok(!html.includes(forbidden), `page ${route}: the ${other.code} text "${forbidden}" is not rendered`);
+      }
     });
   }
 });
 
-describe("bilingual project text", () => {
-  /** Projects the baseline lists an English text for; the rest are Spanish only. */
-  const BILINGUAL = PROJECTS.filter((project) => project.english);
-  const SPANISH_ONLY = PROJECTS.filter((project) => !project.english);
-  const isDivider = ({ element }) => element.classList.contains("project-body__divider");
+describe("fallback project text on the English pages", () => {
+  const TRANSLATED = PROJECTS.filter((project) => project.english);
+  const UNTRANSLATED = PROJECTS.filter((project) => !project.english);
 
-  /** The page's text column split at its divider: what comes before and after. */
-  function sides(route) {
-    const blocks = projectBodyBlocks(route);
-    const dividers = blocks.filter(isDivider);
-    assert.equal(dividers.length, 1, `page ${route}: a bilingual project has exactly one divider`);
-    assert.equal(dividers[0].text, "//", `page ${route}: the divider is the "//" mark`);
+  it("shows an untranslated project's Spanish body marked as Spanish, with no notice", () => {
+    assert.ok(UNTRANSLATED.length > 0, "fixture: expected untranslated projects");
 
-    const at = blocks.indexOf(dividers[0]);
-    return { dividers, spanish: blocks.slice(0, at), english: blocks.slice(at + 1) };
-  }
-
-  it("renders the Spanish text first and the English text after the divider", () => {
-    assert.equal(BILINGUAL.length, BILINGUAL_PROJECT_COUNT, "fixture: expected three bilingual projects");
-
-    for (const { route, spanish, english } of BILINGUAL) {
-      const label = `page ${route}`;
-      const { spanish: before, english: after } = sides(route);
-
-      assert.ok(
-        before.map((block) => block.text).join(" ").includes(spanish),
-        `${label}: Spanish text "${spanish}" comes before the divider`,
-      );
-      assert.ok(
-        after.map((block) => block.text).join(" ").includes(english),
-        `${label}: English text "${english}" comes after the divider`,
+    for (const project of UNTRANSLATED) {
+      const route = projectRouteIn(project.route, ENGLISH);
+      const body = projectArticle(route).querySelector(".project-body");
+      assert.ok(body, `page ${route}: no project body rendered`);
+      assert.equal(body.getAttribute("lang"), SPANISH.code, `page ${route}: the fallback body block declares Spanish`);
+      assert.ok(normalize(body.textContent).includes(project.spanish), `page ${route}: the Spanish body is rendered`);
+      assert.doesNotMatch(
+        normalize(readPage(route).querySelector("main")?.textContent),
+        TRANSLATION_NOTICE,
+        `page ${route}: nothing on the page announces a missing translation`,
       );
     }
   });
 
-  it("draws the divider in the template, never as content", () => {
-    for (const { route } of BILINGUAL) {
-      // The mark stands alone in its own block with the styling hook; any other
-      // "//" block would be a leftover content separator.
-      const marks = projectBodyBlocks(route).filter((block) => block.text === "//");
-      assert.equal(marks.length, 1, `page ${route}: exactly one "//" block`);
-      assert.ok(isDivider(marks[0]), `page ${route}: the "//" block is the template divider`);
-    }
-  });
+  it("shows a translated project's own body, claiming no other language", () => {
+    assert.equal(TRANSLATED.length, BILINGUAL_PROJECT_COUNT, "fixture: the baseline's translated projects");
 
-  it("renders Spanish-only projects without a divider", () => {
-    assert.ok(SPANISH_ONLY.length > 0, "fixture: expected Spanish-only projects");
-
-    for (const { route } of SPANISH_ONLY) {
-      assert.deepEqual(
-        projectBodyBlocks(route).filter(isDivider),
-        [],
-        `page ${route}: a Spanish-only project has no divider`,
+    for (const project of TRANSLATED) {
+      const route = projectRouteIn(project.route, ENGLISH);
+      const body = projectArticle(route).querySelector(".project-body");
+      assert.ok(body, `page ${route}: no project body rendered`);
+      assert.notEqual(body.getAttribute("lang"), SPANISH.code, `page ${route}: the English body is not marked as Spanish`);
+      assert.ok(normalize(body.textContent).includes(project.english), `page ${route}: the English body is rendered`);
+      assert.doesNotMatch(
+        normalize(readPage(route).querySelector("main")?.textContent),
+        TRANSLATION_NOTICE,
+        `page ${route}: nothing on the page announces a missing translation`,
       );
     }
-  });
-
-  it("keeps Corteza Líquida's Spanish artist biography on the Spanish side", () => {
-    const project = PROJECTS.find(({ biography }) => biography);
-    assert.ok(project, "fixture: expected a project whose biography exists in both languages");
-    const { route, biography } = project;
-    const { spanish, english } = sides(route);
-    const spanishText = spanish.map((block) => block.text).join(" ");
-    const englishText = english.map((block) => block.text).join(" ");
-
-    // The biography exists in both languages; each one stays with its language.
-    assert.ok(
-      spanishText.includes(biography.spanish),
-      `page ${route}: the Spanish biography comes before the divider`,
-    );
-    assert.ok(
-      englishText.includes(biography.english),
-      `page ${route}: the English biography comes after the divider`,
-    );
-
-    // The dossier is language-neutral and must not vanish with the English text.
-    assert.ok(/Dossier/.test(spanishText), `page ${route}: the dossier stays with the Spanish text`);
   });
 });
 
@@ -1591,7 +1758,7 @@ describe("site settings in the generated pages", () => {
 describe("page metadata", () => {
   const pages = [
     ...LANGUAGES.map((language) => [homeRoute(language), language.code === SPANISH.code ? SITE.description : SITE.englishDescription]),
-    ...PROJECTS.map((project) => [project.route, null]),
+    ...LANGUAGES.flatMap((language) => PROJECTS.map((project) => [projectRouteIn(project.route, language), null])),
     [ABOUT_ROUTE, SITE.description],
   ];
 
@@ -1617,20 +1784,37 @@ describe("page metadata", () => {
     });
   }
 
-  it("describes each project with the start of its Spanish text", () => {
-    for (const file of projectFiles()) {
-      const route = projectRoute(file);
-      const description = normalize(readPage(route).querySelector('meta[name="description"]')?.getAttribute("content"));
-      assert.ok(description.length > 0, `page ${route}: meta description is empty`);
+  it("describes each project page with the start of its own language's text", () => {
+    for (const language of LANGUAGES) {
+      for (const project of PROJECTS) {
+        const route = projectRouteIn(project.route, language);
+        const description = normalize(readPage(route).querySelector('meta[name="description"]')?.getAttribute("content"));
+        assert.ok(description.length > 0, `page ${route}: meta description is empty`);
 
-      // The description is the rendered Spanish text with its tags stripped and
-      // truncated, so comparing against the raw field only needs the emphasis
-      // markers removed and the truncation mark ignored.
-      const plain = normalize(String(projectData(file).es?.text ?? "").replace(/\*/g, ""));
-      assert.ok(
-        plain.startsWith(description.replace(/(\.{3}|…)$/, "")),
-        `page ${route}: meta description "${description}" starts the Spanish text`,
-      );
+        // The description is the page's own text, rendered with its tags
+        // stripped and truncated, so comparing against the raw field only needs
+        // the emphasis markers removed and the truncation mark ignored.
+        const source = projectVersion(project.route, language).text;
+        const plain = normalize(String(source ?? "").replace(/\*/g, ""));
+        assert.ok(
+          plain.startsWith(description.replace(/(\.{3}|…)$/, "")),
+          `page ${route}: meta description "${description}" starts the text of its own language version`,
+        );
+      }
+    }
+  });
+
+  it("describes a translated project's English page from its English text, never the Spanish one", () => {
+    const translated = PROJECTS.filter((project) => project.english);
+    assert.ok(translated.length > 0, "fixture: expected translated projects");
+
+    for (const project of translated) {
+      const route = projectRouteIn(project.route, ENGLISH);
+      const description = normalize(readPage(route).querySelector('meta[name="description"]')?.getAttribute("content"));
+      const spanish = normalize(String(projectData(sourceOf(project.route)).es?.text ?? "").replace(/\*/g, ""));
+
+      assert.ok(description.includes(project.english), `page ${route}: the description comes from the English text`);
+      assert.ok(!spanish.startsWith(description.replace(/(\.{3}|…)$/, "")), `page ${route}: the description is not the Spanish text`);
     }
   });
 });
@@ -1641,7 +1825,9 @@ describe("page metadata", () => {
  * heading level, linked titles, gallery columns, and first-image priority.
  */
 describe("project rendering contract", () => {
-  const LISTING_ROUTES = ["/", "/proyectos/"];
+  // Both homepages and the archive render the same listings; the archive stays
+  // Spanish-only in this ticket (#23 paginates it).
+  const LISTING_ROUTES = [...LANGUAGES.map(homeRoute), "/proyectos/"];
 
   it("gives project pages an h1 title and listing pages an h2 title", () => {
     for (const { route } of PROJECTS) {
@@ -1760,11 +1946,16 @@ describe("project rendering contract", () => {
   });
 });
 
-/** Every page that renders project text, and so can carry its links. */
-const PAGES_WITH_PROJECT_TEXT = ["/", "/proyectos/", ...PROJECTS.map((project) => project.route)];
-
-/** The project content file behind a project route. */
-const sourceOf = (route) => projectFiles().find((file) => projectRoute(file) === route);
+/**
+ * Every page that renders project text, and so can carry its links: both
+ * homepages and both language versions of every project. The archive is
+ * Spanish-only in this ticket (#23 paginates it), so only its own URL is here.
+ */
+const PAGES_WITH_PROJECT_TEXT = [
+  ...LANGUAGES.map((language) => `${language.prefix}/`),
+  ...LANGUAGES.flatMap((language) => PROJECTS.map((project) => projectRouteIn(project.route, language))),
+  "/proyectos/",
+];
 
 /** Links rendered inside the project text of a page, in document order. */
 function bodyLinks(pageRoute) {
@@ -1777,15 +1968,48 @@ function bodyLinks(pageRoute) {
 const isLocalRootRelative = (href) => href.startsWith("/") && !href.startsWith("//");
 
 describe("local document links", () => {
-  it("links each local document from its project page, under the deployment path prefix", () => {
-    for (const { route, label, file } of LOCAL_DOCUMENTS) {
-      const links = bodyLinks(route).filter((link) => normalize(link.textContent) === label);
-      assert.equal(links.length, 1, `page ${route}: exactly one “${label}” link`);
-      assert.equal(
-        links[0].getAttribute("href"),
-        localUrl(`/assets/files/${file}`),
-        `page ${route}: the “${label}” link points at the document under the path prefix`,
-      );
+  it("links each local document from the language version that links it, under the deployment path prefix", () => {
+    for (const document of LOCAL_DOCUMENTS) {
+      for (const language of LANGUAGES) {
+        const pageRoute = projectRouteIn(document.route, language);
+        // A translated project's English page carries its English text, so the
+        // document is linked from the page whose own text links it, and absent
+        // from the page whose text does not.
+        if (!projectVersion(document.route, language).text.includes(`/assets/files/${document.file}`)) {
+          assert.deepEqual(
+            bodyLinks(pageRoute).filter((link) => normalize(link.textContent) === document.label),
+            [],
+            `page ${pageRoute}: no “${document.label}” link, since this language's text links no document`,
+          );
+          continue;
+        }
+
+        const links = bodyLinks(pageRoute).filter((link) => normalize(link.textContent) === document.label);
+        assert.equal(links.length, 1, `page ${pageRoute}: exactly one “${document.label}” link`);
+        assert.equal(
+          links[0].getAttribute("href"),
+          localUrl(`/assets/files/${document.file}`),
+          `page ${pageRoute}: the “${document.label}” link points at the document under the path prefix`,
+        );
+      }
+    }
+  });
+
+  it("offers every document a language version links from that language's page", () => {
+    for (const language of LANGUAGES) {
+      for (const project of PROJECTS) {
+        const pageRoute = projectRouteIn(project.route, language);
+        const source = projectVersion(project.route, language).text;
+        const documents = [...source.matchAll(/\]\((\/assets\/files\/[^)\s]+)\)/g)].map((match) => match[1]);
+
+        for (const document of documents) {
+          const hrefs = bodyLinks(pageRoute).map((link) => link.getAttribute("href"));
+          assert.ok(
+            hrefs.includes(localUrl(document)),
+            `page ${pageRoute}: the document ${document} linked from this language's text is reachable on this page`,
+          );
+        }
+      }
     }
   });
 
@@ -1805,28 +2029,36 @@ describe("local document links", () => {
   });
 
   it("leaves external links exactly as the content wrote them", () => {
-    for (const project of PROJECTS) {
-      const source = String(projectData(sourceOf(project.route)).es?.text ?? "");
-      const external = [...source.matchAll(/\]\((https?:\/\/[^)\s]+)\)/g)].map((match) => match[1]);
-      if (!external.length) continue;
+    for (const language of LANGUAGES) {
+      for (const project of PROJECTS) {
+        const pageRoute = projectRouteIn(project.route, language);
+        const external = [...projectVersion(project.route, language).text.matchAll(/\]\((https?:\/\/[^)\s]+)\)/g)].map(
+          (match) => match[1],
+        );
+        if (!external.length) continue;
 
-      const rendered = bodyLinks(project.route)
-        .map((link) => link.getAttribute("href"))
-        .filter((href) => /^https?:\/\//.test(href));
-      assert.deepEqual(rendered, external, `page ${project.route}: external links are untouched`);
+        const rendered = bodyLinks(pageRoute)
+          .map((link) => link.getAttribute("href"))
+          .filter((href) => /^https?:\/\//.test(href));
+        assert.deepEqual(rendered, external, `page ${pageRoute}: external links are untouched`);
+      }
     }
   });
 
   it("repairs the malformed link wrappers into single links", () => {
-    for (const { route, label } of LOCAL_DOCUMENTS) {
-      const blocks = projectBodyBlocks(route).filter((block) => block.text.includes(label));
-      assert.equal(blocks.length, 1, `page ${route}: “${label}” renders as one block`);
+    for (const language of LANGUAGES) {
+      for (const { route, label, file } of LOCAL_DOCUMENTS) {
+        const pageRoute = projectRouteIn(route, language);
+        if (!projectVersion(route, language).text.includes(`/assets/files/${file}`)) continue;
+        const blocks = projectBodyBlocks(pageRoute).filter((block) => block.text.includes(label));
+        assert.equal(blocks.length, 1, `page ${pageRoute}: “${label}” renders as one block`);
 
-      const { element, text } = blocks[0];
-      const anchors = element.querySelectorAll("a");
-      assert.equal(anchors.length, 1, `page ${route}: “${label}” is a single link, not split text`);
-      assert.equal(text, label, `page ${route}: the “${label}” block carries only the link text`);
-      assert.ok(!/\]\(/.test(text), `page ${route}: no raw Markdown link residue around “${label}”`);
+        const { element, text } = blocks[0];
+        const anchors = element.querySelectorAll("a");
+        assert.equal(anchors.length, 1, `page ${pageRoute}: “${label}” is a single link, not split text`);
+        assert.equal(text, label, `page ${pageRoute}: the “${label}” block carries only the link text`);
+        assert.ok(!/\]\(/.test(text), `page ${pageRoute}: no raw Markdown link residue around “${label}”`);
+      }
     }
   });
 
@@ -1842,133 +2074,61 @@ describe("local document links", () => {
 });
 
 /**
- * Ticket #10: the same site built for a GitHub Pages subpath. The default run
- * builds it too, so a URL that skips the prefix fails the suite on every run;
- * `PATH_PREFIX=/.../ npm test` covers a custom prefix instead.
+ * The repository's English texts link no local document yet, so the English
+ * page is exercised on a throwaway project: one whose Spanish text links a
+ * document and whose English text links that same file plus one of its own —
+ * an editor may write different documents per language. Each language page
+ * must reach the documents its own language's text links, and only those.
  */
-describe(`subpath deployment (${SUBPATH_PREFIX})`, () => {
-  const PREFIX = SUBPATH_PREFIX.replace(/\/$/, "");
+describe("a project whose language versions each link a document", () => {
+  const SLUG = "fixture-en-document";
+  const DOCUMENT = "/assets/files/PPD_LAVA_posterzine.pdf";
+  const ENGLISH_ONLY = "/assets/files/Dossier_Tiempos-Pendulares-x-Lava.pdf";
   let output;
 
   before(async () => {
-    output = await buildPrefixedSite();
+    const inputDir = writeContentDir(
+      {
+        [`${SLUG}.md`]: projectFile(`
+es:
+  title: Fixture con documento
+  text: |-
+    Texto en español con su [Dossier](${DOCUMENT}).
+en:
+  title: Fixture with a document
+  text: |-
+    English text with its [Dossier](${DOCUMENT}) and [English-only](${ENGLISH_ONLY}).
+media:
+  - type: image
+    src: "/assets/images/lava-logo.png"
+`),
+      },
+      {
+        // The site settings the layouts read and the languages the build
+        // paginates over (a throwaway input directory carries no `_data/`).
+        data: {
+          "languages.json": readRepoFile("src/_data/languages.json"),
+          "site.json": readRepoFile("src/_data/site.json"),
+        },
+      },
+    );
+    output = await buildContentDir(inputDir, { render: true });
   });
 
-  const page = (route) => readOutputPage(output, route);
+  for (const language of LANGUAGES) {
+    const route = `${language.prefix}/proyectos/${SLUG}/`;
 
-  /** Every URL the page owns: its root-relative `href` / `src` values. */
-  const localUrls = (doc) =>
-    doc
-      .querySelectorAll("[href], [src]")
-      .flatMap((node) => ["href", "src"].map((name) => node.getAttribute(name)))
-      .filter((url) => url?.startsWith("/") && !url.startsWith("//"));
+    it(`${route} reaches the documents its own language's text links, and only those`, () => {
+      const links = readOutputPage(output, route)
+        .querySelectorAll("main .project-body a")
+        .map((link) => link.getAttribute("href"));
 
-  it("prefixes every URL the site owns, exactly once", () => {
-    for (const route of [...LANGUAGES.map(homeRoute), "/proyectos/", PROJECTS[0].route, THREE_COLUMN_ROUTE, ABOUT_ROUTE]) {
-      const urls = localUrls(page(route));
-      assert.ok(urls.length > 0, `page ${route}: no local URLs rendered`);
-      for (const url of urls) {
-        assert.ok(url.startsWith(`${PREFIX}/`), `page ${route}: ${url} carries the path prefix`);
-        assert.ok(!url.startsWith(`${PREFIX}${PREFIX}/`), `page ${route}: ${url} is prefixed exactly once`);
-      }
-    }
-  });
-
-  it("serves both language versions of the homepage under the prefix", () => {
-    const english = page(homeRoute(ENGLISH));
-    assert.equal(english.querySelector("html")?.getAttribute("lang"), ENGLISH.code, `page ${homeRoute(ENGLISH)}: page language under the subpath`);
-
-    const backToSpanish = english.querySelector("header a[hreflang]");
-    assert.equal(backToSpanish?.getAttribute("href"), `${PREFIX}${homeRoute(SPANISH)}`, `page ${homeRoute(ENGLISH)}: the language link points at the prefixed Spanish homepage`);
-    assert.equal(normalize(backToSpanish?.textContent), SPANISH.label, `page ${homeRoute(ENGLISH)}: the language link names Español`);
-
-    const toEnglish = page(homeRoute(SPANISH)).querySelector("header a[hreflang]");
-    assert.equal(toEnglish?.getAttribute("href"), `${PREFIX}${homeRoute(ENGLISH)}`, `page ${homeRoute(SPANISH)}: the language link points at the prefixed English homepage`);
-
-    for (const language of LANGUAGES) {
-      assert.deepEqual(
-        page(homeRoute(language))
-          .querySelectorAll('link[rel="alternate"]')
-          .map((node) => node.getAttribute("href")),
-        [
-          `${SITE_URL}${PREFIX}${homeRoute(SPANISH)}`,
-          `${SITE_URL}${PREFIX}${homeRoute(ENGLISH)}`,
-          `${SITE_URL}${PREFIX}${homeRoute(SPANISH)}`,
-        ],
-        `page ${homeRoute(language)}: hreflang links carry the path prefix`,
+      assert.ok(links.includes(DOCUMENT), `page ${route}: the document this language's text links`);
+      assert.equal(
+        links.includes(ENGLISH_ONLY),
+        language.code === ENGLISH.code,
+        `page ${route}: a document only the English text links stays with the English page`,
       );
-    }
-  });
-
-  it("lists both homepages in the prefixed sitemap with prefixed alternates", () => {
-    const xml = readOutputText(output, "/sitemap.xml");
-
-    for (const language of LANGUAGES) {
-      assert.ok(
-        xml.includes(`<loc>${SITE_URL}${PREFIX}${homeRoute(language)}</loc>`),
-        `page /sitemap.xml: ${homeRoute(language)} is listed under the prefix`,
-      );
-    }
-
-    const alternates = [...xml.matchAll(/<xhtml:link rel="alternate" hreflang="[^"]+" href="([^"]+)"/g)].map((match) => match[1]);
-    assert.ok(alternates.length > 0, "page /sitemap.xml: no alternates under the prefix");
-    for (const href of alternates) {
-      assert.ok(href.startsWith(`${SITE_URL}${PREFIX}/`), `page /sitemap.xml: alternate ${href} carries the path prefix`);
-    }
-  });
-
-  it("keeps canonical URLs and the sitemap on the prefixed routes", () => {
-    const route = PROJECTS[0].route;
-    assert.equal(
-      page(route).querySelector('link[rel="canonical"]')?.getAttribute("href"),
-      `${SITE_URL}${PREFIX}${route}`,
-      `page ${route}: canonical URL under the subpath`,
-    );
-
-    const listed = [...readOutputText(output, "/sitemap.xml").matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
-    assert.ok(listed.length > 0, "page /sitemap.xml: no URLs listed");
-    for (const loc of listed) {
-      assert.ok(loc.startsWith(`${SITE_URL}${PREFIX}/`), `page /sitemap.xml: ${loc} carries the path prefix`);
-    }
-  });
-
-  it("serves the gallery video and the dossier links under the prefix", () => {
-    const project = PROJECTS.find(({ videos }) => videos.length);
-    assert.ok(project, "fixture: expected a project with a video");
-    const video = page(project.route).querySelector("video");
-    assert.equal(
-      video?.getAttribute("src"),
-      `${PREFIX}/assets/videos/${project.videos[0].source}`,
-      `page ${project.route}: video source under the subpath`,
-    );
-    // The control bar travels with the markup, so the subpath build must not
-    // lose it: the same expectation, derived from this video's own flags.
-    assert.equal(
-      video?.hasAttribute("controls"),
-      keepsControls(project.videos[0]),
-      `page ${project.route}: gallery video 1 controls under the subpath`,
-    );
-    assert.equal(video?.hasAttribute("playsinline"), true, `page ${project.route}: gallery video 1 playsinline under the subpath`);
-    assert.equal(video?.getAttribute("preload"), "metadata", `page ${project.route}: gallery video 1 preload under the subpath`);
-
-    const { route, file } = LOCAL_DOCUMENTS[0];
-    const hrefs = page(route)
-      .querySelectorAll("main .project-body a")
-      .map((link) => link.getAttribute("href"));
-    assert.ok(hrefs.includes(`${PREFIX}/assets/files/${file}`), `page ${route}: dossier link ${file} under the subpath`);
-  });
-
-  it("serves the responsive images and social metadata under the prefix", () => {
-    const route = PROJECTS[0].route;
-    const doc = page(route);
-
-    assert.ok(
-      doc.querySelector("main .project-gallery img")?.getAttribute("src")?.startsWith(`${PREFIX}/img/`),
-      `page ${route}: gallery images come from the prefixed image pipeline`,
-    );
-    assert.ok(
-      doc.querySelector('meta[property="og:image"]')?.getAttribute("content")?.startsWith(`${SITE_URL}${PREFIX}/img/`),
-      `page ${route}: og:image is an absolute prefixed URL`,
-    );
-  });
+    });
+  }
 });
