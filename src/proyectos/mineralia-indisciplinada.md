@@ -48,7 +48,7 @@ text_es: >-
   minerales y sus propios cuerpos, como parte de una misma materia geológica.
   Cada acto es una exploración sensorial del organismo cavernoso, revelando
   cinco nuevos minerales cuya composición, alterada por procesos del subsuelo y
-  cambios climáticos, conserva vestigios del tiempo profundo. TEST
+  cambios climáticos, conserva vestigios del tiempo profundo.
 text_en: >-
   ***Mineralia indisciplinada*** is a curatorial project developed in
   collaboration with artists Mariana Dussel (Mexico City, 1998) and Daniel
@@ -80,6 +80,6 @@ text_en: >-
 
   Museo Universitario del Chopo (UNAM)  
 
-  Asistencia Artistica TEST
+  Asistencia Artistica
 gallery_columns: 1
 ---
