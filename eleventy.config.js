@@ -133,10 +133,15 @@ export default function (eleventyConfig) {
           const autoplay = item.autoplay ? " autoplay" : "";
           const loop = item.loop ? " loop" : "";
           const mute = item.mute ? " muted" : "";
+          // Only a self-sustaining video — autoplay + mute + loop — is
+          // decoration with nothing for a viewer to operate. Every other video
+          // gets the browser's control bar, including a muted one-shot that
+          // autoplays without loop and would otherwise end on a dead frame.
+          const controls = item.autoplay && item.mute && item.loop ? "" : " controls";
           // Videos are copied verbatim, so the same path-prefix rule applies
           // as for every other URL the site owns (lib/path-prefix.js).
           const src = withPathPrefix(`${ASSET_URL.videos}/${item.src}`, PATH_PREFIX);
-          return `<video class="project-video" src="${src}"${poster}${autoplay}${loop}${mute} playsinline preload="metadata"></video>`;
+          return `<video class="project-video" src="${src}"${poster}${autoplay}${loop}${mute}${controls} playsinline preload="metadata"></video>`;
         }
         return picture(item.src, item.alt, priority && index === 0);
       }),

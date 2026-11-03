@@ -808,6 +808,13 @@ describe("project pages", () => {
         assert.equal(video.hasAttribute("autoplay"), expected.autoplay, `${label}: ${position} autoplay`);
         assert.equal(video.hasAttribute("loop"), expected.loop, `${label}: ${position} loop`);
         assert.equal(video.hasAttribute("muted"), expected.muted, `${label}: ${position} muted`);
+        // A self-sustaining video — autoplay + mute + loop — is decoration and
+        // carries no control bar; every other video is meant to be operated, so
+        // the expectation is derived from this video's own flags, not a list.
+        const selfSustaining = expected.autoplay && expected.muted && expected.loop;
+        assert.equal(video.hasAttribute("controls"), !selfSustaining, `${label}: ${position} controls`);
+        assert.equal(video.hasAttribute("playsinline"), true, `${label}: ${position} playsinline`);
+        assert.equal(video.getAttribute("preload"), "metadata", `${label}: ${position} preload`);
       });
     });
   }
