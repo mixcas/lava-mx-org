@@ -31,6 +31,30 @@ function project(overrides = {}) {
 }
 
 /**
+ * The same project written with the two language objects of ADR-0002: an `es`
+ * object, an optional `en` object, and the shared gallery.
+ */
+const VALID_OBJECTS = {
+  es: {
+    title: "Proyecto de prueba",
+    venue: "Galería",
+    dates: "1 febrero - 1 abril, 2025.",
+    text: "Texto en español.",
+  },
+  media: [{ type: "image", src: "/assets/images/lava-logo.png" }],
+};
+
+/** A project content file from the `es` / `en` objects, with keys replaced. */
+function objects(overrides = {}) {
+  const data = { ...VALID_OBJECTS };
+  for (const [key, value] of Object.entries(overrides)) {
+    if (value === undefined) delete data[key];
+    else data[key] = value;
+  }
+  return file(data);
+}
+
+/**
  * One broken project and the one message the build must fail with. The message
  * names the content file and the field, so an editor knows what to fix.
  */
@@ -175,6 +199,59 @@ INVALID.push(
   },
 );
 
+/**
+ * The two language objects (ADR-0002): the Spanish object is the required
+ * content, the English one is optional at every level, and each message names
+ * the field by its path inside the language objects.
+ */
+INVALID.push(
+  {
+    name: "an English object with no Spanish one",
+    content: objects({ es: undefined, en: { title: "Test project", text: "Text." } }),
+    message: '"es" must be an object with "title" and "text" (found: nothing)',
+  },
+  {
+    name: "a Spanish object with no title",
+    content: objects({ es: { venue: "Galería", text: "Texto en español." } }),
+    message: '"es.title" is required and must be a non-empty string',
+  },
+  {
+    name: "a blank Spanish title in the Spanish object",
+    content: objects({ es: { title: "   ", text: "Texto en español." } }),
+    message: '"es.title" is required and must be a non-empty string',
+  },
+  {
+    name: "a Spanish object with no text",
+    content: objects({ es: { title: "Proyecto de prueba" } }),
+    message: '"es.text" is required and must be a non-empty string',
+  },
+  {
+    name: "a venue in the Spanish object that is not text",
+    content: objects({ es: { ...VALID_OBJECTS.es, venue: 42 } }),
+    message: '"es.venue" must be a string (found: 42)',
+  },
+  {
+    name: "a title in the English object that is not text",
+    content: objects({ en: { title: 42 } }),
+    message: '"en.title" must be a string (found: 42)',
+  },
+  {
+    name: "an English object with a body that is not text",
+    content: objects({ en: { text: 42 } }),
+    message: '"en.text" must be a string (found: 42)',
+  },
+  {
+    name: "a broken gallery item behind the Spanish object",
+    content: objects({ media: [{ type: "image", src: "/assets/images/no-existe.webp" }] }),
+    message: 'media[1] ("/assets/images/no-existe.webp"): the master src/assets/images/no-existe.webp does not exist',
+  },
+  {
+    name: "alt text that is not text behind the Spanish object",
+    content: objects({ media: [{ type: "image", src: IMAGE, alt_en: 42 }] }),
+    message: `media[1] ("${IMAGE}"): "alt_en" must be a string (found: 42)`,
+  },
+);
+
 describe("project content contract", () => {
   it("accepts the migrated repository", () => {
     assert.deepEqual(checkProjects({ inputDir: REPO_INPUT }), [], "the committed project content meets the contract");
@@ -188,6 +265,31 @@ describe("project content contract", () => {
 
   it("accepts a three-column project with two gallery columns", () => {
     const inputDir = writeContentDir({ "tres-columnas.md": project({ variant: "three-column", gallery_columns: 2 }) });
+
+    assert.deepEqual(checkProjects({ inputDir }), []);
+  });
+
+  it("accepts a project written with only the Spanish object", () => {
+    const inputDir = writeContentDir({ "solo-espanol.md": objects() });
+
+    assert.deepEqual(checkProjects({ inputDir }), []);
+  });
+
+  it("accepts a project written with both language objects", () => {
+    const inputDir = writeContentDir({
+      "bilingue.md": objects({
+        // `venue` and `dates` stay optional: one Project has no venue.
+        es: { title: "Proyecto de prueba", text: "Texto en español." },
+        en: { title: "Test project", venue: "Gallery", dates: "1 February - 1 April, 2025.", text: "English text." },
+        media: [{ type: "image", src: IMAGE, alt_es: "Sala principal", alt_en: "Main room" }],
+      }),
+    });
+
+    assert.deepEqual(checkProjects({ inputDir }), []);
+  });
+
+  it("accepts a project with an English object holding only the title it shares", () => {
+    const inputDir = writeContentDir({ "neutro.md": objects({ en: { title: "Proyecto de prueba" } }) });
 
     assert.deepEqual(checkProjects({ inputDir }), []);
   });

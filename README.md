@@ -210,6 +210,37 @@ shape: one typed gallery, `text_es` / `text_en`, `bio_es` / `bio_en` / `team` on
 the About page, and canonical asset paths. The build rejects any other shape
 (see the content contract below) instead of guessing what it meant.
 
+### Two language objects (transition)
+
+The content migration moves every Project onto the two language objects ADR-0002
+defines (`docs/adr/0002-per-language-pages.md`). Until it lands, the content
+contract and the view model accept both shapes and resolve them to the same
+page:
+
+```yaml
+es:                       # required: the Spanish language version
+  title: "Mineralia indisciplinada"   # required; also names the file and both URLs
+  venue: "..."            # optional
+  dates: "..."            # optional
+  text: |-                # required, Markdown
+    ...
+en:                       # optional; an absent object means untranslated
+  title: "..."
+  venue: "..."
+  dates: "..."
+  text: "..."
+media:                    # the gallery stays shared by both versions
+  - type: image
+    src: "/assets/images/DSC01858.webp"
+    alt_es: "Sala principal"   # optional
+    alt_en: "Main room"        # optional
+```
+
+`lib/project-view.js` reads whichever shape the entry uses, so no page changes
+until the content moves and the routes follow. On an English language version an
+image's alt text resolves the English alt, then the English title, then the
+Spanish title.
+
 ### Content contract (build validation)
 
 Before rendering anything, the build checks every file in `src/proyectos/`
@@ -218,7 +249,9 @@ have saved:
 
 - `title` and `text_es` are non-empty, `order` is a number, `featured` is a
   boolean, `gallery_columns` is 1 or 2 (the three-column variant included), and
-  `variant` is `standard` or `three-column`;
+  `variant` is `standard` or `three-column`; a project written with the two
+  language objects instead needs a non-empty `es.title` and `es.text`, and every
+  value it writes in `es` or `en` must be text;
 - every media item has a `type` (`image` / `video`) and a `src` under the right
   assets folder; image sources (and video posters) use webp, jpg, jpeg, png,
   avif or gif, video sources use mp4 or webm;
