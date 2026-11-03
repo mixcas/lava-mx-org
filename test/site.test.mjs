@@ -1294,6 +1294,22 @@ describe("one text per page", () => {
       }
       assert.equal(new Set(sayings).size, sayings.length, `${label}: each line says it in its own language`);
     });
+
+    it("takes each line from that language's site settings", () => {
+      const blocks = declaredBlocks(readPage(NOT_FOUND));
+      const written = settings();
+
+      for (const block of blocks) {
+        const code = block.getAttribute("lang");
+        const copy = written[code].notFound;
+        assert.ok(copy, `site.json: the ${code} settings hold the 404 copy`);
+        assert.equal(
+          normalize(block.textContent),
+          normalize(`${copy.message} ${copy.link}`),
+          `page ${NOT_FOUND}: the ${code} line is the settings' own text, not a copy in the template`,
+        );
+      }
+    });
   });
 });
 
