@@ -39,6 +39,7 @@ import {
   SITE_URL,
   SUBPATH_PREFIX,
 } from "./support/site.mjs";
+import { BLANK_ROUTE, buildUntranslatedAbout, UNTRANSLATED_ROUTE } from "./support/untranslated-about.mjs";
 
 /** About page route (see GLOSSARY: the collective's identity page). */
 const ABOUT_ROUTE = "/acerca-de/";
@@ -75,6 +76,9 @@ const ENGLISH = declaredLanguage("en");
 
 /** The homepage route in one language tree: its prefix plus "/". */
 const homeRoute = (language) => `${language.prefix}/`;
+
+/** The About route in one language tree: its prefix plus the Spanish route. */
+const aboutRoute = (language) => `${language.prefix}${ABOUT_ROUTE}`;
 
 /** Whether an absolute (or root-relative) site URL resolves to a built page. */
 function isGeneratedUrl(url) {
@@ -609,7 +613,7 @@ describe("Pages CMS about page (.pages.yml)", () => {
     assert.doesNotThrow(() => readRepoFile(entry.path), ".pages.yml: the About entry path is the About page file");
   });
 
-  it("exposes both language versions as Markdown rich text with Spanish labels", () => {
+  it("exposes both language versions with Spanish labels", () => {
     const fields = entry?.fields ?? [];
     assert.deepEqual(fields.map((field) => field.name), ["es", "en"], ".pages.yml: About fields");
 
@@ -619,30 +623,37 @@ describe("Pages CMS about page (.pages.yml)", () => {
       assert.equal(field.type, "object", `.pages.yml: the About "${field.name}" version is one labelled group`);
       assert.deepEqual(
         field.fields.map((nested) => nested.name),
-        ["bio", "team"],
-        `.pages.yml: the About "${field.name}" version holds the biography and the team`,
+        ["title", "bio", "team"],
+        `.pages.yml: the About "${field.name}" version holds its page title, biography and team`,
       );
 
-      for (const nested of field.fields) {
-        const label = `.pages.yml: About field "${field.name}.${nested.name}"`;
-        assert.ok(nested.label, `${label} has no label`);
-        assert.ok(nested.description, `${label} has no description`);
-        assert.equal(nested.type, "rich-text", `${label} is rich text`);
-        assert.deepEqual(nested.options, RICH_TEXT_OPTIONS, `${label} is Markdown with a source switch and the documents library`);
+      const label = (nested) => `.pages.yml: About field "${field.name}.${nested.name}"`;
+      const [title, ...richText] = field.fields;
+      assert.equal(title.type, "string", `${label(title)} is the page title, a string`);
+      for (const nested of richText) {
+        assert.ok(nested.label, `${label(nested)} has no label`);
+        assert.ok(nested.description, `${label(nested)} has no description`);
+        assert.equal(nested.type, "rich-text", `${label(nested)} is rich text`);
+        assert.deepEqual(nested.options, RICH_TEXT_OPTIONS, `${label(nested)} is Markdown with a source switch and the documents library`);
       }
     }
 
     const group = (name) => fields.find((field) => field.name === name);
     const inGroup = (name, nested) => group(name).fields.find((field) => field.name === nested);
+    assert.equal(inGroup("es", "title").required, true, ".pages.yml: the Spanish page title is required");
+    assert.ok(inGroup("es", "title").description, ".pages.yml: the Spanish page title has help text");
+    assert.equal(inGroup("en", "title").required, undefined, ".pages.yml: the English page title is never required");
     assert.equal(inGroup("es", "bio").required, true, ".pages.yml: the About page always has a Spanish biography");
     assert.equal(inGroup("es", "team").required, true, ".pages.yml: the About page always has a Spanish team list");
     assert.deepEqual(
       group("en").fields.filter((nested) => nested.required === true),
       [],
-      ".pages.yml: the English biography and team are never required",
+      ".pages.yml: the English title, biography and team are never required",
     );
     assert.match(group("es").label, /español/i, ".pages.yml: the Spanish group is labelled in Spanish");
     assert.match(group("en").label, /inglés/i, ".pages.yml: the English group is labelled in Spanish");
+    assert.match(inGroup("es", "title").label, /español/i, ".pages.yml: the Spanish page title is labelled in Spanish");
+    assert.match(inGroup("en", "title").label, /inglés/i, ".pages.yml: the English page title is labelled in Spanish");
     assert.match(inGroup("es", "bio").label, /español/i, ".pages.yml: the Spanish biography field is labelled in Spanish");
     assert.match(inGroup("en", "bio").label, /inglés/i, ".pages.yml: the English biography field is labelled in Spanish");
     assert.match(inGroup("es", "team").label, /equipo/i, ".pages.yml: the team field is labelled in Spanish");
@@ -1118,7 +1129,7 @@ describe("homepage in both languages", () => {
 
   it("renders no navigation label that mixes the two languages", () => {
     const mixed = ["Lava es — Lava is", "Proyectos anteriores — Previous projects"];
-    for (const route of LANGUAGES.map(homeRoute).concat([ABOUT_ROUTE, "/proyectos/"])) {
+    for (const route of [...LANGUAGES.map(homeRoute), ...LANGUAGES.map(aboutRoute), "/proyectos/"]) {
       const html = readText(path.posix.join(route, "index.html"));
       for (const label of mixed) {
         assert.ok(!html.includes(label), `page ${route}: no half-and-half label "${label}"`);
@@ -1135,9 +1146,13 @@ describe("homepage in both languages", () => {
 
 describe("language alternates follow the routes that were built", () => {
   /** The pages this phase still builds in Spanish only. */
-  const SPANISH_ONLY = [ABOUT_ROUTE, "/proyectos/", "/404.html"];
-  /** The pages built in both languages: each home, and both versions of each project. */
-  const PAIRED = [...LANGUAGES.map(homeRoute), ...LANGUAGES.flatMap((language) => PROJECTS.map((project) => projectRouteIn(project.route, language)))];
+  const SPANISH_ONLY = ["/proyectos/", "/404.html"];
+  /** The pages built in both languages: each home, each About page, and both versions of each project. */
+  const PAIRED = [
+    ...LANGUAGES.map(homeRoute),
+    ...LANGUAGES.map(aboutRoute),
+    ...LANGUAGES.flatMap((language) => PROJECTS.map((project) => projectRouteIn(project.route, language))),
+  ];
 
   it("advertises no English version of a page that exists in Spanish only", () => {
     for (const route of SPANISH_ONLY) {
@@ -1210,7 +1225,7 @@ describe("sitemap (/sitemap.xml)", () => {
     const listed = [...xml().matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
     const routes = [
       ...LANGUAGES.map(homeRoute),
-      ABOUT_ROUTE,
+      ...LANGUAGES.map(aboutRoute),
       "/proyectos/",
       ...LANGUAGES.flatMap((language) => PROJECTS.map((project) => projectRouteIn(project.route, language))),
     ];
@@ -1222,7 +1237,7 @@ describe("sitemap (/sitemap.xml)", () => {
     );
   });
 
-  it("carries xhtml alternates between the language versions of every paired page", () => {
+  it("carries xhtml alternates for every route built in both languages, none for a single-language page", () => {
     assert.ok(xml().includes('xmlns:xhtml="http://www.w3.org/1999/xhtml"'), `page ${route}: declares the xhtml namespace`);
 
     const entries = [...xml().matchAll(/<url>[\s\S]*?<\/url>/g)].map(([block]) => ({
@@ -1234,30 +1249,33 @@ describe("sitemap (/sitemap.xml)", () => {
     }));
     assert.ok(entries.length > 0, `page ${route}: no <url> entries`);
 
-    // The routes built in both languages: the two homepages and all twelve
-    // projects. Each of their language versions carries the same hreflang set,
-    // with x-default on the Spanish URL (ADR-0002).
-    const paired = [homeRoute(SPANISH), ...PROJECTS.map((project) => project.route)];
-    const pairedLocs = new Set(
-      paired.flatMap((pairedRoute) => LANGUAGES.map((language) => `${SITE_URL}${localUrl(projectRouteIn(pairedRoute, language))}`)),
-    );
+    // Every route built in both languages — the homepages, the About pages and
+    // all twelve projects — carries the same three alternates, keyed by that
+    // route's own pair of URLs; a single-language page carries none (ADR-0002).
+    const pairedRoutes = [
+      homeRoute,
+      aboutRoute,
+      ...PROJECTS.map((project) => (language) => projectRouteIn(project.route, language)),
+    ];
 
-    for (const pairedRoute of paired) {
+    for (const ofRoute of pairedRoutes) {
       const expected = [
-        [SPANISH.code, `${SITE_URL}${localUrl(projectRouteIn(pairedRoute, SPANISH))}`],
-        [ENGLISH.code, `${SITE_URL}${localUrl(projectRouteIn(pairedRoute, ENGLISH))}`],
-        ["x-default", `${SITE_URL}${localUrl(projectRouteIn(pairedRoute, SPANISH))}`],
+        [SPANISH.code, `${SITE_URL}${localUrl(ofRoute(SPANISH))}`],
+        [ENGLISH.code, `${SITE_URL}${localUrl(ofRoute(ENGLISH))}`],
+        ["x-default", `${SITE_URL}${localUrl(ofRoute(SPANISH))}`],
       ];
-
       for (const language of LANGUAGES) {
-        const loc = `${SITE_URL}${localUrl(projectRouteIn(pairedRoute, language))}`;
+        const loc = `${SITE_URL}${localUrl(ofRoute(language))}`;
         const entry = entries.find((candidate) => candidate.loc === loc);
         assert.ok(entry, `page ${route}: ${loc} is listed`);
-        assert.deepEqual(entry.alternates, expected, `page ${route}: ${loc} carries the alternates between its language versions`);
+        assert.deepEqual(entry.alternates, expected, `page ${route}: ${loc} carries the alternates of its route`);
       }
     }
 
-    for (const entry of entries.filter((candidate) => !pairedLocs.has(candidate.loc))) {
+    const bilingualLocs = new Set(
+      pairedRoutes.flatMap((ofRoute) => LANGUAGES.map((language) => `${SITE_URL}${localUrl(ofRoute(language))}`)),
+    );
+    for (const entry of entries.filter((candidate) => !bilingualLocs.has(candidate.loc))) {
       assert.deepEqual(entry.alternates, [], `page ${route}: ${entry.loc} was built in one language, so it carries no alternate`);
     }
   });
@@ -1559,122 +1577,200 @@ describe("gallery media items", () => {
   }
 });
 
-describe("about page (/acerca-de/)", () => {
-  const route = ABOUT_ROUTE;
-  const text = () => normalize(readPage(route).querySelector("main")?.textContent);
-
-  /** The text blocks of the biography column, in document order. */
-  const bioBlocks = () => {
-    const bio = readPage(route).querySelector("main .about-bio");
-    assert.ok(bio, `page ${route}: no biography rendered`);
-    return bio.childNodes
-      .filter((node) => node.nodeType === NodeType.ELEMENT_NODE)
-      .map((node) => normalize(node.textContent));
+describe("about page in both languages", () => {
+  /** The biography and team copy each language version must render. */
+  const copy = {
+    [SPANISH.code]: { bio: ABOUT.spanish, team: ABOUT.team.spanish, other: ABOUT.english, otherTeam: ABOUT.team.english },
+    [ENGLISH.code]: { bio: ABOUT.english, team: ABOUT.team.english, other: ABOUT.spanish, otherTeam: ABOUT.team.spanish },
   };
 
-  it("renders the Spanish biography", () => {
-    assert.ok(text().includes(ABOUT.spanish), `page ${route}: Spanish bio "${ABOUT.spanish}"`);
-  });
-
-  it("renders the English biography", () => {
-    assert.ok(text().includes(ABOUT.english), `page ${route}: English bio "${ABOUT.english}"`);
-  });
-
-  it("renders the Spanish bio first, one divider, then the English bio", () => {
-    const blocks = bioBlocks();
-    const spanish = blocks.findIndex((block) => block.startsWith(ABOUT.spanish));
-    const english = blocks.findIndex((block) => block.startsWith(ABOUT.english));
-    const dividers = blocks.flatMap((block, index) => (block === "//" ? [index] : []));
-
-    assert.notEqual(spanish, -1, `page ${route}: the Spanish biography is its own text block`);
-    assert.notEqual(english, -1, `page ${route}: the English biography is its own text block`);
-    assert.equal(dividers.length, 1, `page ${route}: the template draws one divider between the biographies`);
-    assert.ok(spanish < dividers[0], `page ${route}: the Spanish biography comes before the divider`);
-    assert.ok(dividers[0] < english, `page ${route}: the English biography comes after the divider`);
-  });
-
-  it("renders the team in both language versions", () => {
-    for (const member of [...ABOUT.team.spanish, ...ABOUT.team.english]) {
-      assert.ok(text().includes(member), `page ${route}: team copy "${member}"`);
+  it("serves the Spanish About at its current URL and the English one at its mirrored URL", () => {
+    for (const language of LANGUAGES) {
+      const route = aboutRoute(language);
+      const doc = readPage(route);
+      assert.equal(doc.querySelector("html")?.getAttribute("lang"), language.code, `page ${route}: <html lang>`);
     }
+    assert.equal(SPANISH.prefix, "", "the Spanish About keeps the current URL");
+    assert.equal(ENGLISH.prefix, "/en", "the English About mirrors it under /en");
   });
+
+  for (const language of LANGUAGES) {
+    const route = aboutRoute(language);
+    const other = LANGUAGES.find((candidate) => candidate.code !== language.code);
+    const expected = copy[language.code];
+
+    it(`renders only the ${language.code} biography and team on ${route}`, () => {
+      const doc = readPage(route);
+      const label = `page ${route}`;
+      const text = normalize(doc.querySelector("main")?.textContent);
+
+      assert.ok(text.includes(expected.bio), `${label}: the page's own biography "${expected.bio}"`);
+      assert.ok(!text.includes(expected.other), `${label}: not the other language's biography`);
+
+      const team = normalize(doc.querySelector("main .about-team")?.textContent);
+      assert.ok(team.length > 0, `${label}: no team section rendered`);
+      for (const member of expected.team) {
+        assert.ok(team.includes(member), `${label}: the team carries "${member}"`);
+      }
+      // Names repeat across the two lists; the roles and the
+      // former-collaborators heading are what each language writes for itself,
+      // and they must not be the other language's.
+      for (const member of expected.otherTeam.filter((entry) => !expected.team.includes(entry))) {
+        assert.ok(!team.includes(member), `${label}: the team leaves out the other language's "${member}"`);
+      }
+
+      // No role reads "Spanish / English" in one string.
+      for (const mixed of [
+        "Fundadora y Curadora / Founder and Curator",
+        "Curadora Asociada / Associate Curator",
+        "Asistencia Curatorial / Curatorial Assistant",
+        "Colaboradoras anteriores / Former collaborators:",
+      ]) {
+        assert.ok(!text.includes(mixed), `${label}: no half-and-half role "${mixed}"`);
+      }
+    });
+
+    it(`heads, titles and describes ${route} in its own language`, () => {
+      const doc = readPage(route);
+      const label = `page ${route}`;
+      const title = language.code === SPANISH.code ? ABOUT.title.spanish : ABOUT.title.english;
+
+      const heading = normalize(doc.querySelector("main h1")?.textContent);
+      assert.equal(heading, title, `${label}: the page heading is the page language's own`);
+      assert.equal(normalize(doc.querySelector("title")?.textContent), `${title} — ${SITE.title}`, `${label}: <title>`);
+      assert.equal(
+        normalize(doc.querySelector('meta[name="description"]')?.getAttribute("content")),
+        language.code === SPANISH.code ? SITE.description : SITE.englishDescription,
+        `${label}: the meta description is the page language's own`,
+      );
+    });
+
+    it(`links ${route} to its counterpart language version`, () => {
+      const doc = readPage(route);
+      const label = `page ${route}`;
+
+      const links = doc.querySelectorAll("header a[hreflang]");
+      assert.equal(links.length, 1, `${label}: one language link in the header`);
+      const link = links[0];
+      assert.equal(link.getAttribute("href"), localUrl(aboutRoute(other)), `${label}: the language link points at the counterpart About page`);
+      assert.equal(link.getAttribute("hreflang"), other.code, `${label}: the link declares the language it leads to`);
+      assert.equal(normalize(link.textContent), other.label, `${label}: the link names the language in its own language`);
+    });
+
+    it(`declares the hreflang set and a self canonical on ${route}`, () => {
+      const doc = readPage(route);
+      const label = `page ${route}`;
+      const urls = Object.fromEntries(LANGUAGES.map((candidate) => [candidate.code, `${SITE_URL}${localUrl(aboutRoute(candidate))}`]));
+
+      assert.deepEqual(
+        Object.fromEntries(
+          doc.querySelectorAll('link[rel="alternate"]').map((link) => [link.getAttribute("hreflang"), link.getAttribute("href")]),
+        ),
+        {
+          [SPANISH.code]: urls[SPANISH.code],
+          [ENGLISH.code]: urls[ENGLISH.code],
+          "x-default": urls[SPANISH.code],
+        },
+        `${label}: hreflang links, x-default pointing at the Spanish About page`,
+      );
+      assert.equal(doc.querySelector('link[rel="canonical"]')?.getAttribute("href"), `${SITE_URL}${localUrl(route)}`, `${label}: self canonical`);
+    });
+  }
 
   it("stores each language version in its own object, without the separator", () => {
     const data = projectData("src/acerca-de.md");
 
     assert.ok(
       String(data.es?.bio ?? "").trim().startsWith(ABOUT.spanish),
-      `page ${route}: "es.bio" starts the Spanish biography`,
+      `page ${aboutRoute(SPANISH)}: "es.bio" starts the Spanish biography`,
     );
     assert.ok(
       String(data.en?.bio ?? "").trim().startsWith(ABOUT.english),
-      `page ${route}: "en.bio" starts the English biography`,
+      `page ${aboutRoute(ENGLISH)}: "en.bio" starts the English biography`,
     );
 
     for (const flat of ["bio", "bio_es", "bio_en", "team"]) {
-      assert.ok(!Object.hasOwn(data, flat), `page ${route}: the flat "${flat}" field is gone`);
+      assert.ok(!Object.hasOwn(data, flat), `acerca-de.md: the flat "${flat}" field is gone`);
     }
-    for (const language of ["es", "en"]) {
-      assert.equal(typeof data[language]?.team, "string", `page ${route}: "${language}.team" is one rich-text field`);
+    for (const code of [SPANISH.code, ENGLISH.code]) {
+      assert.equal(typeof data[code]?.team, "string", `acerca-de.md: "${code}.team" is one rich-text field`);
+      assert.equal(typeof data[code]?.title, "string", `acerca-de.md: "${code}.title" is the page title in that language`);
+      assert.ok(data[code]?.title?.trim(), `acerca-de.md: "${code}.title" is not blank`);
+      assert.equal(
+        data[code].title,
+        code === SPANISH.code ? ABOUT.title.spanish : ABOUT.title.english,
+        `acerca-de.md: "${code}.title" is the page's own`,
+      );
     }
 
     for (const key of ["es.bio", "en.bio", "es.team", "en.team"]) {
       const value = key.split(".").reduce((value, step) => value?.[step], data);
       assert.ok(
         !/^[ \t]*\/\/[ \t]*$/m.test(String(value ?? "")),
-        `page ${route}: "${key}" contains a literal // separator line (the template draws the divider)`,
+        `acerca-de.md: "${key}" contains a literal // separator line`,
       );
     }
   });
+});
 
-  it("renders each language's team from its own team list", () => {
-    const body = text();
-    const team = readPage(route).querySelector("main .about-team");
-    assert.ok(team, `page ${route}: no team section rendered`);
-    const teamText = normalize(team.textContent);
+describe("about page with no English version written (Untranslated field)", () => {
+  // Every English value cleared in Pages CMS is a legal state (ADR-0002): the
+  // English page shows the Spanish text, silently. The fixture build empties
+  // the English version of the real About page and renders it (see
+  // test/support/untranslated-about.mjs), so this is asserted on built pages.
+  let outputDir;
 
-    assert.ok(
-      body.indexOf(ABOUT.team.spanish[0]) > body.indexOf(ABOUT.english),
-      `page ${route}: the team comes after the biographies`,
-    );
-    for (const member of ABOUT.team.spanish) {
-      assert.ok(teamText.includes(member), `page ${route}: the team section carries the Spanish team copy "${member}"`);
-    }
-    for (const member of ABOUT.team.english) {
-      assert.ok(teamText.includes(member), `page ${route}: the team section carries the English team copy "${member}"`);
-    }
+  before(async () => {
+    outputDir = await buildUntranslatedAbout();
   });
 
-  it("splits the team so no role mixes the two languages", () => {
-    // The one visible change of the content migration: the roles used to read
-    // "Fundadora y Curadora / Founder and Curator" in a single string.
-    const page = readPage(route);
-    const team = normalize(page.querySelector("main .about-team")?.textContent);
-    assert.ok(team.length > 0, `page ${route}: no team section rendered`);
-    for (const mixed of [
-      "Fundadora y Curadora / Founder and Curator",
-      "Curadora Asociada / Associate Curator",
-      "Asistencia Curatorial / Curatorial Assistant",
-      "Colaboradoras anteriores / Former collaborators:",
-    ]) {
-      assert.ok(!team.includes(mixed), `page ${route}: the team no longer reads "${mixed}" in one string`);
-    }
+  /** The biography and team section of a page, as a visitor reads them. */
+  const sections = (doc) => ({
+    bio: normalize(doc.querySelector("main .about-bio")?.textContent),
+    team: normalize(doc.querySelector("main .about-team")?.textContent),
+  });
 
-    // The Spanish team comes first, then the template's divider, then the
-    // English team, the way the biographies are drawn.
-    const blocks = page
-      .querySelector("main .about-team")
-      .childNodes.filter((node) => node.nodeType === NodeType.ELEMENT_NODE)
-      .map((node) => normalize(node.textContent));
-    const divider = blocks.indexOf("//");
-    assert.notEqual(divider, -1, `page ${route}: the template draws one divider between the two team lists`);
-    assert.deepEqual(blocks.filter((block) => block === "//").length, 1, `page ${route}: exactly one team divider`);
-    for (const role of ABOUT.team.spanish.filter((entry) => entry !== ABOUT.team.spanish[0])) {
-      assert.ok(blocks.slice(0, divider).some((block) => block.includes(role)), `page ${route}: "${role}" stays with the Spanish team`);
-    }
-    for (const role of ABOUT.team.english.filter((entry) => entry !== ABOUT.team.english[0])) {
-      assert.ok(blocks.slice(divider + 1).some((block) => block.includes(role)), `page ${route}: "${role}" comes after the divider`);
-    }
+  for (const [variant, route] of [
+    ["no `en` object at all", UNTRANSLATED_ROUTE],
+    ["English fields left blank", BLANK_ROUTE],
+  ]) {
+    it(`builds the English page with ${variant} and shows the Spanish text`, () => {
+      const spanish = sections(readOutputPage(outputDir, route));
+      const englishDoc = readOutputPage(outputDir, `${ENGLISH.prefix}${route}`);
+      const label = `page ${ENGLISH.prefix}${route}`;
+      const english = sections(englishDoc);
+
+      assert.equal(englishDoc.querySelector("html")?.getAttribute("lang"), ENGLISH.code, `${label}: <html lang>`);
+      assert.equal(english.bio, spanish.bio, `${label}: the biography is the Spanish one, with nothing added or announced`);
+      assert.equal(english.team, spanish.team, `${label}: the team is the Spanish one, with nothing added or announced`);
+      assert.ok(english.bio.length > 0, `${label}: the biography is not empty`);
+      assert.ok(english.team.length > 0, `${label}: the team is not empty`);
+    });
+  }
+
+  it("falls back on the page title until the English one is written", () => {
+    const title = (route) => normalize(readOutputPage(outputDir, route).querySelector("title")?.textContent);
+    const heading = (route) => normalize(readOutputPage(outputDir, route).querySelector("main h1")?.textContent);
+
+    assert.equal(heading(`${ENGLISH.prefix}${UNTRANSLATED_ROUTE}`), ABOUT.title.spanish, "page /en/acerca-de/: the heading is the Spanish title");
+    assert.equal(title(`${ENGLISH.prefix}${UNTRANSLATED_ROUTE}`), `${ABOUT.title.spanish} — ${SITE.title}`, "page /en/acerca-de/: <title>");
+    assert.equal(heading(UNTRANSLATED_ROUTE), ABOUT.title.spanish, `page ${UNTRANSLATED_ROUTE}: the Spanish page keeps its own title`);
+  });
+
+  it("resolves each field on its own, so a written English title stays English", () => {
+    const route = `${ENGLISH.prefix}${BLANK_ROUTE}`;
+    const doc = readOutputPage(outputDir, route);
+
+    assert.equal(normalize(doc.querySelector("main h1")?.textContent), ABOUT.title.english, `page ${route}: the English title was written, so it is the heading`);
+    assert.equal(normalize(doc.querySelector("title")?.textContent), `${ABOUT.title.english} — ${SITE.title}`, `page ${route}: <title>`);
+    assert.ok(!sections(doc).bio.includes(ABOUT.english), `page ${route}: the blank English biography does not reach the page`);
+  });
+
+  it("keeps the Spanish page exactly as the fully translated build renders it", () => {
+    const spanish = sections(readPage(aboutRoute(SPANISH)));
+    const fixture = sections(readOutputPage(outputDir, UNTRANSLATED_ROUTE));
+
+    assert.deepEqual(fixture, spanish, `page ${UNTRANSLATED_ROUTE}: the Spanish page is untouched by the missing English version`);
   });
 });
 
@@ -1748,7 +1844,7 @@ describe("site settings in the generated pages", () => {
     // (`url` is what the deploy sets as SITE_URL, and `instagram` / `city`
     // repeat the footer values; the canonical assertions elsewhere pin the
     // origin to SITE_URL, which is what proves `url` is never read.)
-    const pages = ["/", ABOUT_ROUTE, "/proyectos/"].map((page) => readText(path.posix.join(page, "index.html")));
+    const pages = ["/", ...LANGUAGES.map(aboutRoute), "/proyectos/"].map((page) => readText(path.posix.join(page, "index.html")));
     for (const html of pages) {
       assert.ok(!html.includes(settings.social.instagram), "no page renders the social.instagram reference URL");
     }
@@ -1759,7 +1855,7 @@ describe("page metadata", () => {
   const pages = [
     ...LANGUAGES.map((language) => [homeRoute(language), language.code === SPANISH.code ? SITE.description : SITE.englishDescription]),
     ...LANGUAGES.flatMap((language) => PROJECTS.map((project) => [projectRouteIn(project.route, language), null])),
-    [ABOUT_ROUTE, SITE.description],
+    ...LANGUAGES.map((language) => [aboutRoute(language), language.code === SPANISH.code ? SITE.description : SITE.englishDescription]),
   ];
 
   for (const [route, expectedDescription] of pages) {
@@ -2131,4 +2227,203 @@ media:
       );
     });
   }
+});
+
+describe(`subpath deployment (${SUBPATH_PREFIX})`, () => {
+  const PREFIX = SUBPATH_PREFIX.replace(/\/$/, "");
+  let output;
+
+  before(async () => {
+    output = await buildPrefixedSite();
+  });
+
+  const page = (route) => readOutputPage(output, route);
+
+  /** Every URL the page owns: its root-relative `href` / `src` values. */
+  const localUrls = (doc) =>
+    doc
+      .querySelectorAll("[href], [src]")
+      .flatMap((node) => ["href", "src"].map((name) => node.getAttribute(name)))
+      .filter((url) => url?.startsWith("/") && !url.startsWith("//"));
+
+  it("prefixes every URL the site owns, exactly once", () => {
+    for (const route of [
+      ...LANGUAGES.map(homeRoute),
+      ...LANGUAGES.map(aboutRoute),
+      "/proyectos/",
+      ...LANGUAGES.map((language) => projectRouteIn(PROJECTS[0].route, language)),
+      THREE_COLUMN_ROUTE,
+    ]) {
+      const urls = localUrls(page(route));
+      assert.ok(urls.length > 0, `page ${route}: no local URLs rendered`);
+      for (const url of urls) {
+        assert.ok(url.startsWith(`${PREFIX}/`), `page ${route}: ${url} carries the path prefix`);
+        assert.ok(!url.startsWith(`${PREFIX}${PREFIX}/`), `page ${route}: ${url} is prefixed exactly once`);
+      }
+    }
+  });
+
+  it("serves both language versions of the About page under the prefix", () => {
+    const english = page(aboutRoute(ENGLISH));
+    assert.equal(english.querySelector("html")?.getAttribute("lang"), ENGLISH.code, `page ${aboutRoute(ENGLISH)}: page language under the subpath`);
+    assert.ok(
+      normalize(english.querySelector("main .about-bio")?.textContent).includes(ABOUT.english),
+      `page ${aboutRoute(ENGLISH)}: the English biography under the subpath`,
+    );
+
+    const backToSpanish = english.querySelector("header a[hreflang]");
+    assert.equal(
+      backToSpanish?.getAttribute("href"),
+      `${PREFIX}${aboutRoute(SPANISH)}`,
+      `page ${aboutRoute(ENGLISH)}: the language link points at the prefixed Spanish About page`,
+    );
+    assert.equal(normalize(backToSpanish?.textContent), SPANISH.label, `page ${aboutRoute(ENGLISH)}: the language link names Español`);
+
+    for (const language of LANGUAGES) {
+      assert.deepEqual(
+        page(aboutRoute(language))
+          .querySelectorAll('link[rel="alternate"]')
+          .map((node) => node.getAttribute("href")),
+        [
+          `${SITE_URL}${PREFIX}${aboutRoute(SPANISH)}`,
+          `${SITE_URL}${PREFIX}${aboutRoute(ENGLISH)}`,
+          `${SITE_URL}${PREFIX}${aboutRoute(SPANISH)}`,
+        ],
+        `page ${aboutRoute(language)}: hreflang links carry the path prefix`,
+      );
+    }
+  });
+
+  it("serves both language versions of the homepage under the prefix", () => {
+    const english = page(homeRoute(ENGLISH));
+    assert.equal(english.querySelector("html")?.getAttribute("lang"), ENGLISH.code, `page ${homeRoute(ENGLISH)}: page language under the subpath`);
+
+    const backToSpanish = english.querySelector("header a[hreflang]");
+    assert.equal(backToSpanish?.getAttribute("href"), `${PREFIX}${homeRoute(SPANISH)}`, `page ${homeRoute(ENGLISH)}: the language link points at the prefixed Spanish homepage`);
+    assert.equal(normalize(backToSpanish?.textContent), SPANISH.label, `page ${homeRoute(ENGLISH)}: the language link names Español`);
+
+    const toEnglish = page(homeRoute(SPANISH)).querySelector("header a[hreflang]");
+    assert.equal(toEnglish?.getAttribute("href"), `${PREFIX}${homeRoute(ENGLISH)}`, `page ${homeRoute(SPANISH)}: the language link points at the prefixed English homepage`);
+
+    for (const language of LANGUAGES) {
+      assert.deepEqual(
+        page(homeRoute(language))
+          .querySelectorAll('link[rel="alternate"]')
+          .map((node) => node.getAttribute("href")),
+        [
+          `${SITE_URL}${PREFIX}${homeRoute(SPANISH)}`,
+          `${SITE_URL}${PREFIX}${homeRoute(ENGLISH)}`,
+          `${SITE_URL}${PREFIX}${homeRoute(SPANISH)}`,
+        ],
+        `page ${homeRoute(language)}: hreflang links carry the path prefix`,
+      );
+    }
+  });
+
+  it("serves a project page in its own language under the prefix", () => {
+    // A translated project, so the English page renders its own body, not a fallback.
+    const project = PROJECTS.find((candidate) => candidate.english);
+    assert.ok(project, "fixture: expected a project with English text");
+
+    for (const language of LANGUAGES) {
+      const route = projectRouteIn(project.route, language);
+      const doc = page(route);
+      const version = projectVersion(project.route, language);
+      const body = normalize(doc.querySelector("main .project-body")?.textContent);
+      const expected = language.code === ENGLISH.code && version.ownText ? project.english : project.spanish;
+
+      assert.equal(doc.querySelector("html")?.getAttribute("lang"), language.code, `page ${route}: page language under the subpath`);
+      assert.ok(body.includes(expected), `page ${route}: the body of this language version under the subpath`);
+
+      const counterpart = language.code === SPANISH.code ? ENGLISH : SPANISH;
+      const link = doc.querySelector("header a[hreflang]");
+      assert.equal(
+        link?.getAttribute("href"),
+        `${PREFIX}${projectRouteIn(project.route, counterpart)}`,
+        `page ${route}: the language link points at the prefixed counterpart project page`,
+      );
+
+      assert.deepEqual(
+        doc.querySelectorAll('link[rel="alternate"]').map((node) => node.getAttribute("href")),
+        [
+          `${SITE_URL}${PREFIX}${projectRouteIn(project.route, SPANISH)}`,
+          `${SITE_URL}${PREFIX}${projectRouteIn(project.route, ENGLISH)}`,
+          `${SITE_URL}${PREFIX}${projectRouteIn(project.route, SPANISH)}`,
+        ],
+        `page ${route}: hreflang links carry the path prefix`,
+      );
+    }
+  });
+
+  it("lists both homepages in the prefixed sitemap with prefixed alternates", () => {
+    const xml = readOutputText(output, "/sitemap.xml");
+
+    for (const language of LANGUAGES) {
+      assert.ok(
+        xml.includes(`<loc>${SITE_URL}${PREFIX}${homeRoute(language)}</loc>`),
+        `page /sitemap.xml: ${homeRoute(language)} is listed under the prefix`,
+      );
+    }
+
+    const alternates = [...xml.matchAll(/<xhtml:link rel="alternate" hreflang="[^"]+" href="([^"]+)"/g)].map((match) => match[1]);
+    assert.ok(alternates.length > 0, "page /sitemap.xml: no alternates under the prefix");
+    for (const href of alternates) {
+      assert.ok(href.startsWith(`${SITE_URL}${PREFIX}/`), `page /sitemap.xml: alternate ${href} carries the path prefix`);
+    }
+  });
+
+  it("keeps canonical URLs and the sitemap on the prefixed routes", () => {
+    const route = PROJECTS[0].route;
+    assert.equal(
+      page(route).querySelector('link[rel="canonical"]')?.getAttribute("href"),
+      `${SITE_URL}${PREFIX}${route}`,
+      `page ${route}: canonical URL under the subpath`,
+    );
+
+    const listed = [...readOutputText(output, "/sitemap.xml").matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
+    assert.ok(listed.length > 0, "page /sitemap.xml: no URLs listed");
+    for (const loc of listed) {
+      assert.ok(loc.startsWith(`${SITE_URL}${PREFIX}/`), `page /sitemap.xml: ${loc} carries the path prefix`);
+    }
+  });
+
+  it("serves the gallery video and the dossier links under the prefix", () => {
+    const project = PROJECTS.find(({ videos }) => videos.length);
+    assert.ok(project, "fixture: expected a project with a video");
+    const video = page(project.route).querySelector("video");
+    assert.equal(
+      video?.getAttribute("src"),
+      `${PREFIX}/assets/videos/${project.videos[0].source}`,
+      `page ${project.route}: video source under the subpath`,
+    );
+    // The control bar travels with the markup, so the subpath build must not
+    // lose it: the same expectation, derived from this video's own flags.
+    assert.equal(
+      video?.hasAttribute("controls"),
+      keepsControls(project.videos[0]),
+      `page ${project.route}: gallery video 1 controls under the subpath`,
+    );
+    assert.equal(video?.hasAttribute("playsinline"), true, `page ${project.route}: gallery video 1 playsinline under the subpath`);
+    assert.equal(video?.getAttribute("preload"), "metadata", `page ${project.route}: gallery video 1 preload under the subpath`);
+
+    const { route, file } = LOCAL_DOCUMENTS[0];
+    const hrefs = page(route)
+      .querySelectorAll("main .project-body a")
+      .map((link) => link.getAttribute("href"));
+    assert.ok(hrefs.includes(`${PREFIX}/assets/files/${file}`), `page ${route}: dossier link ${file} under the subpath`);
+  });
+
+  it("serves the responsive images and social metadata under the prefix", () => {
+    const route = PROJECTS[0].route;
+    const doc = page(route);
+
+    assert.ok(
+      doc.querySelector("main .project-gallery img")?.getAttribute("src")?.startsWith(`${PREFIX}/img/`),
+      `page ${route}: gallery images come from the prefixed image pipeline`,
+    );
+    assert.ok(
+      doc.querySelector('meta[property="og:image"]')?.getAttribute("content")?.startsWith(`${SITE_URL}${PREFIX}/img/`),
+      `page ${route}: og:image is an absolute prefixed URL`,
+    );
+  });
 });
