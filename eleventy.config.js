@@ -125,6 +125,8 @@ export default function (eleventyConfig) {
   // A project gallery: the one place media items become markup. It renders the
   // view model's typed media items (`lib/project-view.js`) for every project
   // surface — image, video, and its flags — and keeps `data-columns` here too.
+  // It is also where a video's control bar is decided: a self-sustaining video
+  // (autoplay + mute + loop) stays chrome-free, everything else gets controls.
   eleventyConfig.addShortcode("gallery", async (gallery, columns = null, priority = false) => {
     const items = await Promise.all(
       (Array.isArray(gallery) ? gallery : []).map(async (item, index) => {
