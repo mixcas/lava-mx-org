@@ -302,9 +302,17 @@ content:
         label: Versión en español
         type: object
         description: >-
-          Biografía y equipo que se muestran en la versión en español de la
-          página; son los únicos que hay que escribir.
+          Título de la página, biografía y equipo que se muestran en la versión
+          en español; son los únicos que hay que escribir.
         fields:
+          - name: title
+            label: Título de la página en español
+            type: string
+            required: true
+            description: >-
+              Cambia el título de la pestaña y el encabezado de la versión en
+              español de la página. Escribe un título propio, no la traducción
+              del inglés: la versión en inglés tiene el suyo.
           - name: bio
             label: Biografía en español
             type: rich-text
@@ -336,10 +344,17 @@ content:
         label: Versión en inglés
         type: object
         description: >-
-          Biografía y equipo que se muestran en la versión en inglés de la
-          página. Los dos campos son opcionales: si los dejas vacíos, la
-          versión en inglés muestra los textos en español.
+          Título de la página, biografía y equipo que se muestran en la versión
+          en inglés. Son opcionales: si los dejas vacíos, la versión en inglés
+          usa los textos en español.
         fields:
+          - name: title
+            label: Título de la página en inglés
+            type: string
+            description: >-
+              Cambia el título de la pestaña y el encabezado de la versión en
+              inglés de la página. Si lo dejas vacío, la versión en inglés usa
+              el título en español.
           - name: bio
             label: Biografía en inglés
             type: rich-text

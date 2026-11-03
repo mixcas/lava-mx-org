@@ -205,6 +205,12 @@ export const SITE = {
 
 /** About page copy the migration must keep rendering. */
 export const ABOUT = {
+  // The page's own heading and `<title>`, one per language version (ADR-0002:
+  // each language version carries its own text, not a translation of the other).
+  title: {
+    spanish: "Acerca de",
+    english: "About",
+  },
   spanish:
     "Lava es materia incandescente que fluye entre las faldas de un volcán que marca nuevas cartografías en su recorrido.",
   english: "Lava is incandescent matter that flows down the slopes of a volcano, marking new cartographies in its path.",

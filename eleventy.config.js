@@ -9,7 +9,7 @@ import MarkdownIt from "markdown-it";
 import { buildProjectView } from "./lib/project-view.js";
 import { applyPathPrefix, withPathPrefix } from "./lib/path-prefix.js";
 import { assertProjectsValid, untranslatedFields, untranslatedReport } from "./lib/project-contract.js";
-import { languageAlternates, languageRoutes, sitemapEntries } from "./lib/languages.js";
+import { languageAlternates, languageRoutes, localizedText, sitemapEntries } from "./lib/languages.js";
 import { ASSET_URL } from "./lib/media-assets.js";
 import { languageRouteUrl } from "./lib/routes.js";
 
@@ -123,6 +123,13 @@ export default function (eleventyConfig) {
   eleventyConfig.addCollection("languageRoutes", (api) => languageRoutes(api.getAll()));
   eleventyConfig.addFilter("languageAlternates", languageAlternates);
   eleventyConfig.addFilter("sitemapEntries", sitemapEntries);
+
+  // The Untranslated field rule (GLOSSARY, ADR-0002), for pages that carry their
+  // text per language rather than through the project view model: reads one
+  // field of a page's language objects and shows the Spanish value when that
+  // language has none, silently — clearing every English field in the CMS is a
+  // legal state (see lib/languages.js).
+  eleventyConfig.addFilter("localizedText", localizedText);
 
   // Responsive <picture> for a master filename in src/assets/images.
   // `priority` marks the LCP image (eager + high fetch priority).
