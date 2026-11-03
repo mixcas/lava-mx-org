@@ -75,7 +75,8 @@ from the repository.
 4. **Gallery editor**
    - Add an existing image from the media library.
    - Upload a new image.
-   - Add a video, choose a poster, and toggle autoplay / loop / mute.
+   - Add a video, choose a poster, and toggle autoplay / loop / mute; ticking
+     autoplay, mute and loop together is what removes the control bar.
    - Set the alt text on the image items (leave one empty to see the title
      fallback on the deployed page).
    - Drag items to reorder and remove one item.
@@ -129,7 +130,8 @@ from the repository.
    - a project page shows title, venue, dates, Spanish text and, when it exists,
      English text after the `//` divider;
    - gallery images render responsively and videos play with their poster and
-     flags;
+     flags, and every video shows the browser's control bar unless autoplay,
+     mute and loop are all ticked;
    - a dossier link still resolves, including under a subpath deployment.
 4. Confirm the behavior in the app once more against `main` (the configuration is
    read per branch, so a branch-only edit is not in effect on production).
